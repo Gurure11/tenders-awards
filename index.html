@@ -1075,7 +1075,7 @@
             revenueSheetId: '16zsV_C-2pz5gyka2fjlSZZoC5cDZcR3-cokS4Cx1rDE',
             revenueSheetName: 'DailyRevenue',
             folderId: '1al8guXtgk-PJWwdNvd2umUXYv4AvwXSM',
-            scriptURL: 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE'
+            scriptURL: 'https://script.google.com/macros/s/AKfycbxSlddZV9XqC2DEI3snpB-WD1h-u_beDwzD46vZ6cwQsnyklFxO6hsE4KMBm4kV0lQ2/exec'
         };
 
         // Global data stores
@@ -1255,7 +1255,7 @@
                 var today = new Date();
                 var monthIndex = today.getMonth() - 2;
                 if (monthIndex >= 0 && monthIndex < 12) {
-                    var monthlyBudget = Number((project.months && project.months[monthIndex]) || 0);
+                    var monthlyBudget = (project.months && project.months[monthIndex]) || 0;
                     var dailyBudget = Math.round(monthlyBudget / 22);
                     budgetField.value = 'R ' + dailyBudget.toLocaleString();
                 }
@@ -1400,7 +1400,7 @@
             var total = 0;
             for (var i = 0; i < dailyRevenue.length; i++) {
                 if (dailyRevenue[i].date === today) {
-                    total += Number(dailyRevenue[i].amount) || 0;
+                    total += dailyRevenue[i].amount || 0;
                 }
             }
             
@@ -1410,13 +1410,13 @@
                 if (!p.isSummary) {
                     var monthIndex = new Date().getMonth() - 2;
                     if (monthIndex >= 0 && monthIndex < 12) {
-                        budget += (Number((p.months && p.months[monthIndex]) || 0)) / 22;
+                        budget += ((p.months && p.months[monthIndex]) || 0) / 22;
                     }
                 }
             }
             
             var variance = total - budget;
-            var achievement = budget > 0 ? (total / budget * 100).toFixed(1) : 0;
+            var achievement = budget > 0 ? ((total / budget) * 100).toFixed(1) : 0;
             
             var todayTotal = document.getElementById('todayTotal');
             var todayBudget = document.getElementById('todayBudget');
@@ -1455,7 +1455,7 @@
                         budget = ((project.months && project.months[monthIndex]) || 0) / 22;
                     }
                 }
-                var variance = (Number(r.amount) || 0) - budget;
+                var variance = (r.amount || 0) - budget;
                 var varianceClass = variance >= 0 ? 'variance-positive' : 'variance-negative';
                 
                 html += '<tr>' +
@@ -1603,26 +1603,31 @@
             var confirmed = 0;
             var forecast = 0;
             
+            // Calculate confirmed and forecast totals
             for (var i = 0; i < projects.length; i++) {
                 var p = projects[i];
                 if (p.isSummary) continue;
                 
                 if (p.status === 'Confirmed') {
-                    confirmed += Number(p.amount) || 0;
+                    confirmed += p.amount || 0;
+                    console.log('Confirmed project:', p.project, 'Amount:', p.amount);
                 } else if (p.status === 'Forecast') {
-                    forecast += Number(p.amount) || 0;
+                    forecast += p.amount || 0;
+                    console.log('Forecast project:', p.project, 'Amount:', p.amount);
                 }
             }
             
             var total = confirmed + forecast;
             
+            // Calculate actual revenue from daily entries
             var actual = 0;
             for (var i = 0; i < dailyRevenue.length; i++) {
-                actual += Number(dailyRevenue[i].amount) || 0;
+                actual += dailyRevenue[i].amount || 0;
             }
             
             console.log('Calculated - Confirmed:', confirmed, 'Forecast:', forecast, 'Total:', total, 'Actual:', actual);
             
+            // Update KPI display elements
             var totalOrderBook = document.getElementById('totalOrderBook');
             var confirmedTotal = document.getElementById('confirmedTotal');
             var forecastTotal = document.getElementById('forecastTotal');
@@ -1637,6 +1642,7 @@
             if (totalValueDisplay) totalValueDisplay.innerText = 'R ' + total.toLocaleString();
             if (totalActualDisplay) totalActualDisplay.innerText = 'R ' + actual.toLocaleString();
             
+            // Update project count
             var nonSummaryCount = 0;
             for (var i = 0; i < projects.length; i++) {
                 if (!projects[i].isSummary) nonSummaryCount++;
@@ -1737,7 +1743,8 @@
             var today = new Date().toISOString().split('T')[0];
             dailyRevenue = [
                 { date: today, projectId: 1, projectName: 'DBSA Generators', manager: 'Moses', amount: 350000 },
-                { date: today, projectId: 2, projectName: 'DBSA Rooiwal', manager: 'Johan', amount: 180000 }
+                { date: today, projectId: 2, projectName: 'DBSA Rooiwal', manager: 'Johan', amount: 180000 },
+                { date: today, projectId: 5, projectName: 'Stellenbosh', manager: 'Stanley', amount: 250000 }
             ];
             
             extractManagers();
@@ -1798,7 +1805,7 @@
             }
             
             var variance = totalActual - dayBudget;
-            var achievement = dayBudget > 0 ? (totalActual / dayBudget * 100).toFixed(1) : 0;
+            var achievement = dayBudget > 0 ? ((totalActual / dayBudget) * 100).toFixed(1) : 0;
             
             var periodBudget = document.getElementById('periodBudget');
             var periodActual = document.getElementById('periodActual');
@@ -1850,7 +1857,7 @@
             for (var key in projectGroups) {
                 var g = projectGroups[key];
                 var variance = (g.actual || 0) - ((g.budget || 0));
-                var achievement = g.budget > 0 ? ((g.actual || 0) / g.budget * 100).toFixed(1) : 0;
+                var achievement = g.budget > 0 ? (((g.actual || 0) / g.budget) * 100).toFixed(1) : 0;
                 var statusClass = 'danger';
                 if (achievement >= 100) statusClass = 'success';
                 else if (achievement >= 75) statusClass = 'warning';
@@ -1941,7 +1948,7 @@
                 totalActual += dayActual;
                 
                 var variance = dayActual - dayBudget;
-                var achievement = dayBudget > 0 ? (dayActual / dayBudget * 100).toFixed(1) : 0;
+                var achievement = dayBudget > 0 ? ((dayActual / dayBudget) * 100).toFixed(1) : 0;
                 var statusClass = 'danger';
                 if (achievement >= 100) statusClass = 'success';
                 else if (achievement >= 75) statusClass = 'warning';
@@ -1963,7 +1970,7 @@
             }
             
             var totalVariance = totalActual - totalBudget;
-            var totalAchievement = totalBudget > 0 ? (totalActual / totalBudget * 100).toFixed(1) : 0;
+            var totalAchievement = totalBudget > 0 ? ((totalActual / totalBudget) * 100).toFixed(1) : 0;
             
             html += '<tr class="total-row">' +
                 '<td><strong>WEEK TOTAL</strong></td>' +
@@ -2038,7 +2045,7 @@
             for (var key in projectData) {
                 var p = projectData[key];
                 var variance = (p.actual || 0) - (p.budget || 0);
-                var achievement = p.budget > 0 ? ((p.actual || 0) / p.budget * 100).toFixed(1) : 0;
+                var achievement = p.budget > 0 ? (((p.actual || 0) / p.budget) * 100).toFixed(1) : 0;
                 var statusClass = 'danger';
                 if (achievement >= 100) statusClass = 'success';
                 else if (achievement >= 75) statusClass = 'warning';
@@ -2063,7 +2070,7 @@
             }
             
             var totalVariance = totalActual - totalBudget;
-            var totalAchievement = totalBudget > 0 ? (totalActual / totalBudget * 100).toFixed(1) : 0;
+            var totalAchievement = totalBudget > 0 ? ((totalActual / totalBudget) * 100).toFixed(1) : 0;
             
             html += '<tr class="total-row">' +
                 '<td><strong>MONTH TOTAL</strong></td>' +
