@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Onpoint Group - Fixed</title>
+
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+</head>
+<body>
+
+<h2>Connected Dashboard</h2>
+<div id="status">Connecting...</div>
+<div id="chart"></div>
+
+<script>
+// FIXED CONFIG
+const CONFIG = {
+  spreadsheetId: "1_t7JqItYFEy0cGcA927M-rM6jOZDO8Dh8X8vJlALSq0",
+  sheetName: "Bothwell",
+  revenueSheetName: "Bothwell_Revenue",
+  scriptURL: "PASTE_YOUR_DEPLOYED_SCRIPT_URL_HERE"
+};
+
+// Load data
+async function loadData() {
+  try {
+    document.getElementById("status").innerText = "Loading...";
+
+    const res = await fetch(CONFIG.scriptURL + "?action=getProjects");
+    const data = await res.json();
+
+    document.getElementById("status").innerText = "Connected";
+
+    renderChart(data);
+
+  } catch (e) {
+    document.getElementById("status").innerText = "Error connecting";
+    console.error(e);
+  }
+}
+
+// Render chart
+function renderChart(data) {
+  const totals = data.map(r => Number(r.totalIncome || 0));
+  const names = data.map(r => r.projectName);
+
+  const options = {
+    chart: { type: "bar", height: 350 },
+    series: [{ name: "Income", data: totals }],
+    xaxis: { categories: names }
+  };
+
+  const chart = new ApexCharts(document.querySelector("#chart"), options);
+  chart.render();
+}
+
+loadData();
+</script>
+
+</body>
+</html>
