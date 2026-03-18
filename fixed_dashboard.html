@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixed Dashboard</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+body { background:#f4f6f9; padding:20px; }
+.card { border-radius:12px; }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h2 class="mb-4">Project Dashboard (Fixed)</h2>
+
+    <button class="btn btn-primary mb-3" onclick="loadData()">Load Data</button>
+
+    <div class="card p-3 mb-4">
+        <h5>Summary</h5>
+        <p>Total Projects: <span id="projectCount">0</span></p>
+        <p>Total Amount: <span id="totalAmount">0</span></p>
+    </div>
+
+    <div class="card p-3">
+        <h5>Projects</h5>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Project</th>
+                    <th>Manager</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+
+    <div class="card p-3 mt-4">
+        <h5>Add Project</h5>
+        <input id="name" class="form-control mb-2" placeholder="Project Name">
+        <input id="manager" class="form-control mb-2" placeholder="Manager">
+        <input id="amount" type="number" class="form-control mb-2" placeholder="Amount">
+        <button class="btn btn-success" onclick="addProject()">Save</button>
+    </div>
+</div>
+
+<script>
+let projects = [];
+
+async function loadData(){
+    try{
+        // Replace with your Apps Script Web App URL
+        const url = "YOUR_GOOGLE_SCRIPT_URL?action=getProjects";
+
+        const res = await fetch(url);
+        const data = await res.json();
+
+        projects = data.data || [];
+        render();
+    }catch(e){
+        alert("Error loading data. Check Google Script URL.");
+    }
+}
+
+function render(){
+    const tbody = document.getElementById("tableBody");
+    tbody.innerHTML = "";
+
+    let total = 0;
+
+    projects.forEach(p=>{
+        total += Number(p.amount || 0);
+
+        tbody.innerHTML += `
+        <tr>
+            <td>${p.project}</td>
+            <td>${p.manager}</td>
+            <td>${p.amount}</td>
+        </tr>`;
+    });
+
+    document.getElementById("projectCount").innerText = projects.length;
+    document.getElementById("totalAmount").innerText = total;
+}
+
+async function addProject(){
+    const project = document.getElementById("name").value;
+    const manager = document.getElementById("manager").value;
+    const amount = document.getElementById("amount").value;
+
+    if(!project || !manager || !amount){
+        alert("Fill all fields");
+        return;
+    }
+
+    try{
+        const res = await fetch("YOUR_GOOGLE_SCRIPT_URL", {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body: JSON.stringify({
+                action:"addProject",
+                project:{ project, manager, amount }
+            })
+        });
+
+        const result = await res.json();
+
+        if(result.success){
+            alert("Saved!");
+            loadData();
+        }else{
+            alert("Error saving");
+        }
+    }catch(e){
+        alert("Connection error");
+    }
+}
+</script>
+
+</body>
+</html>
