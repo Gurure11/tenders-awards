@@ -55,7 +55,7 @@ let projects = [];
 async function loadData(){
     try{
         // Replace with your Apps Script Web App URL
-        const url = "YOUR_GOOGLE_SCRIPT_URL?action=getProjects";
+        const url = "https://script.google.com/macros/s/AKfycbxSlddZV9XqC2DEI3snpB-WD1h-u_beDwzD46vZ6cwQsnyklFxO6hsE4KMBm4kV0lQ2/exec?action=getProjects";
 
         const res = await fetch(url);
         const data = await res.json();
@@ -99,7 +99,7 @@ async function addProject(){
     }
 
     try{
-        const res = await fetch("YOUR_GOOGLE_SCRIPT_URL", {
+        const res = await fetch("https://script.google.com/macros/s/AKfycbxSlddZV9XqC2DEI3snpB-WD1h-u_beDwzD46vZ6cwQsnyklFxO6hsE4KMBm4kV0lQ2/exec", {
             method:"POST",
             headers:{ "Content-Type":"application/json" },
             body: JSON.stringify({
