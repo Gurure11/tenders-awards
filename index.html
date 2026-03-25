@@ -381,15 +381,15 @@
                 </div>
                 <div class="row mt-3"><div class="col-12"><button class="btn btn-primary rounded-pill px-4" onclick="submitInvoice()"><i class="fas fa-save me-2"></i>Save Invoice</button></div></div>
                 <hr><h6 class="fw-semibold">Today's Invoices Summary</h6>
-                <div class="table-container"><table class="table-modern w-100" id="todayInvoicesTable"><thead><th>Project</th><th>Manager</th><th>Amount</th><th>Time</th></thead><tbody></tbody>          </table></div>
+                <div class="table-container"><table class="table-modern w-100" id="todayInvoicesTable"><thead><th>Project</th><th>Manager</th><th>Amount</th><th>Time</th></thead><tbody></tbody>           </table></div>
             </div></div>
         </div>
         
         <!-- Order Book Tab -->
-        <div id="orderbook" class="tab-pane"><div class="card-modern"><div class="card-header-modern"><i class="fas fa-book"></i> Order Book - All Projects from Projects Sheet</div><div class="card-body-modern"><div class="table-container"><table class="table-modern w-100" id="orderBookTable"><thead id="orderBookHeader"></thead><tbody id="orderBookBody"></tbody>          </table></div></div></div></div>
+        <div id="orderbook" class="tab-pane"><div class="card-modern"><div class="card-header-modern"><i class="fas fa-book"></i> Order Book - All Projects from Projects Sheet</div><div class="card-body-modern"><div class="table-container"><table class="table-modern w-100" id="orderBookTable"><thead id="orderBookHeader"></thead><tbody id="orderBookBody"></tbody>           </table></div></div></div></div>
         
         <!-- Performance Tab -->
-        <div id="performance" class="tab-pane"><div class="card-modern"><div class="card-header-modern"><i class="fas fa-chart-simple"></i> Performance Analysis</div><div class="card-body-modern"><div id="perfChart" class="chart-container"></div><div class="table-container mt-4"><table class="table-modern w-100" id="perfTable"><thead><th>Manager</th><th>Actual</th><th>Target</th><th>Achievement</th><th>Quality</th><th>Safety</th><th>Status</th></thead><tbody></tbody>          </table></div></div></div></div>
+        <div id="performance" class="tab-pane"><div class="card-modern"><div class="card-header-modern"><i class="fas fa-chart-simple"></i> Performance Analysis</div><div class="card-body-modern"><div id="perfChart" class="chart-container"></div><div class="table-container mt-4"><table class="table-modern w-100" id="perfTable"><thead><th>Manager</th><th>Actual</th><th>Target</th><th>Achievement</th><th>Quality</th><th>Safety</th><th>Status</th></thead><tbody></tbody>           </table></div></div></div></div>
     </div>
     <div class="refresh-btn" onclick="loadAllData()"><i class="fas fa-sync-alt"></i></div>
 
@@ -397,7 +397,7 @@
     <script>
         // Google Sheets Configuration
         const CONFIG = { 
-            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxjEurGV7p9qiEwVIlgktTn2gl1Vum2QayLiMcSraI0x35njTaSxkV5ish9Hq1cv0n0/exec',
+            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycby6TQyYEmSXe_rqpNDIoQqPGK7ZVGurtPEM30w4ljZMZKPSCVnb3dGCGSZhsZ_8qqoz/exec',
             PROJECTS_SHEET_ID: '1YNQ4pwOdddNGr-_Gef2bbxVgoW4lKsXy-roPvfFmMEM',
             PROJECTS_SHEET_NAME: 'Projects',
             REVENUE_SHEET_ID: '1XW6-Kz9_8P0MKRHZlsYfz4BCGilatiQ1FoA_MGAKeqg',
@@ -442,15 +442,13 @@
         const formatCurrency = (v) => 'R ' + Math.round(v || 0).toLocaleString();
         const parseNumber = (v) => Number(String(v).replace(/[^0-9.-]+/g, '')) || 0;
         
-        // ✅ FIX 1 — SAFE FETCH
         async function safeFetch(url, options = {}) {
             const res = await fetch(url, options);
             const text = await res.text();
-            
             try {
                 return JSON.parse(text);
             } catch (err) {
-                console.error("Invalid JSON response:", text);
+                console.error("Invalid JSON response:", text.substring(0, 200));
                 throw new Error("Server did not return valid JSON");
             }
         }
@@ -632,18 +630,19 @@
             projects.forEach(p => { 
                 let gp = p.TotalIncome * (p.Margin / 100);
                 body += `
-                    <tr>
-                        <td>${p.Division || 'Onpoint Group'}</td>
-                        <td>${p.Manager || 'Unassigned'}</td>
-                        <td><strong>${p.ProjectName || 'Unknown'}</strong></td>
-                        <td><span class="badge-${p.Status === 'Confirmed' ? 'success' : 'warning'}">${p.Status || 'Forecast'}</span></td>
-                        <td>${formatCurrency(p.TotalIncome)}</td>
-                        <td>${p.Margin}%</td>
-                        <td>${formatCurrency(gp)}</td>
-                    </tr>
+                    <table>
+                        <td>${p.Division || 'Onpoint Group'}${p.Division || 'Onpoint Group'}
+                        <td>${p.Manager || 'Unassigned'}${p.Manager || 'Unassigned'}
+                        <td><strong>${p.ProjectName || 'Unknown'}</strong>${p.ProjectName || 'Unknown'}
+                        <td><span class="badge-${p.Status === 'Confirmed' ? 'success' : 'warning'}">${p.Status || 'Forecast'}</span>${p.Status || 'Forecast'}
+                        <td>${formatCurrency(p.TotalIncome)}${formatCurrency(p.TotalIncome)}
+                        <td>${p.Margin}%${p.Margin}%
+                        <td>${formatCurrency(gp)}${formatCurrency(gp)}
+                    
+    
                 `;
             });
-            document.getElementById('orderBookBody').innerHTML = body || '<tr><td colspan="7" class="text-center">No projects loaded from Projects sheet</td></tr>';
+            document.getElementById('orderBookBody').innerHTML = body || ' <td colspan="7" class="text-center">No projects loaded from Projects sheet </td>';
         }
         
         function updatePerformanceTable() {
@@ -660,36 +659,36 @@
                 let statusClass = ach >= 80 ? 'badge-success' : ach >= 50 ? 'badge-warning' : 'badge-danger';
                 let statusText = ach >= 80 ? 'On Track' : ach >= 50 ? 'At Risk' : 'Behind';
                 html += `
-                    <tr>
-                        <td><strong>${m}</strong></td>
-                        <td>${formatCurrency(mgrMap[m].actual)}</td>
-                        <td>${formatCurrency(mgrMap[m].budget)}</td>
-                        <td>
+                     <tr>
+                         <td><strong>${m}</strong></td>
+                         <td>${formatCurrency(mgrMap[m].actual)}</td>
+                         <td>${formatCurrency(mgrMap[m].budget)}</td>
+                         <td>
                             <div class="progress-bar-custom w-100">
                                 <div class="progress-fill ${ach >= 80 ? 'green' : ach >= 50 ? 'orange' : 'red'}" style="width:${Math.min(100, ach)}%"></div>
                             </div> 
                             ${ach.toFixed(0)}%
-                        </td>
-                        <td><span class="badge-info">${Math.round(avgQuality)}%</span></td>
-                        <td><span class="${totalIncidents === 0 ? 'badge-success' : totalIncidents <= 2 ? 'badge-warning' : 'badge-danger'}">${totalIncidents} incidents</span></td>
-                        <td><span class="${statusClass}">${statusText}</span></td>
-                    </tr>
+                         </td>
+                         <td><span class="badge-info">${Math.round(avgQuality)}%</span></td>
+                         <td><span class="${totalIncidents === 0 ? 'badge-success' : totalIncidents <= 2 ? 'badge-warning' : 'badge-danger'}">${totalIncidents} incidents</span></td>
+                         <td><span class="${statusClass}">${statusText}</span></td>
+                     </tr>
                 `;
             }
-            document.querySelector('#perfTable tbody').innerHTML = html || '<tr><td colspan="7">No data</td></tr>';
+            document.querySelector('#perfTable tbody').innerHTML = html || ' <td colspan="7">No data</td>';
         }
         
         function updateTodayInvoicesTable() {
             let today = new Date().toISOString().split('T')[0];
             let html = invoices.filter(i => i.date === today).map(inv => `
-                <tr>
-                    <td>${inv.projectName}</td>
-                    <td>${inv.manager}</td>
+                 <tr>
+                     <td>${inv.projectName}</td>
+                     <td>${inv.manager}</td>
                     <td class="fw-bold">${formatCurrency(inv.amount)}</td>
-                    <td>${new Date().toLocaleTimeString()}</td>
-                </tr>
+                     <td>${new Date().toLocaleTimeString()}</td>
+                 </tr>
             `).join('');
-            document.querySelector('#todayInvoicesTable tbody').innerHTML = html || '<tr><td colspan="4">No invoices today</td></tr>';
+            document.querySelector('#todayInvoicesTable tbody').innerHTML = html || ' <td colspan="4">No invoices today</td>';
         }
         
         function calculateVariance() {
@@ -709,7 +708,6 @@
             calculateVariance();
         }
         
-        // ✅ FIXED — ADD COSTCENTRE TO REVENUE SUBMISSION
         function submitDailyRevenueWithQuality() {
             let revenue = { 
                 date: document.getElementById('revDate').value, 
@@ -741,7 +739,7 @@
                 try {
                     result = JSON.parse(text);
                 } catch {
-                    throw new Error("Invalid JSON from server: " + text);
+                    throw new Error("Invalid JSON from server: " + text.substring(0, 100));
                 }
                 
                 if (result.success) {
@@ -905,7 +903,7 @@
                 hideLoading();
             } catch(err) { 
                 console.error("Connection Error:", err); 
-                document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> Connection Failed';
+                document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> Connection Failed: ' + err.message;
                 document.getElementById('connectionStatus').className = 'connection-status status-disconnected';
                 hideLoading();
             }
