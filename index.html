@@ -491,7 +491,7 @@
                                             <th>Variance %</th>
                                             <th>Progress</th>
                                             <th>Status</th>
-                                         </tr>
+                                          </tr>
                                     </thead>
                                     <tbody id="managerComparisonBody">
                                         <tr><td colspan="8" class="text-center">Loading...</td></tr>
@@ -609,7 +609,7 @@
                 </div>
                 <div class="row mt-3"><div class="col-12"><button class="btn btn-primary rounded-pill px-4" onclick="submitInvoice()"><i class="fas fa-save me-2"></i>Save Invoice</button></div></div>
                 <hr><h6 class="fw-semibold">Today's Invoices Summary</h6>
-                <div class="table-container"><table class="table-modern w-100" id="todayInvoicesTable"><thead><th>Project</th><th>Manager</th><th>Amount</th><th>Payment Status</th><th>Time</th></thead><tbody></tbody></table></div>
+                <div class="table-container"><table class="table-modern w-100" id="todayInvoicesTable"><thead><th>Project</th><th>Manager</th><th>Amount</th><th>Payment Status</th><th>Time</th></thead><tbody></tbody>可能会</div>
             </div></div>
         </div>
         
@@ -625,7 +625,7 @@
     <script>
         // Google Sheets Configuration - Updated with separate Invoices Sheet ID
         const CONFIG = { 
-            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxSQQrBq3I0rZWyhj4aS-o5cEVXFzX9Sjoj4lsVpSFfLAa6aQLXWd2LclLPiR51EJhL/exec',
+            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyVgjltBGCuYLftt77eiFXCRQIvkPY_uKMHA-_Dg2-2NG6uszgBmX5DdybXCy2Fel8/exec',
             PROJECTS_SHEET_ID: '1YNQ4pwOdddNGr-_Gef2bbxVgoW4lKsXy-roPvfFmMEM',
             PROJECTS_SHEET_NAME: 'Projects',
             REVENUE_SHEET_ID: '1XW6-Kz9_8P0MKRHZlsYfz4BCGilatiQ1FoA_MGAKeqg',
@@ -683,17 +683,15 @@
             }
         }
         
-        // ==================== NEW PROGRESS METRICS FUNCTIONS ====================
+        // ==================== PROGRESS METRICS FUNCTIONS ====================
         
         function calculateProgressMetrics() {
             const today = new Date();
             const currentMonth = today.getMonth();
             const monthIdx = (currentMonth + 10) % 12;
             const workingDays = 22;
-            const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-            const dayOfMonth = today.getDate();
             
-            // Daily Progress
+            // Daily Progress - Get actual from dailyEntries (Revenue sheet)
             const dailyActual = dailyEntries.filter(e => e.date === today.toISOString().split('T')[0]).reduce((s, e) => s + e.amount, 0);
             const dailyTarget = projects.reduce((s, p) => s + ((p.months?.[monthIdx] || p.TotalIncome/12) / workingDays), 0);
             const dailyProgressPercent = dailyTarget > 0 ? (dailyActual / dailyTarget) * 100 : 0;
@@ -858,7 +856,7 @@
             document.getElementById('managerProgressContainer').innerHTML = html || '<p class="text-center text-muted">No manager data available</p>';
         }
         
-        // ==================== EXISTING FUNCTIONS (UPDATED) ====================
+        // ==================== EXISTING FUNCTIONS ====================
         
         function getManagerPerformanceForPeriod(period) {
             const today = new Date().toISOString().split('T')[0];
@@ -1044,7 +1042,6 @@
             const forecastTotal = projects.filter(p => p.Status === 'Forecast').reduce((s, p) => s + p.TotalIncome, 0);
             const totalOrderBook = confirmedTotal + forecastTotal;
             
-            // Updated Group BTYE: (Forecast + Confirmed * 1.5) - MTD Actual
             const mtdActual = dailyEntries.filter(e => {
                 if(!e.date) return false;
                 return new Date(e.date).getMonth() === new Date().getMonth();
@@ -1107,6 +1104,7 @@
                 return true;
             });
             const avgQuality = periodEntries.length ? periodEntries.reduce((s, e) => s + (e.quality || 80), 0) / periodEntries.length : 80;
+            // Safety Incidents - Get total incidents from dailyEntries (Revenue sheet)
             const totalIncidents = periodEntries.reduce((s, e) => s + (e.safety || 0), 0);
             document.getElementById('qualityScore').innerHTML = Math.round(avgQuality) + '%';
             document.getElementById('qualityProgress').style.width = avgQuality + '%';
@@ -1188,14 +1186,14 @@
                 let gp = p.TotalIncome * (p.Margin / 100);
                 body += `
                     <tr>
-                        <td>${p.Division || 'Onpoint Group'}</td>
-                        <td>${p.Manager || 'Unassigned'}</td>
-                        <td><strong>${p.ProjectName || 'Unknown'}</strong></td>
-                        <td><span class="badge-${p.Status === 'Confirmed' ? 'success' : 'warning'}">${p.Status || 'Forecast'}</span></td>
-                        <td>${formatCurrency(p.TotalIncome)}</td>
-                        <td>${p.Margin}%</td>
-                        <td>${formatCurrency(gp)}</td>
-                    </tr>
+                        <td>${p.Division || 'Onpoint Group'} \\n
+                        <td>${p.Manager || 'Unassigned'} \\n
+                        <td><strong>${p.ProjectName || 'Unknown'}</strong> \\n
+                        <td><span class="badge-${p.Status === 'Confirmed' ? 'success' : 'warning'}">${p.Status || 'Forecast'}</span> \\n
+                        <td>${formatCurrency(p.TotalIncome)} \\n
+                        <td>${p.Margin}% \\n
+                        <td>${formatCurrency(gp)} \\n
+                     \<`
                 `;
             });
             document.getElementById('orderBookBody').innerHTML = body || '<tr><td colspan="7" class="text-center">No projects loaded from Projects sheet</td></tr>';
