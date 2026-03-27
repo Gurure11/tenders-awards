@@ -488,11 +488,8 @@
                         <div class="card-body-modern">
                             <div class="table-container">
                                 <table class="table-modern w-100" id="managerComparisonTable">
-                                    <thead>效应<th>Rank</th><th>Manager</th><th>Actual Revenue</th><th>Target Revenue</th><th>Variance (R)</th><th>Variance %</th><th>Progress</th><th>Status</th>\
-                                    </thead>
-                                    <tbody id="managerComparisonBody">\
-                                        <td colspan="8" class="text-center">Loading...</td>\
-                                    </tbody>
+                                    <thead><tr><th>Rank</th><th>Manager</th><th>Actual Revenue</th><th>Target Revenue</th><th>Variance (R)</th><th>Variance %</th><th>Progress</th><th>Status</th></tr></thead>
+                                    <tbody id="managerComparisonBody"><tr><td colspan="8" class="text-center">Loading...</td></tr></tbody>
                                 </table>
                             </div>
                         </div>
@@ -589,10 +586,10 @@
         <div id="invoices" class="tab-pane"><div class="card-modern"><div class="card-header-modern"><i class="fas fa-receipt"></i> Invoice Entry</div><div class="card-body-modern"><div class="row g-3"><div class="col-md-3"><label>Invoice Date</label><input type="date" class="form-control" id="invDate"></div><div class="col-md-3"><label>Manager</label><select class="form-select" id="invManager"></select></div><div class="col-md-4"><label>Project</label><select class="form-select" id="invProjectName"></select></div><div class="col-md-2"><label>Amount</label><input type="number" class="form-control" id="invAmount"></div></div><div class="row mt-3"><div class="col-12"><button class="btn btn-primary rounded-pill px-4" onclick="submitInvoice()">Save Invoice</button></div></div></div></div></div>
         
         <!-- Order Book Tab -->
-        <div id="orderbook" class="tab-pane"><div class="card-modern"><div class="card-header-modern"><i class="fas fa-book"></i> Order Book</div><div class="card-body-modern"><div class="table-container"><table class="table-modern w-100" id="orderBookTable"><thead id="orderBookHeader"></thead><tbody id="orderBookBody"></tbody>}</div></div></div></div>
+        <div id="orderbook" class="tab-pane"><div class="card-modern"><div class="card-header-modern"><i class="fas fa-book"></i> Order Book</div><div class="card-body-modern"><div class="table-container"><table class="table-modern w-100" id="orderBookTable"><thead id="orderBookHeader"></thead><tbody id="orderBookBody"></tbody></table></div></div></div></div>
         
         <!-- Performance Tab -->
-        <div id="performance" class="tab-pane"><div class="card-modern"><div class="card-header-modern"><i class="fas fa-chart-simple"></i> Performance Analysis</div><div class="card-body-modern"><div id="perfChart" class="chart-container"></div><div class="table-container mt-4"><table class="table-modern w-100" id="perfTable"><thead><th>Manager</th><th>Actual</th><th>Target</th><th>Achievement</th><th>Quality</th><th>Safety</th><th>Status</th></thead><tbody></tbody>}</div></div></div></div>
+        <div id="performance" class="tab-pane"><div class="card-modern"><div class="card-header-modern"><i class="fas fa-chart-simple"></i> Performance Analysis</div><div class="card-body-modern"><div id="perfChart" class="chart-container"></div><div class="table-container mt-4"><table class="table-modern w-100" id="perfTable"><thead><tr><th>Manager</th><th>Actual</th><th>Target</th><th>Achievement</th><th>Quality</th><th>Safety</th><th>Status</th></tr></thead><tbody></tbody></table></div></div></div></div>
     </div>
     <div class="refresh-btn" onclick="loadAllData()"><i class="fas fa-sync-alt"></i></div>
 
@@ -600,7 +597,7 @@
     <script>
         // ==================== GOOGLE SHEETS CONFIGURATION ====================
         const CONFIG = {
-            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyERmtY-cuKkmxyWz3uBupCBl_8fqcZBxd1kTaCLJSO4AvC-H6-fa0IIACDRVVlSfGLDg/exec',
+            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbybhFRTuiwfEv4395f6KBfyEh8V6xeQg9-BHWT1UeuRqEXQPfLICNJOrMHN4pO-a7JMmw/exec',
             PROJECTS_SHEET_ID: '1YNQ4pwOdddNGr-_Gef2bbxVgoW4lKsXy-roPvfFmMEM',
             PROJECTS_SHEET_NAME: 'Projects',
             REVENUE_SHEET_ID: '1XW6-Kz9_8P0MKRHZlsYfz4BCGilatiQ1FoA_MGAKeqg',
@@ -653,133 +650,30 @@
             if(overlay) overlay.style.display = 'none'; 
         }
         
-        // Calculate gross profit preview
-        function calculateGrossProfit() {
-            var totalIncome = parseFloat(document.getElementById('totalIncome').value) || 0;
-            var marginPercent = parseFloat(document.getElementById('margin').value) || 0;
-            var grossProfit = totalIncome * (marginPercent / 100);
-            var previewDiv = document.getElementById('gpPreview');
-            if(previewDiv) {
-                previewDiv.innerHTML = `Gross Profit: ${formatCurrency(grossProfit)} (${marginPercent}% of Total Income)`;
-                if(marginPercent > 0 && marginPercent <= 100) {
-                    previewDiv.className = 'alert alert-success py-2 mb-3';
-                } else if(marginPercent > 100) {
-                    previewDiv.className = 'alert alert-warning py-2 mb-3';
-                } else {
-                    previewDiv.className = 'alert alert-info py-2 mb-3';
-                }
-            }
-        }
-        
-        // Load custom projects from localStorage
-        function loadCustomProjects() {
-            try {
-                const saved = localStorage.getItem(STORAGE_KEY_PROJECTS);
-                if (saved) {
-                    const customProjects = JSON.parse(saved);
-                    customProjects.forEach(p => {
-                        if (!dynamicProjectNames.includes(p)) dynamicProjectNames.push(p);
-                    });
-                }
-            } catch(e) { console.error('Error loading custom projects:', e); }
-        }
-        
-        // Save a new custom project
-        function saveCustomProject(projectName) {
-            if (!dynamicProjectNames.includes(projectName)) {
-                dynamicProjectNames.push(projectName);
-                const defaultProjects = ["DBSA Generators", "DBSA Rooiwal", "Joe Gqabi", "Temba", "Midvaal", "Coega", 
-                    "KZN General Buildings", "Tshwane", "Public Works Limpopo", "Limpopo Eskom Substation Ephraim Mogale", 
-                    "Naizna", "Cape Town", "COT Streetlights", "COT Electrification", "COT Metering", 
-                    "COE Streetlights", "Msunduzi E50", "Msunduzi Streetlights", "Msunduzi E33", "Msunduzi E47"];
-                const customProjects = dynamicProjectNames.filter(p => !defaultProjects.includes(p));
-                localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(customProjects));
-                return true;
-            }
-            return false;
-        }
-        
-        // Get saved budget for a project
-        function getSavedBudget(projectName) {
-            try {
-                const budgets = JSON.parse(localStorage.getItem(STORAGE_KEY_BUDGETS) || '{}');
-                return budgets[projectName] || null;
-            } catch(e) { return null; }
-        }
-        
-        // Save custom budget for a project
-        function saveBudgetForProject(projectName, budgetAmount) {
-            try {
-                const budgets = JSON.parse(localStorage.getItem(STORAGE_KEY_BUDGETS) || '{}');
-                budgets[projectName] = budgetAmount;
-                localStorage.setItem(STORAGE_KEY_BUDGETS, JSON.stringify(budgets));
-            } catch(e) { console.error('Error saving budget:', e); }
-        }
-        
-        // Add new project prompt
-        function addNewProjectPrompt() {
-            let newProject = prompt("Enter new project name:", "");
-            if (newProject && newProject.trim() !== "") {
-                newProject = newProject.trim();
-                if (!dynamicProjectNames.includes(newProject)) {
-                    saveCustomProject(newProject);
-                    populateProjectDropdowns();
-                    const select = document.getElementById('revProjectName');
-                    if (select) select.value = newProject;
-                    updateDailyBudget();
-                    alert(`✓ Project "${newProject}" added! You can now set a custom daily budget for it.`);
-                } else {
-                    alert("Project already exists in the list.");
-                    const select = document.getElementById('revProjectName');
-                    if (select) select.value = newProject;
-                    updateDailyBudget();
-                }
-            }
-        }
-        
-        // Save custom budget button handler
-        function saveCustomBudget() {
-            const projectName = document.getElementById('revProjectName').value;
-            const budgetField = document.getElementById('budgetRevenue');
-            if (!projectName) {
-                alert("Please select a project first.");
-                return;
-            }
-            let budgetValue = budgetField.value.replace(/[^0-9.-]/g, '');
-            let budgetNum = parseFloat(budgetValue);
-            if (isNaN(budgetNum) || budgetNum < 0) {
-                alert("Please enter a valid budget amount.");
-                return;
-            }
-            saveBudgetForProject(projectName, budgetNum);
-            budgetField.value = formatCurrency(budgetNum);
-            calculateVariance();
-            alert(`✓ Daily budget for "${projectName}" saved as ${formatCurrency(budgetNum)}. It will auto-load next time.`);
-        }
-        
-        // Populate project dropdowns
-        function populateProjectDropdowns() {
-            const revSelect = document.getElementById('revProjectName');
-            const invSelect = document.getElementById('invProjectName');
-            if (revSelect) {
-                let html = '<option value="">Select Project</option>';
-                dynamicProjectNames.forEach(p => html += `<option value="${p}">${p}</option>`);
-                revSelect.innerHTML = html;
-            }
-            if (invSelect) {
-                let html = '<option value="">Select Project</option>';
-                dynamicProjectNames.forEach(p => html += `<option value="${p}">${p}</option>`);
-                invSelect.innerHTML = html;
-            }
-        }
-        
-        // API call functions
+        // ==================== FIXED fetchFromSheet (MOST IMPORTANT) ====================
         async function fetchFromSheet(action) {
             const url = `${CONFIG.SCRIPT_URL}?action=${action}&_=${Date.now()}`;
+            
             const response = await fetch(url);
-            const result = await response.json();
-            if (!result.success) throw new Error(result.error || 'Failed to fetch data');
-            return result.data;
+            const text = await response.text(); // get raw response first
+            
+            console.log("RAW RESPONSE:", text);
+            
+            let result;
+            try {
+                result = JSON.parse(text);
+            } catch (e) {
+                throw new Error("Invalid JSON response from Google Script");
+            }
+
+            // 🔥 Handle BOTH formats (fix)
+            if (result.success !== undefined) {
+                if (!result.success) throw new Error(result.error || 'Failed to fetch data');
+                return result.data;
+            } else {
+                // fallback if your GAS returns raw array
+                return result;
+            }
         }
         
         async function postToSheet(action, data) {
@@ -969,16 +863,16 @@
             data.sort((a,b)=>b.variancePercent - a.variancePercent).forEach((p,idx)=>{ 
                 let statusBadge = p.variancePercent >= 0 ? 'badge-success' : (p.variancePercent >= -20 ? 'badge-warning' : 'badge-danger'); 
                 let statusText = p.variancePercent >= 0 ? 'Above Target' : (p.variancePercent >= -20 ? 'Slightly Behind' : 'Behind'); 
-                html += `\
-                    <td class="fw-bold">#${idx+1}</td>\
-                    <td><strong>${p.manager}</strong></td>\
-                    <td>${formatCurrency(p.actual)}</td>\
-                    <td>${formatCurrency(p.target)}</td>\
-                    <td class="${p.variancePercent>=0?'variance-positive':'variance-negative'}">${formatCurrency(p.actual-p.target)}</td>\
-                    <td>${p.variancePercent.toFixed(1)}%</td>\
-                    <td><div class="progress-bar-custom"><div class="progress-fill ${p.variancePercent>=0?'green':'red'}" style="width:${Math.min(100,Math.abs(p.variancePercent))}%"></div></div></td>\
-                    <td><span class="${statusBadge}">${statusText}</span></td>\
-                `; 
+                html += `<tr>
+                    <td class="fw-bold">#${idx+1}</td>
+                    <td><strong>${p.manager}</strong></td>
+                    <td>${formatCurrency(p.actual)}</td>
+                    <td>${formatCurrency(p.target)}</td>
+                    <td class="${p.variancePercent>=0?'variance-positive':'variance-negative'}">${formatCurrency(p.actual-p.target)}</td>
+                    <td>${p.variancePercent.toFixed(1)}%</td>
+                    <td><div class="progress-bar-custom"><div class="progress-fill ${p.variancePercent>=0?'green':'red'}" style="width:${Math.min(100,Math.abs(p.variancePercent))}%"></div></div></td>
+                    <td><span class="${statusBadge}">${statusText}</span></td>
+                </tr>`; 
             }); 
             var body = document.getElementById('managerComparisonBody');
             if(body) body.innerHTML = html || '<tr><td colspan="8">No data</td></tr>'; 
@@ -1045,6 +939,23 @@
             if(tbody) tbody.innerHTML = html; 
         }
         
+        function calculateGrossProfit() {
+            var totalIncome = parseFloat(document.getElementById('totalIncome').value) || 0;
+            var marginPercent = parseFloat(document.getElementById('margin').value) || 0;
+            var grossProfit = totalIncome * (marginPercent / 100);
+            var previewDiv = document.getElementById('gpPreview');
+            if(previewDiv) {
+                previewDiv.innerHTML = `Gross Profit: ${formatCurrency(grossProfit)} (${marginPercent}% of Total Income)`;
+                if(marginPercent > 0 && marginPercent <= 100) {
+                    previewDiv.className = 'alert alert-success py-2 mb-3';
+                } else if(marginPercent > 100) {
+                    previewDiv.className = 'alert alert-warning py-2 mb-3';
+                } else {
+                    previewDiv.className = 'alert alert-info py-2 mb-3';
+                }
+            }
+        }
+        
         function calculateVariance() {
             let actual = parseFloat(document.getElementById('revAmount').value)||0;
             let budget = parseFloat(document.getElementById('budgetRevenue').value.replace(/[^0-9.-]/g,''))||0;
@@ -1054,6 +965,86 @@
             if(varianceEl) varianceEl.value = formatCurrency(varAmt);
             if(variancePercentEl) variancePercentEl.value = budget>0?((varAmt/budget)*100).toFixed(1)+'%':'0%';
             if(varianceEl) varianceEl.style.color = varAmt >= 0 ? '#10b981' : '#ef4444';
+        }
+        
+        function loadCustomProjects() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY_PROJECTS);
+                if (saved) {
+                    const customProjects = JSON.parse(saved);
+                    customProjects.forEach(p => {
+                        if (!dynamicProjectNames.includes(p)) dynamicProjectNames.push(p);
+                    });
+                }
+            } catch(e) { console.error('Error loading custom projects:', e); }
+        }
+        
+        function saveCustomProject(projectName) {
+            if (!dynamicProjectNames.includes(projectName)) {
+                dynamicProjectNames.push(projectName);
+                const defaultProjects = ["DBSA Generators", "DBSA Rooiwal", "Joe Gqabi", "Temba", "Midvaal", "Coega", 
+                    "KZN General Buildings", "Tshwane", "Public Works Limpopo", "Limpopo Eskom Substation Ephraim Mogale", 
+                    "Naizna", "Cape Town", "COT Streetlights", "COT Electrification", "COT Metering", 
+                    "COE Streetlights", "Msunduzi E50", "Msunduzi Streetlights", "Msunduzi E33", "Msunduzi E47"];
+                const customProjects = dynamicProjectNames.filter(p => !defaultProjects.includes(p));
+                localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(customProjects));
+                return true;
+            }
+            return false;
+        }
+        
+        function getSavedBudget(projectName) {
+            try {
+                const budgets = JSON.parse(localStorage.getItem(STORAGE_KEY_BUDGETS) || '{}');
+                return budgets[projectName] || null;
+            } catch(e) { return null; }
+        }
+        
+        function saveBudgetForProject(projectName, budgetAmount) {
+            try {
+                const budgets = JSON.parse(localStorage.getItem(STORAGE_KEY_BUDGETS) || '{}');
+                budgets[projectName] = budgetAmount;
+                localStorage.setItem(STORAGE_KEY_BUDGETS, JSON.stringify(budgets));
+            } catch(e) { console.error('Error saving budget:', e); }
+        }
+        
+        function addNewProjectPrompt() {
+            let newProject = prompt("Enter new project name:", "");
+            if (newProject && newProject.trim() !== "") {
+                newProject = newProject.trim();
+                if (!dynamicProjectNames.includes(newProject)) {
+                    saveCustomProject(newProject);
+                    populateProjectDropdowns();
+                    const select = document.getElementById('revProjectName');
+                    if (select) select.value = newProject;
+                    updateDailyBudget();
+                    alert(`✓ Project "${newProject}" added! You can now set a custom daily budget for it.`);
+                } else {
+                    alert("Project already exists in the list.");
+                    const select = document.getElementById('revProjectName');
+                    if (select) select.value = newProject;
+                    updateDailyBudget();
+                }
+            }
+        }
+        
+        function saveCustomBudget() {
+            const projectName = document.getElementById('revProjectName').value;
+            const budgetField = document.getElementById('budgetRevenue');
+            if (!projectName) {
+                alert("Please select a project first.");
+                return;
+            }
+            let budgetValue = budgetField.value.replace(/[^0-9.-]/g, '');
+            let budgetNum = parseFloat(budgetValue);
+            if (isNaN(budgetNum) || budgetNum < 0) {
+                alert("Please enter a valid budget amount.");
+                return;
+            }
+            saveBudgetForProject(projectName, budgetNum);
+            budgetField.value = formatCurrency(budgetNum);
+            calculateVariance();
+            alert(`✓ Daily budget for "${projectName}" saved as ${formatCurrency(budgetNum)}. It will auto-load next time.`);
         }
         
         function updateDailyBudget() {
@@ -1087,6 +1078,42 @@
             }
             document.getElementById('budgetRevenue').value = formatCurrency(budget);
             calculateVariance();
+        }
+        
+        function populateProjectDropdowns() {
+            const revSelect = document.getElementById('revProjectName');
+            const invSelect = document.getElementById('invProjectName');
+            if (revSelect) {
+                let html = '<option value="">Select Project</option>';
+                dynamicProjectNames.forEach(p => html += `<option value="${p}">${p}</option>`);
+                revSelect.innerHTML = html;
+            }
+            if (invSelect) {
+                let html = '<option value="">Select Project</option>';
+                dynamicProjectNames.forEach(p => html += `<option value="${p}">${p}</option>`);
+                invSelect.innerHTML = html;
+            }
+        }
+        
+        function populateDropdownsStatic() { 
+            ['revManager','invManager','projectManager'].forEach(id=>{ 
+                let sel=document.getElementById(id); 
+                if(sel) sel.innerHTML='<option value="">Select Manager</option>'+PROJECT_MANAGERS.map(m=>`<option value="${m}">${m}</option>`).join(''); 
+            }); 
+            populateProjectDropdowns();
+        }
+        
+        function initQualityStars() { 
+            const stars = document.querySelectorAll('#qualityStars .rating-star'); 
+            stars.forEach(star=>{ 
+                star.addEventListener('click',()=>{ 
+                    let score=parseInt(star.dataset.score); 
+                    document.getElementById('qualityScoreInput').value=score; 
+                    stars.forEach(s=>s.classList.remove('active')); 
+                    stars.forEach(s=>{ if(parseInt(s.dataset.score)<=score) s.classList.add('active'); }); 
+                }); 
+                if(parseInt(star.dataset.score)<=80) star.classList.add('active'); 
+            }); 
         }
         
         async function submitDailyRevenueWithQuality() { 
@@ -1149,27 +1176,6 @@
             finally { hideLoading(); } 
         }
         
-        function populateDropdownsStatic() { 
-            ['revManager','invManager','projectManager'].forEach(id=>{ 
-                let sel=document.getElementById(id); 
-                if(sel) sel.innerHTML='<option value="">Select Manager</option>'+PROJECT_MANAGERS.map(m=>`<option value="${m}">${m}</option>`).join(''); 
-            }); 
-            populateProjectDropdowns();
-        }
-        
-        function initQualityStars() { 
-            const stars = document.querySelectorAll('#qualityStars .rating-star'); 
-            stars.forEach(star=>{ 
-                star.addEventListener('click',()=>{ 
-                    let score=parseInt(star.dataset.score); 
-                    document.getElementById('qualityScoreInput').value=score; 
-                    stars.forEach(s=>s.classList.remove('active')); 
-                    stars.forEach(s=>{ if(parseInt(s.dataset.score)<=score) s.classList.add('active'); }); 
-                }); 
-                if(parseInt(star.dataset.score)<=80) star.classList.add('active'); 
-            }); 
-        }
-        
         function refreshAllUI() { 
             updateAllProgressBars(); 
             updateDivisionProgress(); 
@@ -1188,6 +1194,7 @@
             if(invDate) invDate.value = new Date().toISOString().split('T')[0]; 
         }
         
+        // ==================== MAIN loadAllData() - ONLY ONE VERSION ====================
         async function loadAllData() {
             showLoading("Fetching live data from Google Sheets...");
             try {
@@ -1282,6 +1289,14 @@
             }
         }
         
+        function exportFullReport() { 
+            let csv = 'Division,Manager,Project,Status,Total Income,Margin %,Gross Profit\n' + projects.map(p => `${p.Division},${p.Manager},${p.ProjectName},${p.Status},${p.TotalIncome},${p.Margin},${p.TotalIncome*(p.Margin/100)}`).join('\n'); 
+            let a=document.createElement('a'); 
+            a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); 
+            a.download='orderbook_report.csv'; 
+            a.click(); 
+        }
+        
         // Event Listeners
         var mgrProgressPeriod = document.querySelectorAll('#managerProgressPeriod .manager-period-btn');
         if(mgrProgressPeriod.length) {
@@ -1356,7 +1371,6 @@
             }));
         }
         
-        // Add event listeners for budget updates
         var revManager = document.getElementById('revManager');
         var revProjectName = document.getElementById('revProjectName');
         var budgetRevenue = document.getElementById('budgetRevenue');
@@ -1365,26 +1379,17 @@
         if(revProjectName) revProjectName.addEventListener('change', updateDailyBudget);
         if(budgetRevenue) budgetRevenue.addEventListener('input', calculateVariance);
         
-        // Add event listeners for margin calculation
         var totalIncomeInput = document.getElementById('totalIncome');
         var marginInput = document.getElementById('margin');
         if(totalIncomeInput) totalIncomeInput.addEventListener('input', calculateGrossProfit);
         if(marginInput) marginInput.addEventListener('input', calculateGrossProfit);
-        
-        function exportFullReport() { 
-            let csv = 'Division,Manager,Project,Status,Total Income,Margin %,Gross Profit\n' + projects.map(p => `${p.Division},${p.Manager},${p.ProjectName},${p.Status},${p.TotalIncome},${p.Margin},${p.TotalIncome*(p.Margin/100)}`).join('\n'); 
-            let a=document.createElement('a'); 
-            a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); 
-            a.download='orderbook_report.csv'; 
-            a.click(); 
-        }
         
         // Initialize
         loadCustomProjects();
         populateDropdownsStatic();
         initQualityStars();
         initCharts();
-        calculateGrossProfit(); // Initialize gross profit display
+        calculateGrossProfit();
         loadAllData();
     </script>
 </body>
