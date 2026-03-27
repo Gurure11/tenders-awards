@@ -262,7 +262,6 @@
             color: white;
         }
         
-        /* New styles for project name with add button */
         .project-input-group {
             display: flex;
             gap: 8px;
@@ -379,7 +378,7 @@
             <div class="nav-tab-modern" data-tab="performance">📈 Performance Analysis</div>
         </div>
         
-        <!-- Dashboard Tab (same structure) -->
+        <!-- Dashboard Tab -->
         <div id="dashboard" class="tab-pane active">
             <div class="kpi-grid">
                 <div class="kpi-card"><div class="kpi-icon"><i class="fas fa-check-circle text-success"></i></div><div class="kpi-label">Total Confirmed</div><div class="kpi-value" id="totalConfirmed">R 0</div></div>
@@ -482,8 +481,8 @@
                         <div class="card-body-modern">
                             <div class="table-container">
                                 <table class="table-modern w-100" id="managerComparisonTable">
-                                    <thead>32<th>Rank</th><th>Manager</th><th>Actual Revenue</th><th>Target Revenue</th><th>Variance (R)</th><th>Variance %</th><th>Progress</th><th>Status</th> </thead>
-                                    <tbody id="managerComparisonBody"> <tr><td colspan="8" class="text-center">Loading...</td></tr> </tbody>
+                                    <thead><tr><th>Rank</th><th>Manager</th><th>Actual Revenue</th><th>Target Revenue</th><th>Variance (R)</th><th>Variance %</th><th>Progress</th><th>Status</th></tr></thead>
+                                    <tbody id="managerComparisonBody"><tr><td colspan="8" class="text-center">Loading...</td></tr></tbody>
                                 </table>
                             </div>
                         </div>
@@ -497,7 +496,7 @@
         <!-- Project Entry Tab -->
         <div id="projects" class="tab-pane"><div class="card-modern"><div class="card-header-modern"><i class="fas fa-plus-circle"></i> Add New Project</div><div class="card-body-modern"><form id="projectForm" onsubmit="return false;"><div class="row g-3"><div class="col-md-3"><input type="text" class="form-control" id="projectName" placeholder="Project Name" required></div><div class="col-md-2"><select class="form-select" id="costCentre"><option>Onpoint Group</option><option>Nkanyezi Projects</option><option>Aqua Telecoms</option><option>DI Solutions</option></select></div><div class="col-md-2"><select class="form-select" id="projectManager" required></select></div><div class="col-md-2"><select class="form-select" id="projectStatus"><option>Confirmed</option><option>Forecast</option></select></div><div class="col-md-2"><input type="number" class="form-control" id="totalIncome" placeholder="Total Income (R)" required></div><div class="col-md-1"><input type="number" class="form-control" id="margin" placeholder="Margin %" value="25"></div><div class="col-12"><button type="button" class="btn btn-primary rounded-pill px-4" onclick="submitProject()"><i class="fas fa-save me-2"></i>Save Project</button></div></div></form></div></div></div>
         
-        <!-- Daily Revenue Tab - UPDATED with Add Project and Save Budget features -->
+        <!-- Daily Revenue Tab with Add Project and Save Budget features -->
         <div id="revenue" class="tab-pane">
             <div class="card-modern">
                 <div class="card-header-modern"><i class="fas fa-calendar-day"></i> Daily Revenue & Performance Entry</div>
@@ -536,18 +535,24 @@
         <div id="invoices" class="tab-pane"><div class="card-modern"><div class="card-header-modern"><i class="fas fa-receipt"></i> Invoice Entry</div><div class="card-body-modern"><div class="row g-3"><div class="col-md-3"><label>Invoice Date</label><input type="date" class="form-control" id="invDate"></div><div class="col-md-3"><label>Manager</label><select class="form-select" id="invManager"></select></div><div class="col-md-4"><label>Project</label><select class="form-select" id="invProjectName"></select></div><div class="col-md-2"><label>Amount</label><input type="number" class="form-control" id="invAmount"></div></div><div class="row mt-3"><div class="col-12"><button class="btn btn-primary rounded-pill px-4" onclick="submitInvoice()">Save Invoice</button></div></div></div></div></div>
         
         <!-- Order Book Tab -->
-        <div id="orderbook" class="tab-pane"><div class="card-modern"><div class="card-header-modern"><i class="fas fa-book"></i> Order Book</div><div class="card-body-modern"><div class="table-container"><table class="table-modern w-100" id="orderBookTable"><thead id="orderBookHeader"></thead><tbody id="orderBookBody"></tbody>}</div></div></div></div>
+        <div id="orderbook" class="tab-pane"><div class="card-modern"><div class="card-header-modern"><i class="fas fa-book"></i> Order Book</div><div class="card-body-modern"><div class="table-container"><table class="table-modern w-100" id="orderBookTable"><thead id="orderBookHeader"></thead><tbody id="orderBookBody"></tbody></table></div></div></div></div>
         
         <!-- Performance Tab -->
-        <div id="performance" class="tab-pane"><div class="card-modern"><div class="card-header-modern"><i class="fas fa-chart-simple"></i> Performance Analysis</div><div class="card-body-modern"><div id="perfChart" class="chart-container"></div><div class="table-container mt-4"><table class="table-modern w-100" id="perfTable"><thead>32<th>Manager</th><th>Actual</th><th>Target</th><th>Achievement</th><th>Quality</th><th>Safety</th><th>Status</th> </thead><tbody></tbody>}</div></div></div></div>
+        <div id="performance" class="tab-pane"><div class="card-modern"><div class="card-header-modern"><i class="fas fa-chart-simple"></i> Performance Analysis</div><div class="card-body-modern"><div id="perfChart" class="chart-container"></div><div class="table-container mt-4"><table class="table-modern w-100" id="perfTable"><thead><th>Manager</th><th>Actual</th><th>Target</th><th>Achievement</th><th>Quality</th><th>Safety</th><th>Status</th></thead><tbody></tbody></table></div></div></div></div>
     </div>
     <div class="refresh-btn" onclick="loadAllData()"><i class="fas fa-sync-alt"></i></div>
 
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script>
-        // Configuration - REPLACE WITH YOUR DEPLOYED WEB APP URL
+        // ==================== GOOGLE SHEETS CONFIGURATION ====================
         const CONFIG = { 
-            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzIdp_Op-FkMDT-DgCFiKZ7yoZaDSqFoV61R1IJm2xCY8541BG30TrPoIoG8E4ly7i6/exec',
+            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwF7dzsu65Kr4cl7UAWbmxf01BMP8wHHaFeYKzsQA0QShARNbeOszhyEdyhDrs0Zdc-/exec', // REPLACE WITH YOUR WEB APP URL
+            PROJECTS_SHEET_ID: '1YNQ4pwOdddNGr-_Gef2bbxVgoW4lKsXy-roPvfFmMEM',
+            PROJECTS_SHEET_NAME: 'Projects',
+            REVENUE_SHEET_ID: '1XW6-Kz9_8P0MKRHZlsYfz4BCGilatiQ1FoA_MGAKeqg',
+            REVENUE_SHEET_NAME: 'Revenue',
+            INVOICES_SHEET_ID: '1h1hoJkc6J1VYfj52R7v2fTNLjWnf865b8I7VTR4Cqeg',
+            INVOICES_SHEET_NAME: 'invoices',
             FORECAST_SHEET_ID: '1QPKVVGL5iQVJS8BcerOwDtbbrHw_E5_M0cYxYGK1twI'
         };
         
@@ -597,12 +602,11 @@
         function saveCustomProject(projectName) {
             if (!dynamicProjectNames.includes(projectName)) {
                 dynamicProjectNames.push(projectName);
-                const customProjects = dynamicProjectNames.filter(p => 
-                    !["DBSA Generators", "DBSA Rooiwal", "Joe Gqabi", "Temba", "Midvaal", "Coega", 
-                      "KZN General Buildings", "Tshwane", "Public Works Limpopo", "Limpopo Eskom Substation Ephraim Mogale", 
-                      "Naizna", "Cape Town", "COT Streetlights", "COT Electrification", "COT Metering", 
-                      "COE Streetlights", "Msunduzi E50", "Msunduzi Streetlights", "Msunduzi E33", "Msunduzi E47"].includes(p)
-                );
+                const defaultProjects = ["DBSA Generators", "DBSA Rooiwal", "Joe Gqabi", "Temba", "Midvaal", "Coega", 
+                    "KZN General Buildings", "Tshwane", "Public Works Limpopo", "Limpopo Eskom Substation Ephraim Mogale", 
+                    "Naizna", "Cape Town", "COT Streetlights", "COT Electrification", "COT Metering", 
+                    "COE Streetlights", "Msunduzi E50", "Msunduzi Streetlights", "Msunduzi E33", "Msunduzi E47"];
+                const customProjects = dynamicProjectNames.filter(p => !defaultProjects.includes(p));
                 localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(customProjects));
                 return true;
             }
@@ -678,6 +682,25 @@
                 dynamicProjectNames.forEach(p => html += `<option value="${p}">${p}</option>`);
                 invSelect.innerHTML = html;
             }
+        }
+        
+        // API call functions using the correct Sheet IDs
+        async function fetchFromSheet(action) {
+            const url = `${CONFIG.SCRIPT_URL}?action=${action}&_=${Date.now()}`;
+            const response = await fetch(url);
+            const result = await response.json();
+            if (!result.success) throw new Error(result.error);
+            return result.data;
+        }
+        
+        async function postToSheet(action, data) {
+            const response = await fetch(CONFIG.SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action, data })
+            });
+            const result = await response.json();
+            if (!result.success) throw new Error(result.error);
+            return result;
         }
         
         function getPeriodData(period) {
@@ -823,7 +846,7 @@
         
         function updateDashboard() { const { actual, target, percent } = getPeriodData(currentDashboardPeriod); document.getElementById('periodRevenue').innerHTML = formatCurrency(actual); document.getElementById('periodTarget').innerHTML = formatCurrency(target); document.getElementById('periodProgress').style.width = Math.min(100, percent) + '%'; document.getElementById('periodAch').innerHTML = percent.toFixed(0) + '%'; document.getElementById('activeProjects').innerHTML = projects.length; document.getElementById('confirmedCount').innerHTML = projects.filter(p => p.Status === 'Confirmed').length; updateGrossProfitDisplay(); }
         function updateOrderBookSummary() { const confirmed = projects.filter(p => p.Status === 'Confirmed').reduce((s,p) => s + p.TotalIncome,0); const forecast = projects.filter(p => p.Status === 'Forecast').reduce((s,p) => s + p.TotalIncome,0); const mtd = dailyEntries.filter(e => new Date(e.date).getMonth() === new Date().getMonth()).reduce((s,e) => s + e.amount,0); document.getElementById('totalConfirmed').innerHTML = formatCurrency(confirmed); document.getElementById('totalForecast').innerHTML = formatCurrency(forecast); document.getElementById('totalOrderBook').innerHTML = formatCurrency(confirmed+forecast); document.getElementById('groupBTYE').innerHTML = formatCurrency((forecast + confirmed*1.5) - mtd); document.getElementById('mtdActual').innerHTML = formatCurrency(mtd); }
-        function updateManagerComparisonTable() { const data = getManagerVarianceData(currentManagerComparisonPeriod); let html = ''; data.sort((a,b)=>b.variancePercent - a.variancePercent).forEach((p,idx)=>{ let statusBadge = p.variancePercent >= 0 ? 'badge-success' : (p.variancePercent >= -20 ? 'badge-warning' : 'badge-danger'); let statusText = p.variancePercent >= 0 ? 'Above Target' : (p.variancePercent >= -20 ? 'Slightly Behind' : 'Behind'); html += `<tr><td class="fw-bold">#${idx+1}</td><td><strong>${p.manager}</strong></td><td>${formatCurrency(p.actual)}</td><td>${formatCurrency(p.target)}</td><td class="${p.variancePercent>=0?'variance-positive':'variance-negative'}">${formatCurrency(p.actual-p.target)}</td><td>${p.variancePercent.toFixed(1)}%</td><td><div class="progress-bar-custom"><div class="progress-fill ${p.variancePercent>=0?'green':'red'}" style="width:${Math.min(100,Math.abs(p.variancePercent))}%"></div></div></td><td><span class="${statusBadge}">${statusText}</span></td></tr>`; }); document.getElementById('managerComparisonBody').innerHTML = html || '<tr><td colspan="8">No data</td></tr>'; }
+        function updateManagerComparisonTable() { const data = getManagerVarianceData(currentManagerComparisonPeriod); let html = ''; data.sort((a,b)=>b.variancePercent - a.variancePercent).forEach((p,idx)=>{ let statusBadge = p.variancePercent >= 0 ? 'badge-success' : (p.variancePercent >= -20 ? 'badge-warning' : 'badge-danger'); let statusText = p.variancePercent >= 0 ? 'Above Target' : (p.variancePercent >= -20 ? 'Slightly Behind' : 'Behind'); html += ` <tr><td class="fw-bold">#${idx+1}</td><td><strong>${p.manager}</strong></td><td>${formatCurrency(p.actual)}</td><td>${formatCurrency(p.target)}</td><td class="${p.variancePercent>=0?'variance-positive':'variance-negative'}">${formatCurrency(p.actual-p.target)}</td><td>${p.variancePercent.toFixed(1)}%</td><td><div class="progress-bar-custom"><div class="progress-fill ${p.variancePercent>=0?'green':'red'}" style="width:${Math.min(100,Math.abs(p.variancePercent))}%"></div></div></td><td><span class="${statusBadge}">${statusText}</span></td></tr>`; }); document.getElementById('managerComparisonBody').innerHTML = html || '<tr><td colspan="8">No data</td></tr>'; }
         function updateRevenueChart() { if(window.revenueChart) { window.revenueChart.updateOptions({ xaxis: { categories: [] } }); window.revenueChart.updateSeries([{ name: 'Budget', data: [] }, { name: 'Actual', data: [] }]); } }
         function updateManagerChart() { const data = getManagerVarianceData(currentManagerPeriod); let chartData = data.map(d => ({ name: d.manager.split(' ')[0], variance: d.variancePercent })).sort((a,b)=>b.variance - a.variance); if(window.managerChart) { window.managerChart.updateOptions({ xaxis: { categories: chartData.map(d => d.name) } }); window.managerChart.updateSeries([{ name: 'Variance %', data: chartData.map(d => d.variance) }]); } }
         function updateOrderBook() { let headers = '<tr><th>Division</th><th>Manager</th><th>Project Name</th><th>Status</th><th>Total Income</th><th>Margin %</th><th>Gross Profit</th></tr>'; document.getElementById('orderBookHeader').innerHTML = headers; let body = ''; projects.forEach(p => { body += `<tr><td>${p.Division||'Onpoint'}</td><td>${p.Manager||'Unassigned'}</td><td><strong>${p.ProjectName}</strong></td><td><span class="badge-${p.Status==='Confirmed'?'success':'warning'}">${p.Status||'Forecast'}</span></td><td>${formatCurrency(p.TotalIncome)}</td><td>${p.Margin}%</td><td>${formatCurrency(p.TotalIncome * (p.Margin/100))}</td></tr>`; }); document.getElementById('orderBookBody').innerHTML = body; }
@@ -865,7 +888,6 @@
             if (matchedProject) {
                 budget = (matchedProject.months?.[monthIdx] || matchedProject.TotalIncome/12) / 22;
             } else {
-                // If project not found in projects sheet, try to find any project with same name
                 const anyMatch = projects.find(p => p.ProjectName === selectedProject);
                 if (anyMatch) {
                     budget = (anyMatch.months?.[monthIdx] || anyMatch.TotalIncome/12) / 22;
@@ -880,11 +902,10 @@
             if(!rev.manager||!rev.projectName||rev.amount<=0) { alert('Fill all fields'); return; } 
             showLoading("Saving revenue data...");
             try { 
-                const response = await fetch(CONFIG.SCRIPT_URL, { method:'POST', body:JSON.stringify({ action:'addRevenue', data:rev }) }); 
-                const result = await response.json(); 
-                if(result.success) { alert('✓ Revenue saved to Google Sheets!'); loadAllData(); } 
-                else { alert('✗ Error: ' + (result.error || 'Unknown error')); }
-            } catch(e) { alert('⚠️ Connection error: ' + e.message); } 
+                await postToSheet('addRevenue', rev);
+                alert('✓ Revenue saved to Google Sheets!'); 
+                await loadAllData(); 
+            } catch(e) { alert('✗ Error: ' + e.message); } 
             finally { hideLoading(); document.getElementById('revAmount').value=''; document.getElementById('safetyIncidentsInput').value='0'; } 
         }
         
@@ -893,11 +914,10 @@
             if(!inv.manager||!inv.projectName||inv.amount<=0) { alert('Fill all fields'); return; } 
             showLoading("Saving invoice...");
             try { 
-                const response = await fetch(CONFIG.SCRIPT_URL, { method:'POST', body:JSON.stringify({ action:'addInvoice', data:inv }) }); 
-                const result = await response.json(); 
-                if(result.success) { alert('✓ Invoice saved!'); loadAllData(); } 
-                else { alert('✗ Error: ' + (result.error || 'Unknown error')); }
-            } catch(e) { alert('⚠️ Connection error'); } 
+                await postToSheet('addInvoice', inv);
+                alert('✓ Invoice saved!'); 
+                await loadAllData(); 
+            } catch(e) { alert('✗ Error: ' + e.message); } 
             finally { hideLoading(); document.getElementById('invAmount').value=''; } 
         }
         
@@ -906,11 +926,11 @@
             if(!proj.projectName||!proj.manager||proj.totalIncome<=0) { alert('Fill all fields'); return; } 
             showLoading("Saving project...");
             try { 
-                const response = await fetch(CONFIG.SCRIPT_URL, { method:'POST', body:JSON.stringify({ action:'addProject', data:proj }) }); 
-                const result = await response.json(); 
-                if(result.success) { alert('✓ Project saved!'); loadAllData(); document.getElementById('projectForm').reset(); } 
-                else { alert('✗ Error: ' + (result.error || 'Unknown error')); }
-            } catch(e) { alert('⚠️ Connection error'); } 
+                await postToSheet('addProject', proj);
+                alert('✓ Project saved!'); 
+                await loadAllData(); 
+                document.getElementById('projectForm').reset(); 
+            } catch(e) { alert('✗ Error: ' + e.message); } 
             finally { hideLoading(); } 
         }
         
@@ -930,35 +950,26 @@
         async function loadAllData() {
             showLoading("Fetching live data from Google Sheets...");
             try {
-                const projectsResponse = await fetch(`${CONFIG.SCRIPT_URL}?action=getProjects&_=${Date.now()}`);
-                const projectsResult = await projectsResponse.json();
-                if(projectsResult.success) {
-                    projects = (projectsResult.data || []).map(p => ({ 
-                        ...p, Division: p.Division || p.costCentre || 'Onpoint Group', Manager: p.Manager || 'Unassigned', 
-                        ProjectName: p.ProjectName || 'Unknown', Status: p.Status || 'Forecast', 
-                        TotalIncome: parseNumber(p.TotalIncome), Margin: parseNumber(p.Margin)||20, 
-                        months: [parseNumber(p.Mar26), parseNumber(p.Apr26), parseNumber(p.May26), parseNumber(p.Jun26), parseNumber(p.Jul26), parseNumber(p.Aug26), parseNumber(p.Sep26), parseNumber(p.Oct26), parseNumber(p.Nov26), parseNumber(p.Dec26), parseNumber(p.Jan27), parseNumber(p.Feb27)] 
-                    }));
-                } else throw new Error(projectsResult.error);
+                const projectsData = await fetchFromSheet('getProjects');
+                projects = (projectsData || []).map(p => ({ 
+                    ...p, Division: p.Division || p.costCentre || 'Onpoint Group', Manager: p.Manager || 'Unassigned', 
+                    ProjectName: p.ProjectName || 'Unknown', Status: p.Status || 'Forecast', 
+                    TotalIncome: parseNumber(p.TotalIncome), Margin: parseNumber(p.Margin)||20, 
+                    months: [parseNumber(p.Mar26), parseNumber(p.Apr26), parseNumber(p.May26), parseNumber(p.Jun26), parseNumber(p.Jul26), parseNumber(p.Aug26), parseNumber(p.Sep26), parseNumber(p.Oct26), parseNumber(p.Nov26), parseNumber(p.Dec26), parseNumber(p.Jan27), parseNumber(p.Feb27)] 
+                }));
                 
-                const revenueResponse = await fetch(`${CONFIG.SCRIPT_URL}?action=getRevenue&_=${Date.now()}`);
-                const revenueResult = await revenueResponse.json();
-                if(revenueResult.success) {
-                    dailyEntries = (revenueResult.data || []).map(r => ({ date: (r.Date||'').split('T')[0], manager: r.Manager, projectName: r.ProjectName, amount: parseNumber(r.Amount), quality: parseNumber(r.Quality)||80, safety: parseNumber(r.Safety)||0 }));
-                } else throw new Error(revenueResult.error);
+                const revenueData = await fetchFromSheet('getRevenue');
+                dailyEntries = (revenueData || []).map(r => ({ date: (r.Date||'').split('T')[0], manager: r.Manager, projectName: r.ProjectName, amount: parseNumber(r.Amount), quality: parseNumber(r.Quality)||80, safety: parseNumber(r.Safety)||0 }));
                 
-                const invoicesResponse = await fetch(`${CONFIG.SCRIPT_URL}?action=getInvoices&_=${Date.now()}`);
-                const invoicesResult = await invoicesResponse.json();
-                if(invoicesResult.success) {
-                    invoices = (invoicesResult.data || []).map(i => ({ date: (i.Date||'').split('T')[0], manager: i.Manager, projectName: i.ProjectName, amount: parseNumber(i.Amount), paymentReceived: i.PaymentReceived === 'TRUE' }));
-                } else throw new Error(invoicesResult.error);
+                const invoicesData = await fetchFromSheet('getInvoices');
+                invoices = (invoicesData || []).map(i => ({ date: (i.Date||'').split('T')[0], manager: i.Manager, projectName: i.ProjectName, amount: parseNumber(i.Amount), paymentReceived: i.PaymentReceived === 'TRUE' }));
                 
                 document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-check-circle me-1"></i> Live Connected';
                 document.getElementById('connectionStatus').className = 'connection-status status-connected';
                 refreshAllUI();
             } catch(e) { 
                 console.error("Connection Error:", e); 
-                document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> Connection Failed - Check Web App URL';
+                document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> Connection Failed';
                 document.getElementById('connectionStatus').className = 'connection-status status-disconnected';
             } finally { hideLoading(); }
         }
