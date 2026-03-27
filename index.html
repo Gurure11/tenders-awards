@@ -545,15 +545,16 @@
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script>
         // ==================== GOOGLE SHEETS CONFIGURATION ====================
-        const CONFIG = { const CONFIG = { 
-    SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzeyqrHSxAm9_e69wNPq3tQXFTb6fTHpbo2rwMisZnOzfnSgm5Dkk7l2zzYRcKP2Bc1pA/exec', // ← REPLACE THIS
-    PROJECTS_SHEET_ID: '1YNQ4pwOdddNGr-_Gef2bbxVgoW4lKsXy-roPvfFmMEM',
-    PROJECTS_SHEET_NAME: 'Projects',
-    REVENUE_SHEET_ID: '1XW6-Kz9_8P0MKRHZlsYfz4BCGilatiQ1FoA_MGAKeqg',
-    REVENUE_SHEET_NAME: 'Revenue',
-    INVOICES_SHEET_ID: '1h1hoJkc6J1VYfj52R7v2fTNLjWnf865b8I7VTR4Cqeg',
-    INVOICES_SHEET_NAME: 'invoices'
-};
+        const CONFIG = {
+            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycby11Bv0BrffYRyVaccJmM8cluQB-W2W-7HQYSVWx1IHOzB7dXgMiPwxljdH0Yi2BUDd/exec',
+            PROJECTS_SHEET_ID: '1YNQ4pwOdddNGr-_Gef2bbxVgoW4lKsXy-roPvfFmMEM',
+            PROJECTS_SHEET_NAME: 'Projects',
+            REVENUE_SHEET_ID: '1XW6-Kz9_8P0MKRHZlsYfz4BCGilatiQ1FoA_MGAKeqg',
+            REVENUE_SHEET_NAME: 'Revenue',
+            INVOICES_SHEET_ID: '1h1hoJkc6J1VYfj52R7v2fTNLjWnf865b8I7VTR4Cqeg',
+            INVOICES_SHEET_NAME: 'invoices'
+        };
+        
         // Gross Profit by Division Data from Forecast Sheet
         const DIVISION_GP_DATA = {
             "Onpoint Group": { revenue: 306041304, gp: 94756891, margin: 0.31 },
@@ -632,7 +633,6 @@
                 if (!dynamicProjectNames.includes(newProject)) {
                     saveCustomProject(newProject);
                     populateProjectDropdowns();
-                    // Auto-select the new project
                     const select = document.getElementById('revProjectName');
                     if (select) select.value = newProject;
                     updateDailyBudget();
@@ -694,7 +694,7 @@
         async function postToSheet(action, data) {
             const response = await fetch(CONFIG.SCRIPT_URL, {
                 method: 'POST',
-                body: JSON.stringify({ action, data })
+                body: JSON.stringify({ action: action, data: data })
             });
             const result = await response.json();
             if (!result.success) throw new Error(result.error);
@@ -711,14 +711,14 @@
             let actual = 0, target = 0;
             if(period === 'daily') {
                 actual = dailyEntries.filter(e => e.date === todayStr).reduce((s,e) => s + e.amount, 0);
-                target = projects.reduce((s,p) => s + ((p.months?.[monthIdx] || p.TotalIncome/12) / workingDays), 0);
+                target = projects.reduce((s,p) => s + ((p.months && p.months[monthIdx] ? p.months[monthIdx] : p.TotalIncome/12) / workingDays), 0);
             } else if(period === 'weekly') {
                 const weekStart = new Date(); weekStart.setDate(today.getDate() - today.getDay());
                 actual = dailyEntries.filter(e => new Date(e.date) >= weekStart).reduce((s,e) => s + e.amount, 0);
-                target = projects.reduce((s,p) => s + ((p.months?.[monthIdx] || p.TotalIncome/12) / workingDays) * 7, 0);
+                target = projects.reduce((s,p) => s + ((p.months && p.months[monthIdx] ? p.months[monthIdx] : p.TotalIncome/12) / workingDays) * 7, 0);
             } else if(period === 'monthly') {
                 actual = dailyEntries.filter(e => new Date(e.date).getMonth() === currentMonth).reduce((s,e) => s + e.amount, 0);
-                target = projects.reduce((s,p) => s + (p.months?.[monthIdx] || p.TotalIncome/12), 0);
+                target = projects.reduce((s,p) => s + (p.months && p.months[monthIdx] ? p.months[monthIdx] : p.TotalIncome/12), 0);
             } else if(period === 'quarterly') {
                 const currentQuarter = Math.floor(currentMonth / 3);
                 actual = dailyEntries.filter(e => Math.floor(new Date(e.date).getMonth() / 3) === currentQuarter).reduce((s,e) => s + e.amount, 0);
@@ -762,20 +762,21 @@
             projects.forEach(p => {
                 const div = p.Division || p.costCentre || 'Onpoint Group';
                 if(monthlyTarget[div] !== undefined) {
-                    monthlyTarget[div] += p.months?.[(currentMonth+10)%12] || p.TotalIncome/12;
+                    monthlyTarget[div] += (p.months && p.months[(currentMonth+10)%12] ? p.months[(currentMonth+10)%12] : p.TotalIncome/12);
                 }
             });
             
             dailyEntries.forEach(e => {
                 if(new Date(e.date).getMonth() === currentMonth) {
                     const proj = projects.find(p => p.ProjectName === e.projectName);
-                    const div = proj?.Division || proj?.costCentre || 'Onpoint Group';
+                    const div = proj ? (proj.Division || proj.costCentre || 'Onpoint Group') : 'Onpoint Group';
                     if(monthlyActual[div] !== undefined) monthlyActual[div] += e.amount;
                 }
             });
             
             let html = '<div class="row">';
-            for(let [div, target] of Object.entries(monthlyTarget)) {
+            for(let div in monthlyTarget) {
+                const target = monthlyTarget[div];
                 const actual = monthlyActual[div] || 0;
                 const percent = target > 0 ? (actual / target) * 100 : 0;
                 const colorClass = percent >= 80 ? 'green' : (percent >= 50 ? 'orange' : 'red');
@@ -796,7 +797,7 @@
             
             projects.forEach(p => {
                 if(mgrData[p.Manager]) {
-                    let monthlyTarget = p.months?.[monthIdx] || p.TotalIncome/12;
+                    let monthlyTarget = p.months && p.months[monthIdx] ? p.months[monthIdx] : p.TotalIncome/12;
                     if(period === 'daily') mgrData[p.Manager].target += monthlyTarget / workingDays;
                     else if(period === 'weekly') mgrData[p.Manager].target += (monthlyTarget / workingDays) * 7;
                     else if(period === 'monthly') mgrData[p.Manager].target += monthlyTarget;
@@ -836,15 +837,15 @@
         
         function updatePieChart() {
             let labels = [], values = [];
-            for(let [div, data] of Object.entries(DIVISION_GP_DATA)) {
-                if(data.gp > 0) { labels.push(div); values.push(data.gp); }
+            for(let div in DIVISION_GP_DATA) {
+                if(DIVISION_GP_DATA[div].gp > 0) { labels.push(div); values.push(DIVISION_GP_DATA[div].gp); }
             }
-            if(window.pieChart) { window.pieChart.updateOptions({ labels }); window.pieChart.updateSeries(values); }
+            if(window.pieChart) { window.pieChart.updateOptions({ labels: labels }); window.pieChart.updateSeries(values); }
         }
         
         function updateDashboard() { const { actual, target, percent } = getPeriodData(currentDashboardPeriod); document.getElementById('periodRevenue').innerHTML = formatCurrency(actual); document.getElementById('periodTarget').innerHTML = formatCurrency(target); document.getElementById('periodProgress').style.width = Math.min(100, percent) + '%'; document.getElementById('periodAch').innerHTML = percent.toFixed(0) + '%'; document.getElementById('activeProjects').innerHTML = projects.length; document.getElementById('confirmedCount').innerHTML = projects.filter(p => p.Status === 'Confirmed').length; updateGrossProfitDisplay(); }
         function updateOrderBookSummary() { const confirmed = projects.filter(p => p.Status === 'Confirmed').reduce((s,p) => s + p.TotalIncome,0); const forecast = projects.filter(p => p.Status === 'Forecast').reduce((s,p) => s + p.TotalIncome,0); const mtd = dailyEntries.filter(e => new Date(e.date).getMonth() === new Date().getMonth()).reduce((s,e) => s + e.amount,0); document.getElementById('totalConfirmed').innerHTML = formatCurrency(confirmed); document.getElementById('totalForecast').innerHTML = formatCurrency(forecast); document.getElementById('totalOrderBook').innerHTML = formatCurrency(confirmed+forecast); document.getElementById('groupBTYE').innerHTML = formatCurrency((forecast + confirmed*1.5) - mtd); document.getElementById('mtdActual').innerHTML = formatCurrency(mtd); }
-        function updateManagerComparisonTable() { const data = getManagerVarianceData(currentManagerComparisonPeriod); let html = ''; data.sort((a,b)=>b.variancePercent - a.variancePercent).forEach((p,idx)=>{ let statusBadge = p.variancePercent >= 0 ? 'badge-success' : (p.variancePercent >= -20 ? 'badge-warning' : 'badge-danger'); let statusText = p.variancePercent >= 0 ? 'Above Target' : (p.variancePercent >= -20 ? 'Slightly Behind' : 'Behind'); html += ` <tr><td class="fw-bold">#${idx+1}</td><td><strong>${p.manager}</strong></td><td>${formatCurrency(p.actual)}</td><td>${formatCurrency(p.target)}</td><td class="${p.variancePercent>=0?'variance-positive':'variance-negative'}">${formatCurrency(p.actual-p.target)}</td><td>${p.variancePercent.toFixed(1)}%</td><td><div class="progress-bar-custom"><div class="progress-fill ${p.variancePercent>=0?'green':'red'}" style="width:${Math.min(100,Math.abs(p.variancePercent))}%"></div></div></td><td><span class="${statusBadge}">${statusText}</span></td></tr>`; }); document.getElementById('managerComparisonBody').innerHTML = html || '<tr><td colspan="8">No data</td></tr>'; }
+        function updateManagerComparisonTable() { const data = getManagerVarianceData(currentManagerComparisonPeriod); let html = ''; data.sort((a,b)=>b.variancePercent - a.variancePercent).forEach((p,idx)=>{ let statusBadge = p.variancePercent >= 0 ? 'badge-success' : (p.variancePercent >= -20 ? 'badge-warning' : 'badge-danger'); let statusText = p.variancePercent >= 0 ? 'Above Target' : (p.variancePercent >= -20 ? 'Slightly Behind' : 'Behind'); html += `<tr><td class="fw-bold">#${idx+1}</td><td><strong>${p.manager}</strong></td><td>${formatCurrency(p.actual)}</td><td>${formatCurrency(p.target)}</td><td class="${p.variancePercent>=0?'variance-positive':'variance-negative'}">${formatCurrency(p.actual-p.target)}</td><td>${p.variancePercent.toFixed(1)}%</td><td><div class="progress-bar-custom"><div class="progress-fill ${p.variancePercent>=0?'green':'red'}" style="width:${Math.min(100,Math.abs(p.variancePercent))}%"></div></div></td><td><span class="${statusBadge}">${statusText}</span></td></tr>`; }); document.getElementById('managerComparisonBody').innerHTML = html || '<tr><td colspan="8">No data</td></tr>'; }
         function updateRevenueChart() { if(window.revenueChart) { window.revenueChart.updateOptions({ xaxis: { categories: [] } }); window.revenueChart.updateSeries([{ name: 'Budget', data: [] }, { name: 'Actual', data: [] }]); } }
         function updateManagerChart() { const data = getManagerVarianceData(currentManagerPeriod); let chartData = data.map(d => ({ name: d.manager.split(' ')[0], variance: d.variancePercent })).sort((a,b)=>b.variance - a.variance); if(window.managerChart) { window.managerChart.updateOptions({ xaxis: { categories: chartData.map(d => d.name) } }); window.managerChart.updateSeries([{ name: 'Variance %', data: chartData.map(d => d.variance) }]); } }
         function updateOrderBook() { let headers = '<tr><th>Division</th><th>Manager</th><th>Project Name</th><th>Status</th><th>Total Income</th><th>Margin %</th><th>Gross Profit</th></tr>'; document.getElementById('orderBookHeader').innerHTML = headers; let body = ''; projects.forEach(p => { body += `<tr><td>${p.Division||'Onpoint'}</td><td>${p.Manager||'Unassigned'}</td><td><strong>${p.ProjectName}</strong></td><td><span class="badge-${p.Status==='Confirmed'?'success':'warning'}">${p.Status||'Forecast'}</span></td><td>${formatCurrency(p.TotalIncome)}</td><td>${p.Margin}%</td><td>${formatCurrency(p.TotalIncome * (p.Margin/100))}</td></tr>`; }); document.getElementById('orderBookBody').innerHTML = body; }
@@ -870,7 +871,6 @@
                 return;
             }
             
-            // Check for saved custom budget first
             const savedBudget = getSavedBudget(selectedProject);
             if (savedBudget !== null) {
                 document.getElementById('budgetRevenue').value = formatCurrency(savedBudget);
@@ -878,17 +878,16 @@
                 return;
             }
             
-            // Otherwise calculate from projects data
             const monthIdx = (new Date().getMonth() + 10) % 12;
             const matchedProject = projects.find(p => p.ProjectName === selectedProject && (!selectedManager || p.Manager === selectedManager));
             
             let budget = 0;
             if (matchedProject) {
-                budget = (matchedProject.months?.[monthIdx] || matchedProject.TotalIncome/12) / 22;
+                budget = ((matchedProject.months && matchedProject.months[monthIdx] ? matchedProject.months[monthIdx] : matchedProject.TotalIncome/12) / 22);
             } else {
                 const anyMatch = projects.find(p => p.ProjectName === selectedProject);
                 if (anyMatch) {
-                    budget = (anyMatch.months?.[monthIdx] || anyMatch.TotalIncome/12) / 22;
+                    budget = ((anyMatch.months && anyMatch.months[monthIdx] ? anyMatch.months[monthIdx] : anyMatch.TotalIncome/12) / 22);
                 }
             }
             document.getElementById('budgetRevenue').value = formatCurrency(budget);
@@ -896,7 +895,7 @@
         }
         
         async function submitDailyRevenueWithQuality() { 
-            let rev = { date: document.getElementById('revDate').value, manager: document.getElementById('revManager').value, projectName: document.getElementById('revProjectName').value, amount: parseFloat(document.getElementById('revAmount').value)||0, quality: parseInt(document.getElementById('qualityScoreInput').value)||80, safety: parseInt(document.getElementById('safetyIncidentsInput').value)||0, costCentre: document.getElementById('costCentre')?.value || 'Onpoint Group' }; 
+            let rev = { date: document.getElementById('revDate').value, manager: document.getElementById('revManager').value, projectName: document.getElementById('revProjectName').value, amount: parseFloat(document.getElementById('revAmount').value)||0, quality: parseInt(document.getElementById('qualityScoreInput').value)||80, safety: parseInt(document.getElementById('safetyIncidentsInput').value)||0, costCentre: document.getElementById('costCentre') ? document.getElementById('costCentre').value : 'Onpoint Group' }; 
             if(!rev.manager||!rev.projectName||rev.amount<=0) { alert('Fill all fields'); return; } 
             showLoading("Saving revenue data...");
             try { 
@@ -969,6 +968,7 @@
                 console.error("Connection Error:", e); 
                 document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> Connection Failed';
                 document.getElementById('connectionStatus').className = 'connection-status status-disconnected';
+                alert('Failed to connect to Google Sheets. Please check your internet connection and try again.\n\nError: ' + e.message);
             } finally { hideLoading(); }
         }
         
