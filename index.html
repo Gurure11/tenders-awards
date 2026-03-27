@@ -545,17 +545,15 @@
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script>
         // ==================== GOOGLE SHEETS CONFIGURATION ====================
-        const CONFIG = { 
-            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzeyqrHSxAm9_e69wNPq3tQXFTb6fTHpbo2rwMisZnOzfnSgm5Dkk7l2zzYRcKP2Bc1pA/exec', // REPLACE WITH YOUR WEB APP URL
-            PROJECTS_SHEET_ID: '1YNQ4pwOdddNGr-_Gef2bbxVgoW4lKsXy-roPvfFmMEM',
-            PROJECTS_SHEET_NAME: 'Projects',
-            REVENUE_SHEET_ID: '1XW6-Kz9_8P0MKRHZlsYfz4BCGilatiQ1FoA_MGAKeqg',
-            REVENUE_SHEET_NAME: 'Revenue',
-            INVOICES_SHEET_ID: '1h1hoJkc6J1VYfj52R7v2fTNLjWnf865b8I7VTR4Cqeg',
-            INVOICES_SHEET_NAME: 'invoices',
-            FORECAST_SHEET_ID: '1QPKVVGL5iQVJS8BcerOwDtbbrHw_E5_M0cYxYGK1twI'
-        };
-        
+        const CONFIG = { const CONFIG = { 
+    SCRIPT_URL: 'https://script.google.com/macros/s/YOUR_NEW_DEPLOYMENT_ID/exec', // ← REPLACE THIS
+    PROJECTS_SHEET_ID: '1YNQ4pwOdddNGr-_Gef2bbxVgoW4lKsXy-roPvfFmMEM',
+    PROJECTS_SHEET_NAME: 'Projects',
+    REVENUE_SHEET_ID: '1XW6-Kz9_8P0MKRHZlsYfz4BCGilatiQ1FoA_MGAKeqg',
+    REVENUE_SHEET_NAME: 'Revenue',
+    INVOICES_SHEET_ID: '1h1hoJkc6J1VYfj52R7v2fTNLjWnf865b8I7VTR4Cqeg',
+    INVOICES_SHEET_NAME: 'invoices'
+};
         // Gross Profit by Division Data from Forecast Sheet
         const DIVISION_GP_DATA = {
             "Onpoint Group": { revenue: 306041304, gp: 94756891, margin: 0.31 },
