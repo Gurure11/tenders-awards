@@ -1,1107 +1,656 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Onpoint Group | Intelligent Management Dashboard - Live Google Sheets</title>
-    
-    <!-- CSS Dependencies -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/apexcharts/dist/apexcharts.css" rel="stylesheet">
-    
-    <!-- Excel Export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
-    <style>
-        :root {
-            --primary: #1e3c72;
-            --secondary: #2a5298;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --info: #3b82f6;
-            --gradient: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            --slate-50: #f8fafc;
-            --slate-100: #f1f5f9;
-            --slate-200: #e2e8f0;
-            --slate-500: #64748b;
-            --slate-700: #334155;
-            --slate-900: #0f172a;
-        }
-        
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-            min-height: 100vh;
-            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-            padding: 20px;
-        }
-        
-        .main-container { max-width: 1600px; margin: 0 auto; }
-        
-        .company-header {
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 32px;
-            padding: 25px 35px;
-            margin-bottom: 25px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.05);
-            border: 1px solid rgba(255,255,255,0.5);
-        }
-        
-        .company-title {
-            color: var(--primary);
-            font-size: 42px;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-        }
-        
-        .company-subtitle { color: var(--slate-500); font-size: 14px; font-weight: 500; }
-        
-        .connection-status {
-            display: inline-flex;
-            align-items: center;
-            padding: 6px 16px;
-            border-radius: 40px;
-            font-size: 12px;
-            font-weight: 600;
-            margin-left: 15px;
-        }
-        .status-connected { background: #d1fae5; color: #065f46; }
-        .status-disconnected { background: #fee2e2; color: #991b1b; }
-        .status-checking { background: #fef3c7; color: #92400e; }
-        
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .kpi-card {
-            background: white;
-            border-radius: 28px;
-            padding: 20px 24px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-            border: 1px solid var(--slate-200);
-            transition: all 0.2s ease;
-        }
-        .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(0,0,0,0.08); }
-        .kpi-icon { font-size: 28px; margin-bottom: 12px; display: inline-block; padding: 10px; border-radius: 18px; background: var(--slate-100); }
-        .kpi-value { font-size: 32px; font-weight: 700; color: var(--slate-900); margin: 8px 0 4px; }
-        .kpi-label { color: var(--slate-500); font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
-        
-        .card-modern {
-            border: none;
-            border-radius: 28px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-            margin-bottom: 30px;
-            background: white;
-            border: 1px solid var(--slate-200);
-            overflow: hidden;
-        }
-        .card-header-modern {
-            background: white;
-            padding: 20px 24px;
-            font-weight: 600;
-            font-size: 16px;
-            border-bottom: 1px solid var(--slate-200);
-            color: var(--slate-700);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-        .card-header-modern i { margin-right: 12px; color: var(--primary); }
-        .card-body-modern { padding: 24px; }
-        
-        .period-selector {
-            display: flex;
-            gap: 8px;
-            background: var(--slate-100);
-            padding: 4px;
-            border-radius: 40px;
-            flex-wrap: wrap;
-        }
-        .period-btn {
-            padding: 6px 16px;
-            border-radius: 32px;
-            font-size: 12px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            background: transparent;
-            border: none;
-            color: var(--slate-500);
-        }
-        .period-btn:hover { background: white; }
-        .period-btn.active { background: var(--gradient); color: white; }
-        
-        .table-modern {
-            font-size: 13px;
-            width: 100%;
-        }
-        .table-modern thead th {
-            background: var(--slate-50);
-            color: var(--slate-500);
-            padding: 14px 12px;
-            font-weight: 600;
-            font-size: 12px;
-            text-transform: uppercase;
-            border-bottom: 1px solid var(--slate-200);
-        }
-        .table-modern tbody td { padding: 12px 12px; border-bottom: 1px solid var(--slate-100); vertical-align: middle; }
-        .table-modern tbody tr:hover { background: var(--slate-50); }
-        
-        .badge-success { background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 40px; font-size: 11px; font-weight: 600; }
-        .badge-warning { background: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 40px; font-size: 11px; font-weight: 600; }
-        .badge-danger { background: #fee2e2; color: #991b1b; padding: 4px 12px; border-radius: 40px; font-size: 11px; font-weight: 600; }
-        .badge-info { background: #e0f2fe; color: #075985; padding: 4px 12px; border-radius: 40px; font-size: 11px; font-weight: 600; }
-        
-        .progress-bar-custom {
-            height: 8px;
-            background: var(--slate-200);
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        .progress-fill { height: 100%; border-radius: 10px; transition: width 0.5s ease; }
-        .progress-fill.green { background: var(--success); }
-        .progress-fill.orange { background: var(--warning); }
-        .progress-fill.red { background: var(--danger); }
-        
-        .nav-tabs-modern {
-            display: flex;
-            gap: 8px;
-            background: white;
-            padding: 8px;
-            border-radius: 60px;
-            margin-bottom: 24px;
-            border: 1px solid var(--slate-200);
-            flex-wrap: wrap;
-        }
-        .nav-tab-modern {
-            padding: 10px 24px;
-            border-radius: 40px;
-            font-weight: 500;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-            color: var(--slate-500);
-        }
-        .nav-tab-modern:hover { background: var(--slate-100); }
-        .nav-tab-modern.active { background: var(--gradient); color: white; }
-        
-        .tab-pane { display: none; }
-        .tab-pane.active { display: block; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(4px);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-        }
-        .refresh-btn {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 52px;
-            height: 52px;
-            border-radius: 50%;
-            background: var(--gradient);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-            z-index: 1000;
-            transition: all 0.3s;
-        }
-        .refresh-btn:hover { transform: rotate(180deg); }
-        
-        .chart-container { height: 360px; width: 100%; }
-        .variance-positive { color: var(--success); font-weight: 600; }
-        .variance-negative { color: var(--danger); font-weight: 600; }
-        
-        .quality-rating { display: flex; gap: 12px; margin-top: 8px; }
-        .rating-star { cursor: pointer; font-size: 24px; color: #cbd5e1; transition: all 0.2s; }
-        .rating-star:hover, .rating-star.active { color: #f59e0b; }
-        
-        .manager-period-selector {
-            display: inline-flex;
-            gap: 5px;
-            background: var(--slate-100);
-            padding: 3px;
-            border-radius: 30px;
-        }
-        .manager-period-btn {
-            padding: 4px 12px;
-            border-radius: 25px;
-            font-size: 11px;
-            font-weight: 500;
-            cursor: pointer;
-            background: transparent;
-            border: none;
-            color: var(--slate-500);
-        }
-        .manager-period-btn.active {
-            background: var(--gradient);
-            color: white;
-        }
-        
-        @media (max-width: 768px) {
-            .company-title { font-size: 28px; }
-            .kpi-value { font-size: 24px; }
-            .period-btn { padding: 4px 10px; font-size: 10px; }
-        }
-        .good{
-            color: blue;
-            text-item: center;
-            align-items: center;
-        }
-        .good:hover{
-            opacity: 0.8;
-            transition: 0.6;
-            cursor: pointer;
-        }
-        
-        .add-project-btn {
-            background: var(--gradient);
-            color: white;
-            border: none;
-            border-radius: 40px;
-            padding: 5px 15px;
-            font-size: 12px;
-            margin-left: 8px;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: 0.2s;
-        }
-        .add-project-btn:hover { opacity: 0.9; transform: scale(0.98); }
-        .project-select-wrapper { display: flex; gap: 5px; align-items: center; width: 100%; }
-        .project-select-wrapper select { flex: 1; }
-        
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 20000;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-content {
-            background: white;
-            border-radius: 28px;
-            padding: 30px;
-            max-width: 400px;
-            width: 90%;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-        }
-        .modal-content h5 { margin-bottom: 20px; font-weight: 600; }
-        .modal-content input { margin-bottom: 20px; }
-        .modal-buttons { display: flex; gap: 12px; justify-content: flex-end; }
-        
-        #budgetRevenue.editable {
-            background-color: #fff3e0;
-            cursor: text;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Onpoint Group | Live Revenue Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root{
+      --bg:#f1f5f9;--card:#fff;--line:#e2e8f0;--text:#0f172a;--muted:#64748b;--soft:#f8fafc;
+      --green-bg:#dcfce7;--green-text:#15803d;--amber-bg:#fef3c7;--amber-text:#b45309;
+      --red-bg:#fee2e2;--red-text:#b91c1c;--slate-bg:#e2e8f0;--slate-text:#334155;
+      --shadow:0 10px 30px rgba(15,23,42,.06)
+    }
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .container{max-width:1500px;margin:0 auto;padding:18px}
+    .topbar,.hero,.card{background:var(--card);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow)}
+    .topbar{padding:12px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    .hero{margin-top:18px;padding:24px;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
+    .hero h1{margin:8px 0;font-size:34px}.muted{color:var(--muted)}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:var(--soft);color:var(--muted);font-size:12px;font-weight:600}
+    .controls,.form-grid{display:grid;gap:12px}.controls{grid-template-columns:repeat(4,minmax(160px,1fr));align-content:start;min-width:420px;flex:1}.form-grid{grid-template-columns:repeat(12,1fr);gap:14px}
+    .control,.searchbox input,button,.btn-secondary,.field input,.field select{border-radius:16px;border:1px solid var(--line);background:var(--soft);padding:12px 14px;font-size:14px;color:var(--text);font-family:inherit}
+    .searchbox{grid-column:span 2}.searchbox input{width:100%} button{cursor:pointer;background:var(--text);color:#fff;border-color:var(--text)} .btn-secondary{background:#fff;color:var(--text)}
+    .section{margin-top:18px}.grid-6,.grid-5,.grid-3{display:grid;gap:16px}.grid-6{grid-template-columns:repeat(6,1fr)}.grid-5{grid-template-columns:repeat(5,1fr)}.grid-3{grid-template-columns:repeat(3,1fr)}
+    .card{padding:18px;overflow:hidden}.card h3{margin:0 0 14px;font-size:18px}.kpi{padding:18px;border-radius:24px;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);cursor:pointer}
+    .kpi.active{outline:2px solid #0f172a20;border-color:var(--text)} .kpi-title{color:var(--muted);font-size:14px}.kpi-value{font-size:28px;font-weight:700;margin:10px 0 4px}.kpi-sub{color:var(--muted);font-size:12px}
+    .badge{display:inline-flex;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid transparent;white-space:nowrap}
+    .b-green{background:var(--green-bg);color:var(--green-text);border-color:#bbf7d0}.b-amber{background:var(--amber-bg);color:var(--amber-text);border-color:#fde68a}.b-red{background:var(--red-bg);color:var(--red-text);border-color:#fecaca}.b-slate{background:var(--slate-bg);color:var(--slate-text);border-color:#cbd5e1}
+    .tabs{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;background:#cbd5e166;border-radius:18px;padding:8px;margin-top:18px}.tab{background:transparent;color:var(--text);border:none;border-radius:14px;padding:12px;font-weight:700;cursor:pointer}.tab.active{background:#fff;box-shadow:var(--shadow)}
+    .tab-content{display:none}.tab-content.active{display:block}.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:22px;background:#fff}
+    table{width:100%;border-collapse:collapse;min-width:900px} thead{background:#f1f5f9} th,td{padding:14px 16px;text-align:left;border-bottom:1px solid var(--line);font-size:14px;vertical-align:middle} th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)} td.right,th.right{text-align:right}
+    .summary-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}.summary-box{border:1px solid var(--line);border-radius:24px;background:var(--soft);padding:16px}.summary-box .big{font-size:24px;font-weight:700;margin-top:10px}
+    .action-mini{border:1px solid var(--line);border-radius:20px;background:var(--soft);padding:16px;margin-bottom:12px}.row{display:grid;gap:16px}.row.two{grid-template-columns:1fr 1fr}.row.two-wide{grid-template-columns:2fr 1fr}
+    .small-canvas{height:280px!important} canvas{width:100%!important;height:320px!important}.filter-strip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;color:var(--muted);font-size:14px}
+    .field{display:flex;flex-direction:column;gap:8px}.field label{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em}.span-2{grid-column:span 2}.span-3{grid-column:span 3}.span-4{grid-column:span 4}.span-8{grid-column:span 8}.span-12{grid-column:span 12}
+    .loading{position:fixed;inset:0;background:rgba(15,23,42,.35);display:none;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(4px)} .loading-card{background:#fff;border-radius:24px;padding:24px 30px;box-shadow:var(--shadow);border:1px solid var(--line);min-width:260px;text-align:center}
+    .spinner{width:36px;height:36px;border-radius:50%;border:4px solid #e2e8f0;border-top-color:#0f172a;animation:spin .8s linear infinite;margin:0 auto 14px}@keyframes spin{to{transform:rotate(360deg)}}
+    .helper{font-size:12px;color:var(--muted)} .diagnostics{display:grid;grid-template-columns:2fr 1fr;gap:16px}.diagnostics pre{margin:0;white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#e2e8f0;padding:14px;border-radius:16px;min-height:160px}.notice{padding:14px 16px;border:1px solid var(--line);border-radius:18px;background:var(--soft);font-size:14px}
+    @media (max-width:1280px){.grid-6{grid-template-columns:repeat(3,1fr)}.grid-5{grid-template-columns:repeat(2,1fr)}.summary-grid{grid-template-columns:repeat(2,1fr)}.row.two,.row.two-wide,.grid-3,.diagnostics{grid-template-columns:1fr}.tabs{grid-template-columns:repeat(3,1fr)}}
+    @media (max-width:900px){.controls,.form-grid,.grid-6,.grid-5,.summary-grid,.tabs{grid-template-columns:1fr}.searchbox{grid-column:span 1}.span-2,.span-3,.span-4,.span-8,.span-12{grid-column:span 1}.hero h1{font-size:28px}}
+  </style>
 </head>
 <body>
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="bg-white rounded-3xl p-6 text-center shadow-xl">
-            <div class="spinner-border text-primary mb-3" role="status"></div>
-            <div id="loadingMessage">Loading live data from Google Sheets...</div>
-        </div>
+  <div class="loading" id="loadingOverlay"><div class="loading-card"><div class="spinner"></div><div id="loadingMessage">Loading live data from Google Sheets...</div></div></div>
+  <div class="container">
+    <div class="topbar">
+      <div class="pill">Onpoint Group live dashboard</div>
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <div id="connectionBadge" class="badge b-amber">Connecting</div>
+        <button id="testConnectionBtn">Test connection</button>
+        <button id="refreshBtn">Refresh</button>
+        <button id="exportBtn">Export report</button>
+      </div>
     </div>
-    
-    <div class="main-container">
-        <div class="company-header">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                <div>
-                    <div class="company-title">
-                        ONPOINT GROUP
-                        <span class="connection-status" id="connectionStatus">
-                            <i class="fas fa-sync-alt fa-spin me-1"></i> Connecting...
-                        </span>
-                    </div>
-                    <div class="company-subtitle">Intelligent Management Dashboard | Live Google Sheets Integration</div>
-                </div>
-                <button class="btn btn-outline-secondary rounded-pill px-4" onclick="exportFullReport()">
-                    <i class="fas fa-file-excel me-2 text-success"></i>Export Report
-                </button>
-            </div>
-        </div>
-        <a class="good" href="kpi.html">KPIs</a>
-        <small>click here for KPI's</small>
-        
-        <div class="nav-tabs-modern">
-            <div class="nav-tab-modern active" data-tab="dashboard">📊 Executive Dashboard</div>
-            <div class="nav-tab-modern" data-tab="projects">📁 Project Entry</div>
-            <div class="nav-tab-modern" data-tab="revenue">💰 Daily Revenue</div>
-            <div class="nav-tab-modern" data-tab="invoices">📄 Invoice Entry</div>
-            <div class="nav-tab-modern" data-tab="orderbook">📋 Order Book</div>
-            <div class="nav-tab-modern" data-tab="performance">📈 Performance Analysis</div>
-        </div>
-        
-        <div id="dashboard" class="tab-pane active">
-            <div class="kpi-grid">
-                <div class="kpi-card"><div class="kpi-icon"><i class="fas fa-check-circle text-success"></i></div><div class="kpi-label">Total Confirmed</div><div class="kpi-value" id="totalConfirmed">R 0</div></div>
-                <div class="kpi-card"><div class="kpi-icon"><i class="fas fa-chart-line text-warning"></i></div><div class="kpi-label">Total Forecast</div><div class="kpi-value" id="totalForecast">R 0</div></div>
-                <div class="kpi-card"><div class="kpi-icon"><i class="fas fa-book"></i></div><div class="kpi-label">Total Order Book</div><div class="kpi-value" id="totalOrderBook">R 0</div></div>
-                <div class="kpi-card"><div class="kpi-icon"><i class="fas fa-calendar-check text-primary"></i></div><div class="kpi-label">Group BTYE</div><div class="kpi-value" id="groupBTYE">R 0</div></div>
-                <div class="kpi-card"><div class="kpi-icon"><i class="fas fa-calendar-alt text-info"></i></div><div class="kpi-label">MTD Actual</div><div class="kpi-value" id="mtdActual">R 0</div></div>
-            </div>
-            
-            <div class="row mb-4">
-                <div class="col-md-12">
-                    <div class="card-modern">
-                        <div class="card-header-modern">
-                            <span><i class="fas fa-chart-line"></i> Progress Towards Budget</span>
-                            <small class="text-muted">Daily → Yearly Performance</small>
-                        </div>
-                        <div class="card-body-modern">
-                            <div class="row g-4">
-                                <div class="col-md-2 col-6">
-                                    <div class="text-center">
-                                        <div class="small text-muted">Daily Progress</div>
-                                        <div class="progress-bar-custom mt-2 mb-2" style="height: 30px;">
-                                            <div id="dailyProgressFill" class="progress-fill green" style="width: 0%; height: 100%; line-height: 30px; text-align: center; color: white;"></div>
-                                        </div>
-                                        <div><strong id="dailyProgressPercent">0%</strong></div>
-                                        <small id="dailyProgressDetails">R0 / R0</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-2 col-6">
-                                    <div class="text-center">
-                                        <div class="small text-muted">Weekly Progress</div>
-                                        <div class="progress-bar-custom mt-2 mb-2" style="height: 30px;">
-                                            <div id="weeklyProgressFill" class="progress-fill green" style="width: 0%; height: 100%;"></div>
-                                        </div>
-                                        <div><strong id="weeklyProgressPercent">0%</strong></div>
-                                        <small id="weeklyProgressDetails">R0 / R0</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-2 col-6">
-                                    <div class="text-center">
-                                        <div class="small text-muted">Monthly Progress</div>
-                                        <div class="progress-bar-custom mt-2 mb-2" style="height: 30px;">
-                                            <div id="monthlyProgressFill" class="progress-fill green" style="width: 0%; height: 100%;"></div>
-                                        </div>
-                                        <div><strong id="monthlyProgressPercent">0%</strong></div>
-                                        <small id="monthlyProgressDetails">R0 / R0</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-2 col-6">
-                                    <div class="text-center">
-                                        <div class="small text-muted">Quarterly Progress</div>
-                                        <div class="progress-bar-custom mt-2 mb-2" style="height: 30px;">
-                                            <div id="quarterlyProgressFill" class="progress-fill green" style="width: 0%; height: 100%;"></div>
-                                        </div>
-                                        <div><strong id="quarterlyProgressPercent">0%</strong></div>
-                                        <small id="quarterlyProgressDetails">R0 / R0</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-2 col-6">
-                                    <div class="text-center">
-                                        <div class="small text-muted">Yearly Progress</div>
-                                        <div class="progress-bar-custom mt-2 mb-2" style="height: 30px;">
-                                            <div id="yearlyProgressFill" class="progress-fill green" style="width: 0%; height: 100%;"></div>
-                                        </div>
-                                        <div><strong id="yearlyProgressPercent">0%</strong></div>
-                                        <small id="yearlyProgressDetails">R0 / R0</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row mb-4">
-                <div class="col-md-12">
-                    <div class="card-modern">
-                        <div class="card-header-modern">
-                            <span><i class="fas fa-building"></i> Division Progress</span>
-                            <small>% towards budget by division</small>
-                        </div>
-                        <div class="card-body-modern" id="divisionProgressContainer">
-                            <div class="text-center text-muted">Loading division data...</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row mb-4">
-                <div class="col-md-12">
-                    <div class="card-modern">
-                        <div class="card-header-modern">
-                            <span><i class="fas fa-user-tie"></i> Manager Progress</span>
-                            <small>% towards budget by manager</small>
-                        </div>
-                        <div class="card-body-modern" id="managerProgressContainer">
-                            <div class="text-center text-muted">Loading manager data...</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="text-muted mb-0">Revenue Performance Overview</h6>
-                <div class="period-selector" id="dashboardPeriodSelector">
-                    <button class="period-btn active" data-period="daily">Daily</button>
-                    <button class="period-btn" data-period="weekly">Weekly</button>
-                    <button class="period-btn" data-period="monthly">Monthly</button>
-                    <button class="period-btn" data-period="quarterly">Quarterly</button>
-                    <button class="period-btn" data-period="yearly">Yearly</button>
-                </div>
-            </div>
-            
-            <div class="row g-3 mb-4">
-                <div class="col-md-2 col-6"><div class="kpi-card text-center"><div class="kpi-label">Revenue</div><div class="kpi-value" id="periodRevenue">R 0</div><div class="small text-muted">Target: <span id="periodTarget">R 0</span></div><div class="progress-bar-custom mt-2"><div class="progress-fill green" id="periodProgress" style="width:0%"></div></div><div class="mt-1"><span id="periodAch">0%</span></div></div></div>
-                <div class="col-md-2 col-6"><div class="kpi-card text-center"><div class="kpi-label">Quality Score</div><div class="kpi-value" id="qualityScore">0%</div><div class="small text-muted">Target: 95%</div><div class="progress-bar-custom mt-2"><div class="progress-fill green" id="qualityProgress" style="width:0%"></div></div></div></div>
-                <div class="col-md-2 col-6"><div class="kpi-card text-center"><div class="kpi-label">Safety Incidents</div><div class="kpi-value" id="safetyIncidents">0</div><div class="small text-muted">Target: 0 incidents</div><div class="progress-bar-custom mt-2"><div class="progress-fill green" id="safetyProgress" style="width:100%"></div></div></div></div>
-                <div class="col-md-2 col-6"><div class="kpi-card text-center"><div class="kpi-label">Gross Profit</div><div class="kpi-value" id="grossProfit">R 0</div><div class="small text-muted">Margin: <span id="gpMargin">0%</span></div></div></div>
-                <div class="col-md-2 col-6"><div class="kpi-card text-center"><div class="kpi-label">Active Projects</div><div class="kpi-value" id="activeProjects">0</div><div class="small text-muted">Confirmed: <span id="confirmedCount">0</span></div></div></div>
-                <div class="col-md-2 col-6"><div class="kpi-card text-center"><div class="kpi-label">Cash Collected</div><div class="kpi-value" id="cashCollected">R 0</div><div class="small text-muted">Collection Rate: <span id="collectionRate">0%</span></div></div></div>
-            </div>
-            
-            <div class="row">
-                <div class="col-lg-8"><div class="card-modern"><div class="card-header-modern"><span><i class="fas fa-chart-line"></i> Revenue Performance - Budget vs Actual</span><div class="period-selector" id="revenueChartPeriod"><button class="period-btn active" data-period="daily">Daily</button><button class="period-btn" data-period="weekly">Weekly</button><button class="period-btn" data-period="monthly">Monthly</button><button class="period-btn" data-period="quarterly">Quarterly</button></div></div><div class="card-body-modern"><div id="revenueChart" class="chart-container"></div></div></div></div>
-                <div class="col-lg-4"><div class="card-modern"><div class="card-header-modern"><span><i class="fas fa-chart-pie"></i> Gross Profit by Division</span><div class="period-selector" id="pieChartPeriod"><button class="period-btn active" data-period="daily">Daily</button><button class="period-btn" data-period="weekly">Weekly</button><button class="period-btn" data-period="monthly">Monthly</button><button class="period-btn" data-period="quarterly">Quarterly</button><button class="period-btn" data-period="yearly">Yearly</button></div></div><div class="card-body-modern"><div id="pieChart" class="chart-container" style="height: 280px;"></div></div></div></div>
-            </div>
-            
-            <div class="row mt-3">
-                <div class="col-md-12">
-                    <div class="card-modern">
-                        <div class="card-header-modern">
-                            <span><i class="fas fa-chart-line"></i> Manager Performance Comparison</span>
-                            <div class="manager-period-selector" id="managerComparisonPeriod">
-                                <button class="manager-period-btn active" data-period="daily">Daily</button>
-                                <button class="manager-period-btn" data-period="weekly">Weekly</button>
-                                <button class="manager-period-btn" data-period="monthly">Monthly</button>
-                                <button class="manager-period-btn" data-period="yearly">Yearly</button>
-                            </div>
-                        </div>
-                        <div class="card-body-modern">
-                            <div class="table-container">
-                                <table class="table-modern w-100" id="managerComparisonTable">
-                                    <thead><tr><th>Rank</th><th>Manager</th><th>Actual Revenue</th><th>Target Revenue</th><th>Variance (R)</th><th>Variance %</th><th>Progress</th><th>Status</th></tr></thead>
-                                    <tbody id="managerComparisonBody"><tr><td colspan="8" class="text-center">Loading...</td></tr></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row mt-3">
-                <div class="col-md-12">
-                    <div class="card-modern">
-                        <div class="card-header-modern">
-                            <span><i class="fas fa-clock"></i> Project Timeline Progress</span>
-                        </div>
-                        <div class="card-body-modern">
-                            <div class="table-container">
-                                <table class="table-modern w-100" id="projectTimelineTable">
-                                    <thead><tr><th>Project Name</th><th>Manager</th><th>Start Date</th><th>End Date</th><th>Time Progress</th><th>Status</th></tr></thead>
-                                    <tbody id="projectTimelineBody"><tr><td colspan="6" class="text-center">Loading...</td></tr></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row mt-3">
-                <div class="col-md-12"><div class="card-modern"><div class="card-header-modern"><span><i class="fas fa-chart-simple"></i> Manager Performance by Variance % & Progress</span><div class="period-selector" id="managerChartPeriod"><button class="period-btn active" data-period="daily">Daily</button><button class="period-btn" data-period="weekly">Weekly</button><button class="period-btn" data-period="monthly">Monthly</button><button class="period-btn" data-period="yearly">Yearly</button></div></div><div class="card-body-modern"><div id="managerPerformanceChart" class="chart-container" style="height: 400px;"></div></div></div></div>
-            </div>
-        </div>
-        
-        <div id="projects" class="tab-pane">
-            <div class="card-modern"><div class="card-header-modern"><i class="fas fa-plus-circle"></i> Add New Project</div><div class="card-body-modern">
-                <form id="projectForm" onsubmit="return false;">
-                    <div class="row g-3">
-                        <div class="col-md-3"><input type="text" class="form-control" id="projectName" placeholder="Project Name" required></div>
-                        <div class="col-md-2"><select class="form-select" id="costCentre"><option>Onpoint Group</option><option>Nkanyezi Projects</option><option>Aqua Telecoms</option><option>DI Solutions</option></select></div>
-                        <div class="col-md-2"><select class="form-select" id="projectManager" required></select></div>
-                        <div class="col-md-2"><select class="form-select" id="projectStatus"><option>Confirmed</option><option>Forecast</option></select></div>
-                        <div class="col-md-2"><input type="number" class="form-control" id="totalIncome" placeholder="Total Income (R)" required></div>
-                        <div class="col-md-1"><input type="number" class="form-control" id="margin" placeholder="Margin %" value="25"></div>
-                        <div class="col-12"><button type="button" class="btn btn-primary rounded-pill px-4" onclick="submitProject()"><i class="fas fa-save me-2"></i>Save Project</button></div>
-                    </div>
-                </form>
-            </div></div>
-        </div>
-        
-        <div id="revenue" class="tab-pane">
-            <div class="card-modern"><div class="card-header-modern"><i class="fas fa-calendar-day"></i> Daily Revenue & Performance Entry</div><div class="card-body-modern">
-                <div class="row g-3">
-                    <div class="col-md-3"><label class="form-label">Date</label><input type="date" class="form-control" id="revDate"></div>
-                    <div class="col-md-3"><label class="form-label">Project Manager</label><select class="form-select" id="revManager"><option value="">Select Manager</option></select></div>
-                    <div class="col-md-4">
-                        <label class="form-label">Project Name</label>
-                        <div class="project-select-wrapper">
-                            <select class="form-select" id="revProjectName"><option value="">Select Project</option></select>
-                            <button type="button" class="add-project-btn" onclick="openAddProjectModal()">+ Add</button>
-                        </div>
-                    </div>
-                    <div class="col-md-2"><label class="form-label">Actual Revenue (R)</label><input type="number" class="form-control" id="revAmount" placeholder="Amount" oninput="calculateVariance()"></div>
-                </div>
-                <div class="row g-3 mt-2">
-                    <div class="col-md-3"><label class="form-label">Budget Revenue (Daily)</label><input type="text" class="form-control" id="budgetRevenue" readonly style="cursor: pointer;"></div>
-                    <div class="col-md-3"><label class="form-label">Variance (R)</label><input type="text" class="form-control" id="varianceAmount" readonly></div>
-                    <div class="col-md-2"><label class="form-label">Variance %</label><input type="text" class="form-control" id="variancePercent" readonly></div>
-                </div>
-                <div class="row g-3 mt-3 pt-3 border-top">
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold"><i class="fas fa-star text-warning"></i> Quality Score (0-100%)</label>
-                        <div class="quality-rating" id="qualityStars"><span class="rating-star" data-score="20">★</span><span class="rating-star" data-score="40">★</span><span class="rating-star" data-score="60">★</span><span class="rating-star" data-score="80">★</span><span class="rating-star" data-score="100">★</span></div>
-                        <input type="hidden" id="qualityScoreInput" value="80">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold"><i class="fas fa-shield-alt text-danger"></i> Safety Incidents</label>
-                        <input type="number" class="form-control" id="safetyIncidentsInput" min="0" value="0" placeholder="Number of incidents">
-                    </div>
-                </div>
-                <div class="row mt-4"><div class="col-12"><button class="btn btn-success rounded-pill px-5" onclick="submitDailyRevenueWithQuality()"><i class="fas fa-save me-2"></i>Save Revenue & Performance</button></div></div>
-            </div></div>
-        </div>
-        
-        <div id="addProjectModal" class="modal-overlay">
-            <div class="modal-content">
-                <h5>Add New Project</h5>
-                <input type="text" id="newProjectNameInput" class="form-control" placeholder="Enter new project name">
-                <div class="modal-buttons">
-                    <button class="btn btn-secondary" onclick="closeAddProjectModal()">Cancel</button>
-                    <button class="btn btn-primary" onclick="addNewProject()">Add Project</button>
-                </div>
-            </div>
-        </div>
-        
-        <div id="invoices" class="tab-pane">
-            <div class="card-modern"><div class="card-header-modern"><i class="fas fa-receipt"></i> Invoice Entry</div><div class="card-body-modern">
-                <div class="row g-3">
-                    <div class="col-md-3"><label class="form-label">Invoice Date</label><input type="date" class="form-control" id="invDate"></div>
-                    <div class="col-md-3"><label class="form-label">Project Manager</label><select class="form-select" id="invManager"><option value="">Select Manager</option></select></div>
-                    <div class="col-md-4"><label class="form-label">Project Invoiced</label><select class="form-select" id="invProjectName"><option value="">Select Project</option></select></div>
-                    <div class="col-md-2"><label class="form-label">Invoice Amount (R)</label><input type="number" class="form-control" id="invAmount" placeholder="Amount"></div>
-                </div>
-                <div class="row g-3 mt-2">
-                    <div class="col-md-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="paymentReceived"><label class="form-check-label" for="paymentReceived"><i class="fas fa-check-circle text-success"></i> Payment Received</label></div></div>
-                    <div class="col-md-6"><label class="form-label">Payment Date</label><input type="date" class="form-control" id="paymentDate"></div>
-                </div>
-                <div class="row mt-3"><div class="col-12"><button class="btn btn-primary rounded-pill px-4" onclick="submitInvoice()"><i class="fas fa-save me-2"></i>Save Invoice</button></div></div>
-                <hr><h6 class="fw-semibold">Today's Invoices Summary</h6>
-                <div class="table-container"><table class="table-modern w-100" id="todayInvoicesTable"><thead><th>Project</th><th>Manager</th><th>Amount</th><th>Payment Status</th><th>Time</th></thead><tbody></tbody>}</table></div>
-            </div></div>
-        </div>
-        
-        <div id="orderbook" class="tab-pane"><div class="card-modern"><div class="card-header-modern"><i class="fas fa-book"></i> Order Book - All Projects from Projects Sheet</div><div class="card-body-modern"><div class="table-container"><table class="table-modern w-100" id="orderBookTable"><thead id="orderBookHeader"></thead><tbody id="orderBookBody"></tbody></table></div></div></div></div>
-        
-        <div id="performance" class="tab-pane"><div class="card-modern"><div class="card-header-modern"><i class="fas fa-chart-simple"></i> Performance Analysis</div><div class="card-body-modern"><div id="perfChart" class="chart-container"></div><div class="table-container mt-4"><table class="table-modern w-100" id="perfTable"><thead><th>Manager</th><th>Actual</th><th>Target</th><th>Achievement</th><th>Quality</th><th>Safety</th><th>Status</th></thead><tbody></tbody></table></div></div></div></div>
-    </div>
-    <div class="refresh-btn" onclick="loadAllData()"><i class="fas fa-sync-alt"></i></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script>
-        const CONFIG = { 
-            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxSQQrBq3I0rZWyhj4aS-o5cEVXFzX9Sjoj4lsVpSFfLAa6aQLXWd2LclLPiR51EJhL/exec'
-        };
-        
-        const PROJECT_MANAGERS = ["Moses", "Johan", "Siyanda", "Dave", "James", "Rayman", "Timothy", "Roads Site Agent COT", "Civil Site Agent", "Roads Site Agent CPT", "Brian", "EL CM", "Stanley", "Tony", "Govern", "Graham", "Ronald", "Petros", "Elroy", "Mesh", "Vusi", "Tinotenda", "Sydney", "Andrew", "Phillip", "Moeti"];
-        
-        const BASE_PROJECT_NAMES = ["DBSA Generators", "DBSA Rooiwal", "Joe Gqabi", "Temba", "Midvaal", "Coega", "KZN General Buildings", "Tshwane", "Public Works Limpopo", "Limpopo Eskom Substation Ephraim Mogale", "Naizna", "Cape Town", "COT Streetlights", "COT Electrification", "COT Metering", "COE Streetlights", "Msunduzi E50", "Msunduzi Streetlights", "Msunduzi E33", "Msunduzi E47", "Moqhaka Streetlights", "Moqhaka Metering", "Centlec CD11", "Centlec Transformers CD32", "Centlec CD45", "Midvaal Mechanical", "Eskom SPU", "Eskom FSOU Substation", "Eskom ECOU", "Eskom LOU General Buildings", "Eskom KZN Minor Reticulation", "Randwest Electrical", "Randwest Roads & Stormwater", "Randwest Water rand sanitation", "Randwest Bulk", "RAL", "Stellenbosh", "Liquid ECPG", "Liquid ECSOD", "Liquid Gauteng SOD", "Telkom", "MTN", "Centlec", "Eskom Harvard", "City Power", "Umhlathuze Municipality", "Eskom WC", "COE Buildings", "Uthukela", "Kgetleng River", "Ray Nkonyeni Facility", "Ray Nkonyeni Electrical Material", "Ray Nkonyeni Mast", "Ray Nkonyeni Meter Reading", "Ramotshere Electrical Supplies", "Newcastle Substations", "Ubuntu", "IDT North West Buidlings", "Amajuba Generator", "uPhongolo", "Abaquilisi Battery Supplies", "Abaquilisi Streetlights"];
-        
-        let dynamicProjectList = [...BASE_PROJECT_NAMES];
-        let budgetMemoryMap = new Map();
-        let projects = [], dailyEntries = [], invoices = [];
-        let currentDashboardPeriod = 'daily', currentRevenueChartPeriod = 'daily', currentPieChartPeriod = 'daily', currentManagerPeriod = 'daily', currentManagerComparisonPeriod = 'daily';
-        const monthLabels = ['Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb'];
-        const quarterLabels = ['Q1', 'Q2', 'Q3', 'Q4'];
-        
-        function showLoading(msg) { document.getElementById('loadingOverlay').style.display = 'flex'; document.getElementById('loadingMessage').innerText = msg; }
-        function hideLoading() { document.getElementById('loadingOverlay').style.display = 'none'; }
-        const formatCurrency = (v) => 'R ' + Math.round(v || 0).toLocaleString();
-        const parseNumber = (v) => Number(String(v).replace(/[^0-9.-]+/g, '')) || 0;
-        
-        async function safeFetch(url) {
-            const res = await fetch(url);
-            const text = await res.text();
-            try { return JSON.parse(text); } catch (err) { return { data: [] }; }
-        }
-        
-        function calculateProgressMetrics() {
-            const today = new Date();
-            const todayStr = today.toISOString().split('T')[0];
-            const currentMonth = today.getMonth();
-            const monthIdx = (currentMonth + 10) % 12;
-            const workingDays = 22;
-            
-            const dailyActual = dailyEntries.filter(e => e.date === todayStr).reduce((s, e) => s + e.amount, 0);
-            const dailyTarget = projects.reduce((s, p) => s + ((p.months?.[monthIdx] || p.TotalIncome/12) / workingDays), 0);
-            const dailyProgressPercent = dailyTarget > 0 ? (dailyActual / dailyTarget) * 100 : 0;
-            
-            const weekStart = new Date(today);
-            weekStart.setDate(today.getDate() - today.getDay());
-            const weeklyActual = dailyEntries.filter(e => new Date(e.date) >= weekStart).reduce((s, e) => s + e.amount, 0);
-            const weeklyTarget = projects.reduce((s, p) => s + ((p.months?.[monthIdx] || p.TotalIncome/12) / workingDays) * 7, 0);
-            const weeklyProgressPercent = weeklyTarget > 0 ? (weeklyActual / weeklyTarget) * 100 : 0;
-            
-            const monthlyActual = dailyEntries.filter(e => new Date(e.date).getMonth() === currentMonth).reduce((s, e) => s + e.amount, 0);
-            const monthlyTarget = projects.reduce((s, p) => s + (p.months?.[monthIdx] || p.TotalIncome/12), 0);
-            const monthlyProgressPercent = monthlyTarget > 0 ? (monthlyActual / monthlyTarget) * 100 : 0;
-            
-            const currentQuarter = Math.floor(currentMonth / 3);
-            const quarterlyActual = dailyEntries.filter(e => Math.floor(new Date(e.date).getMonth() / 3) === currentQuarter).reduce((s, e) => s + e.amount, 0);
-            const quarterlyTarget = projects.reduce((s, p) => s + (p.TotalIncome / 4), 0);
-            const quarterlyProgressPercent = quarterlyTarget > 0 ? (quarterlyActual / quarterlyTarget) * 100 : 0;
-            
-            const yearlyActual = dailyEntries.reduce((s, e) => s + e.amount, 0);
-            const yearlyTarget = projects.reduce((s, p) => s + p.TotalIncome, 0);
-            const yearlyProgressPercent = yearlyTarget > 0 ? (yearlyActual / yearlyTarget) * 100 : 0;
-            
-            return { daily: { actual: dailyActual, target: dailyTarget, percent: dailyProgressPercent }, weekly: { actual: weeklyActual, target: weeklyTarget, percent: weeklyProgressPercent }, monthly: { actual: monthlyActual, target: monthlyTarget, percent: monthlyProgressPercent }, quarterly: { actual: quarterlyActual, target: quarterlyTarget, percent: quarterlyProgressPercent }, yearly: { actual: yearlyActual, target: yearlyTarget, percent: yearlyProgressPercent } };
-        }
-        
-        function updateProgressBars() {
-            const p = calculateProgressMetrics();
-            document.getElementById('dailyProgressFill').style.width = Math.min(100, p.daily.percent) + '%';
-            document.getElementById('dailyProgressPercent').innerHTML = p.daily.percent.toFixed(1) + '%';
-            document.getElementById('dailyProgressDetails').innerHTML = `${formatCurrency(p.daily.actual)} / ${formatCurrency(p.daily.target)}`;
-            document.getElementById('weeklyProgressFill').style.width = Math.min(100, p.weekly.percent) + '%';
-            document.getElementById('weeklyProgressPercent').innerHTML = p.weekly.percent.toFixed(1) + '%';
-            document.getElementById('weeklyProgressDetails').innerHTML = `${formatCurrency(p.weekly.actual)} / ${formatCurrency(p.weekly.target)}`;
-            document.getElementById('monthlyProgressFill').style.width = Math.min(100, p.monthly.percent) + '%';
-            document.getElementById('monthlyProgressPercent').innerHTML = p.monthly.percent.toFixed(1) + '%';
-            document.getElementById('monthlyProgressDetails').innerHTML = `${formatCurrency(p.monthly.actual)} / ${formatCurrency(p.monthly.target)}`;
-            document.getElementById('quarterlyProgressFill').style.width = Math.min(100, p.quarterly.percent) + '%';
-            document.getElementById('quarterlyProgressPercent').innerHTML = p.quarterly.percent.toFixed(1) + '%';
-            document.getElementById('quarterlyProgressDetails').innerHTML = `${formatCurrency(p.quarterly.actual)} / ${formatCurrency(p.quarterly.target)}`;
-            document.getElementById('yearlyProgressFill').style.width = Math.min(100, p.yearly.percent) + '%';
-            document.getElementById('yearlyProgressPercent').innerHTML = p.yearly.percent.toFixed(1) + '%';
-            document.getElementById('yearlyProgressDetails').innerHTML = `${formatCurrency(p.yearly.actual)} / ${formatCurrency(p.yearly.target)}`;
-        }
-        
-        function updateDivisionProgress() {
-            const today = new Date();
-            const currentMonth = today.getMonth();
-            const monthIdx = (currentMonth + 10) % 12;
-            const monthlyTarget = {}, monthlyActual = {};
-            projects.forEach(p => { const div = p.Division || p.costCentre || 'Onpoint Group'; monthlyTarget[div] = (monthlyTarget[div] || 0) + (p.months?.[monthIdx] || p.TotalIncome/12); });
-            dailyEntries.forEach(e => { if (new Date(e.date).getMonth() === currentMonth) { const proj = projects.find(p => p.ProjectName === e.projectName && p.Manager === e.manager); const div = proj?.Division || proj?.costCentre || 'Onpoint Group'; monthlyActual[div] = (monthlyActual[div] || 0) + e.amount; } });
-            let html = '<div class="row">';
-            for (const [div, target] of Object.entries(monthlyTarget)) {
-                const actual = monthlyActual[div] || 0;
-                const percent = target > 0 ? (actual / target) * 100 : 0;
-                const colorClass = percent >= 80 ? 'green' : (percent >= 50 ? 'orange' : 'red');
-                html += `<div class="col-md-6 mb-3"><div class="d-flex justify-content-between mb-1"><strong>${div}</strong><span>${formatCurrency(actual)} / ${formatCurrency(target)}</span></div><div class="progress-bar-custom"><div class="progress-fill ${colorClass}" style="width: ${Math.min(100, percent)}%"></div></div><div class="text-end small mt-1">${percent.toFixed(1)}%</div></div>`;
-            }
-            document.getElementById('divisionProgressContainer').innerHTML = html + '</div>' || '<p class="text-center text-muted">No division data</p>';
-        }
-        
-        function updateManagerProgress() {
-            const today = new Date();
-            const currentMonth = today.getMonth();
-            const monthIdx = (currentMonth + 10) % 12;
-            const managerTarget = {}, managerActual = {};
-            projects.forEach(p => { const mgr = p.Manager; if (mgr && mgr !== 'Unassigned') managerTarget[mgr] = (managerTarget[mgr] || 0) + (p.months?.[monthIdx] || p.TotalIncome/12); });
-            dailyEntries.forEach(e => { if (e.manager && new Date(e.date).getMonth() === currentMonth) managerActual[e.manager] = (managerActual[e.manager] || 0) + e.amount; });
-            let html = '<div class="row">';
-            for (const [mgr, target] of Object.entries(managerTarget)) {
-                const actual = managerActual[mgr] || 0;
-                const percent = target > 0 ? (actual / target) * 100 : 0;
-                const colorClass = percent >= 80 ? 'green' : (percent >= 50 ? 'orange' : 'red');
-                html += `<div class="col-md-6 mb-3"><div class="d-flex justify-content-between mb-1"><strong>${mgr}</strong><span>${formatCurrency(actual)} / ${formatCurrency(target)}</span></div><div class="progress-bar-custom"><div class="progress-fill ${colorClass}" style="width: ${Math.min(100, percent)}%"></div></div><div class="text-end small mt-1">${percent.toFixed(1)}%</div></div>`;
-            }
-            document.getElementById('managerProgressContainer').innerHTML = html + '</div>' || '<p class="text-center text-muted">No manager data</p>';
-        }
-        
-        function getManagerPerformanceForPeriod(period) {
-            const today = new Date().toISOString().split('T')[0];
-            const currentMonth = new Date().getMonth();
-            const monthIdx = (currentMonth + 10) % 12;
-            const workingDays = 22;
-            let mgrData = {};
-            PROJECT_MANAGERS.forEach(m => { mgrData[m] = { actual: 0, target: 0 }; });
-            projects.forEach(p => {
-                if (mgrData[p.Manager]) {
-                    let monthlyTarget = p.months?.[monthIdx] || p.TotalIncome / 12;
-                    if (period === 'daily') mgrData[p.Manager].target += monthlyTarget / workingDays;
-                    else if (period === 'weekly') mgrData[p.Manager].target += (monthlyTarget / workingDays) * 7;
-                    else if (period === 'monthly') mgrData[p.Manager].target += monthlyTarget;
-                    else if (period === 'yearly') mgrData[p.Manager].target += p.TotalIncome;
-                }
-            });
-            if (period === 'daily') dailyEntries.filter(e => e.date === today).forEach(e => { if (mgrData[e.manager]) mgrData[e.manager].actual += e.amount; });
-            else if (period === 'weekly') { const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay()); dailyEntries.filter(e => new Date(e.date) >= weekStart).forEach(e => { if (mgrData[e.manager]) mgrData[e.manager].actual += e.amount; }); }
-            else if (period === 'monthly') dailyEntries.filter(e => new Date(e.date).getMonth() === currentMonth).forEach(e => { if (mgrData[e.manager]) mgrData[e.manager].actual += e.amount; });
-            else if (period === 'yearly') dailyEntries.forEach(e => { if (mgrData[e.manager]) mgrData[e.manager].actual += e.amount; });
-            return Object.entries(mgrData).map(([name, data]) => ({ manager: name, actual: data.actual, target: data.target, variance: data.actual - data.target, variancePercent: data.target > 0 ? ((data.actual - data.target) / data.target) * 100 : 0 })).filter(r => r.target > 0 || r.actual > 0).sort((a, b) => b.variancePercent - a.variancePercent);
-        }
-        
-        function updateManagerComparisonTable() {
-            const performance = getManagerPerformanceForPeriod(currentManagerComparisonPeriod);
-            let html = '';
-            performance.forEach((p, idx) => {
-                let varianceClass = p.variance >= 0 ? 'variance-positive' : 'variance-negative';
-                let progressColor = p.variancePercent >= 0 ? 'green' : (p.variancePercent >= -20 ? 'orange' : 'red');
-                let statusBadge = p.variancePercent >= 0 ? 'badge-success' : (p.variancePercent >= -20 ? 'badge-warning' : 'badge-danger');
-                let statusText = p.variancePercent >= 0 ? 'Above Target' : (p.variancePercent >= -20 ? 'Slightly Behind' : 'Behind');
-                html += `<tr><td class="fw-bold">#${idx + 1}</td><td><strong>${p.manager}</strong></td><td>${formatCurrency(p.actual)}</td><td>${formatCurrency(p.target)}</td><td class="${varianceClass}">${formatCurrency(p.variance)}</td><td class="${varianceClass}">${p.variancePercent.toFixed(1)}%</td><td><div class="progress-bar-custom w-100"><div class="progress-fill ${progressColor}" style="width: ${Math.min(100, Math.abs(p.variancePercent))}%"></div></div><small>${Math.abs(p.variancePercent).toFixed(0)}% ${p.variancePercent >= 0 ? 'above' : 'below'}</small></td><td><span class="${statusBadge}">${statusText}</span></td></tr>`;
-            });
-            document.getElementById('managerComparisonBody').innerHTML = html || '<tr><td colspan="8" class="text-center">No data available</td></tr>';
-        }
-        
-        function updateProjectTimelineTable() {
-            let html = '';
-            projects.forEach(p => {
-                if (p.StartDate && p.EndDate) {
-                    const startDate = new Date(p.StartDate), endDate = new Date(p.EndDate), today = new Date();
-                    const totalDuration = endDate - startDate, elapsed = today - startDate;
-                    let progressPercent = totalDuration > 0 && today >= startDate ? Math.min(100, Math.max(0, (elapsed / totalDuration) * 100)) : 0;
-                    let status = progressPercent >= 100 ? 'Completed' : progressPercent >= 75 ? 'Near Completion' : progressPercent >= 50 ? 'In Progress' : progressPercent > 0 ? 'Early Stage' : 'Not Started';
-                    let statusColor = progressPercent >= 100 ? 'badge-success' : progressPercent >= 75 ? 'badge-info' : progressPercent >= 50 ? 'badge-warning' : progressPercent > 0 ? 'badge-info' : 'badge-secondary';
-                    let progressColor = progressPercent >= 75 ? 'green' : (progressPercent >= 50 ? 'orange' : 'red');
-                    html += `<tr><td><strong>${p.ProjectName || 'Unknown'}</strong></td><td>${p.Manager || 'Unassigned'}</td><td>${p.StartDate ? new Date(p.StartDate).toLocaleDateString() : '-'}</td><td>${p.EndDate ? new Date(p.EndDate).toLocaleDateString() : '-'}</td><td><div class="progress-bar-custom w-100"><div class="progress-fill ${progressColor}" style="width: ${progressPercent}%"></div></div><small>${progressPercent.toFixed(0)}% complete</small></td><td><span class="${statusColor}">${status}</span></td></tr>`;
-                }
-            });
-            document.getElementById('projectTimelineBody').innerHTML = html || '<tr><td colspan="6" class="text-center">No projects with dates available</td></tr>';
-        }
-        
-        function getRevenueDataForPeriod(period) {
-            const today = new Date().toISOString().split('T')[0];
-            const currentMonth = new Date().getMonth();
-            const monthIdx = (currentMonth + 10) % 12;
-            const workingDays = 22;
-            if(period === 'daily') return { actual: dailyEntries.filter(e => e.date === today).reduce((s, e) => s + e.amount, 0), target: projects.reduce((s, p) => s + ((p.months?.[monthIdx] || p.TotalIncome/12) / workingDays), 0) };
-            if(period === 'weekly') { const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay()); return { actual: dailyEntries.filter(e => new Date(e.date) >= weekStart).reduce((s, e) => s + e.amount, 0), target: projects.reduce((s, p) => s + ((p.months?.[monthIdx] || p.TotalIncome/12) / workingDays) * 7, 0) }; }
-            if(period === 'monthly') return { actual: dailyEntries.filter(e => new Date(e.date).getMonth() === currentMonth).reduce((s, e) => s + e.amount, 0), target: projects.reduce((s, p) => s + (p.months?.[monthIdx] || p.TotalIncome/12), 0) };
-            if(period === 'quarterly') { const currentQuarter = Math.floor(currentMonth / 3); return { actual: dailyEntries.filter(e => Math.floor(new Date(e.date).getMonth() / 3) === currentQuarter).reduce((s, e) => s + e.amount, 0), target: projects.reduce((s, p) => s + (p.TotalIncome / 4), 0) }; }
-            return { actual: dailyEntries.reduce((s, e) => s + e.amount, 0), target: projects.reduce((s, p) => s + p.TotalIncome, 0) };
-        }
-        
-        function getCashCollectedForPeriod(period) {
-            const today = new Date();
-            const currentMonth = today.getMonth();
-            const currentYear = today.getFullYear();
-            let filtered = invoices.filter(inv => inv.paymentReceived === true);
-            if (period === 'daily') filtered = filtered.filter(inv => inv.date === today.toISOString().split('T')[0]);
-            else if (period === 'weekly') { const weekStart = new Date(today); weekStart.setDate(today.getDate() - today.getDay()); filtered = filtered.filter(inv => new Date(inv.date) >= weekStart); }
-            else if (period === 'monthly') filtered = filtered.filter(inv => { const d = new Date(inv.date); return d.getMonth() === currentMonth && d.getFullYear() === currentYear; });
-            else if (period === 'quarterly') { const q = Math.floor(currentMonth / 3); filtered = filtered.filter(inv => { const d = new Date(inv.date); return Math.floor(d.getMonth() / 3) === q && d.getFullYear() === currentYear; }); }
-            else if (period === 'yearly') filtered = filtered.filter(inv => new Date(inv.date).getFullYear() === currentYear);
-            return filtered.reduce((s, inv) => s + (inv.amount || 0), 0);
-        }
-        
-        function updateDashboard() {
-            const confirmedTotal = projects.filter(p => p.Status === 'Confirmed').reduce((s, p) => s + p.TotalIncome, 0);
-            const forecastTotal = projects.filter(p => p.Status === 'Forecast').reduce((s, p) => s + p.TotalIncome, 0);
-            const totalOrderBook = confirmedTotal + forecastTotal;
-            const mtdActual = dailyEntries.filter(e => new Date(e.date).getMonth() === new Date().getMonth()).reduce((s, e) => s + e.amount, 0);
-            document.getElementById('totalConfirmed').innerHTML = formatCurrency(confirmedTotal);
-            document.getElementById('totalForecast').innerHTML = formatCurrency(forecastTotal);
-            document.getElementById('totalOrderBook').innerHTML = formatCurrency(totalOrderBook);
-            document.getElementById('groupBTYE').innerHTML = formatCurrency((forecastTotal + (confirmedTotal * 1.5)) - mtdActual);
-            document.getElementById('mtdActual').innerHTML = formatCurrency(mtdActual);
-            
-            const { actual, target } = getRevenueDataForPeriod(currentDashboardPeriod);
-            const ach = target > 0 ? (actual / target) * 100 : 0;
-            document.getElementById('periodRevenue').innerHTML = formatCurrency(actual);
-            document.getElementById('periodTarget').innerHTML = formatCurrency(target);
-            document.getElementById('periodProgress').style.width = Math.min(100, ach) + '%';
-            document.getElementById('periodAch').innerHTML = ach.toFixed(0) + '%';
-            
-            const cashCollected = getCashCollectedForPeriod(currentDashboardPeriod);
-            document.getElementById('cashCollected').innerHTML = formatCurrency(cashCollected);
-            document.getElementById('collectionRate').innerHTML = target > 0 ? ((cashCollected / target) * 100).toFixed(0) + '%' : '0%';
-            
-            const periodEntries = dailyEntries.filter(e => {
-                if(currentDashboardPeriod === 'daily') return e.date === new Date().toISOString().split('T')[0];
-                if(currentDashboardPeriod === 'weekly') { const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay()); return new Date(e.date) >= weekStart; }
-                if(currentDashboardPeriod === 'monthly') return new Date(e.date).getMonth() === new Date().getMonth();
-                if(currentDashboardPeriod === 'quarterly') return Math.floor(new Date(e.date).getMonth() / 3) === Math.floor(new Date().getMonth() / 3);
-                return true;
-            });
-            const avgQuality = periodEntries.length ? periodEntries.reduce((s, e) => s + (e.quality || 80), 0) / periodEntries.length : 80;
-            const totalIncidents = periodEntries.reduce((s, e) => s + (e.safety || 0), 0);
-            document.getElementById('qualityScore').innerHTML = Math.round(avgQuality) + '%';
-            document.getElementById('qualityProgress').style.width = avgQuality + '%';
-            document.getElementById('safetyIncidents').innerHTML = totalIncidents;
-            const safetyPercent = Math.max(0, 100 - (totalIncidents * 10));
-            document.getElementById('safetyProgress').style.width = safetyPercent + '%';
-            document.getElementById('safetyProgress').className = `progress-fill ${totalIncidents === 0 ? 'green' : totalIncidents <= 2 ? 'orange' : 'red'}`;
-            
-            const gpTotal = projects.reduce((s, p) => s + (p.TotalIncome * (p.Margin / 100)), 0);
-            document.getElementById('grossProfit').innerHTML = formatCurrency(gpTotal * (actual / Math.max(target, 1)));
-            document.getElementById('gpMargin').innerHTML = (projects.reduce((s, p) => s + p.Margin, 0) / Math.max(projects.length, 1)).toFixed(0) + '%';
-            document.getElementById('activeProjects').innerHTML = projects.length;
-            document.getElementById('confirmedCount').innerHTML = projects.filter(p => p.Status === 'Confirmed').length;
-            
-            updateManagerComparisonTable();
-            updateProjectTimelineTable();
-        }
-        
-        function updateRevenueChart() {
-            let categories = [], budgetData = [], actualData = [];
-            if(currentRevenueChartPeriod === 'daily') {
-                const last7Days = [...Array(7)].map((_, i) => { let d = new Date(); d.setDate(d.getDate() - (6-i)); return d.toISOString().split('T')[0]; });
-                categories = last7Days.map(d => d.slice(5));
-                budgetData = last7Days.map(day => projects.reduce((s, p) => { let monthIdx = (new Date(day).getMonth() + 10) % 12; return s + ((p.months?.[monthIdx] || p.TotalIncome/12) / 22); }, 0));
-                actualData = last7Days.map(day => dailyEntries.filter(e => e.date === day).reduce((s, e) => s + e.amount, 0));
-            } else if(currentRevenueChartPeriod === 'weekly') {
-                categories = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
-                budgetData = [0,0,0,0]; actualData = [0,0,0,0];
-                dailyEntries.forEach(e => { let week = Math.min(3, Math.floor((new Date(e.date).getDate() - 1) / 7)); actualData[week] += e.amount; });
-                projects.forEach(p => { let monthBudget = p.months?.[(new Date().getMonth() + 10) % 12] || p.TotalIncome/12; for(let w=0;w<4;w++) budgetData[w] += monthBudget/4; });
-            } else if(currentRevenueChartPeriod === 'monthly') {
-                categories = monthLabels;
-                budgetData = Array(12).fill(0); actualData = Array(12).fill(0);
-                projects.forEach(p => { if(p.months) for(let i=0;i<12;i++) budgetData[i] += p.months[i]; });
-                dailyEntries.forEach(e => { let d = new Date(e.date); let idx = (d.getMonth() + 10) % 12; actualData[idx] += e.amount; });
-            } else {
-                categories = quarterLabels;
-                budgetData = [0,0,0,0]; actualData = [0,0,0,0];
-                projects.forEach(p => { if(p.months) for(let q=0;q<4;q++) for(let i=q*3;i<(q+1)*3;i++) budgetData[q] += p.months[i]; });
-                dailyEntries.forEach(e => { let q = Math.floor(new Date(e.date).getMonth() / 3); actualData[q] += e.amount; });
-            }
-            if(window.revenueChart) { window.revenueChart.updateOptions({ xaxis: { categories } }); window.revenueChart.updateSeries([{ name: 'Budget', data: budgetData }, { name: 'Actual', data: actualData }]); }
-        }
-        
-        function updatePieChart() {
-            let gpByDiv = {};
-            let multiplier = currentPieChartPeriod === 'daily' ? 22 : currentPieChartPeriod === 'weekly' ? 4 : currentPieChartPeriod === 'monthly' ? 1 : currentPieChartPeriod === 'quarterly' ? 1/3 : 1/12;
-            projects.forEach(p => { let gp = p.TotalIncome * (p.Margin / 100) * multiplier; gpByDiv[p.Division || p.costCentre || 'Onpoint'] = (gpByDiv[p.Division || p.costCentre || 'Onpoint'] || 0) + gp; });
-            if(window.pieChart && Object.keys(gpByDiv).length) { window.pieChart.updateOptions({ labels: Object.keys(gpByDiv) }); window.pieChart.updateSeries(Object.values(gpByDiv)); }
-        }
-        
-        function updateManagerChart() {
-            let mgrData = {};
-            let daysMultiplier = { daily: 1, weekly: 7, monthly: 22, yearly: 260 }[currentManagerPeriod];
-            PROJECT_MANAGERS.forEach(m => { mgrData[m] = { budget: 0, actual: 0 }; });
-            projects.forEach(p => { let monthIdx = (new Date().getMonth() + 10) % 12; let dailyBudget = (p.months?.[monthIdx] || p.TotalIncome/12) / 22; if(mgrData[p.Manager]) mgrData[p.Manager].budget += dailyBudget * daysMultiplier; });
-            let cutoffDate = new Date(); cutoffDate.setDate(cutoffDate.getDate() - daysMultiplier + 1);
-            dailyEntries.forEach(e => { if(new Date(e.date) >= cutoffDate && mgrData[e.manager]) mgrData[e.manager].actual += e.amount; });
-            let chartData = Object.entries(mgrData).map(([name, d]) => ({ name: name.split(' ')[0], variancePercent: d.budget > 0 ? ((d.actual - d.budget) / d.budget) * 100 : 0 })).sort((a,b) => b.variancePercent - a.variancePercent);
-            if(window.managerChart) { window.managerChart.updateOptions({ xaxis: { categories: chartData.map(d => d.name) } }); window.managerChart.updateSeries([{ name: 'Variance %', data: chartData.map(d => d.variancePercent) }]); }
-        }
-        
-        function updateOrderBook() {
-            let headers = '<th>Division</th><th>Manager</th><th>Project Name</th><th>Status</th><th>Total Income (R)</th><th>Margin %</th><th>Gross Profit (R)</th>';
-            document.getElementById('orderBookHeader').innerHTML = headers;
-            let body = '';
-            projects.forEach(p => { let gp = p.TotalIncome * (p.Margin / 100); body += `<tr><td>${p.Division || 'Onpoint Group'}</td><td>${p.Manager || 'Unassigned'}</td><td><strong>${p.ProjectName || 'Unknown'}</strong></td><td><span class="badge-${p.Status === 'Confirmed' ? 'success' : 'warning'}">${p.Status || 'Forecast'}</span></td><td>${formatCurrency(p.TotalIncome)}</td><td>${p.Margin}%</td><td>${formatCurrency(gp)}</td> </tr>`; });
-            document.getElementById('orderBookBody').innerHTML = body || '<tr><td colspan="7" class="text-center">No projects loaded</td></tr>';
-        }
-        
-        function updatePerformanceTable() {
-            let mgrMap = {};
-            PROJECT_MANAGERS.forEach(m => { mgrMap[m] = { budget: 0, actual: 0, quality: 0, safety: 0, count: 0 }; });
-            projects.forEach(p => { if(mgrMap[p.Manager]) mgrMap[p.Manager].budget += p.TotalIncome; });
-            dailyEntries.forEach(e => { if(mgrMap[e.manager]) { mgrMap[e.manager].actual += e.amount; mgrMap[e.manager].quality += e.quality || 80; mgrMap[e.manager].safety += e.safety || 0; mgrMap[e.manager].count++; } });
-            let html = '';
-            for(let m in mgrMap) {
-                if(mgrMap[m].budget === 0 && mgrMap[m].actual === 0) continue;
-                let ach = mgrMap[m].budget > 0 ? (mgrMap[m].actual / mgrMap[m].budget) * 100 : 0;
-                let avgQuality = mgrMap[m].count ? mgrMap[m].quality / mgrMap[m].count : 80;
-                let totalIncidents = mgrMap[m].safety;
-                let statusClass = ach >= 80 ? 'badge-success' : ach >= 50 ? 'badge-warning' : 'badge-danger';
-                let statusText = ach >= 80 ? 'On Track' : ach >= 50 ? 'At Risk' : 'Behind';
-                html += `<tr><td><strong>${m}</strong></td><td>${formatCurrency(mgrMap[m].actual)}</td><td>${formatCurrency(mgrMap[m].budget)}</td><td><div class="progress-bar-custom w-100"><div class="progress-fill ${ach >= 80 ? 'green' : ach >= 50 ? 'orange' : 'red'}" style="width:${Math.min(100, ach)}%"></div></div>${ach.toFixed(0)}%</td><td><span class="badge-info">${Math.round(avgQuality)}%</span></td><td><span class="${totalIncidents === 0 ? 'badge-success' : totalIncidents <= 2 ? 'badge-warning' : 'badge-danger'}">${totalIncidents} incidents</span></td><td><span class="${statusClass}">${statusText}</span></td></tr>`;
-            }
-            document.querySelector('#perfTable tbody').innerHTML = html || '<tr><td colspan="7">No data</td></tr>';
-        }
-        
-        function updateTodayInvoicesTable() {
-            let today = new Date().toISOString().split('T')[0];
-            let html = invoices.filter(i => i.date === today).map(inv => `<tr><td>${inv.projectName}</td><td>${inv.manager}</td><td class="fw-bold">${formatCurrency(inv.amount)}</td><td><span class="${inv.paymentReceived ? 'badge-success' : 'badge-warning'}">${inv.paymentReceived ? 'Paid' : 'Pending'}</span></td><td>${new Date().toLocaleTimeString()}</td></tr>`).join('');
-            document.querySelector('#todayInvoicesTable tbody').innerHTML = html || '<tr><td colspan="5">No invoices today</td></tr>';
-        }
-        
-        function openAddProjectModal() { document.getElementById('addProjectModal').style.display = 'flex'; }
-        function closeAddProjectModal() { document.getElementById('addProjectModal').style.display = 'none'; document.getElementById('newProjectNameInput').value = ''; }
-        
-        function addNewProject() {
-            const newProjectName = document.getElementById('newProjectNameInput').value.trim();
-            if (!newProjectName) { alert('Please enter a project name'); return; }
-            if (dynamicProjectList.includes(newProjectName)) { alert('Project already exists!'); closeAddProjectModal(); return; }
-            dynamicProjectList.push(newProjectName);
-            const projectSelects = ['revProjectName', 'invProjectName'];
-            projectSelects.forEach(id => {
-                const select = document.getElementById(id);
-                if (select) { select.innerHTML = '<option value="">Select Project</option>' + dynamicProjectList.map(p => `<option value="${p}">${p}</option>`).join(''); }
-            });
-            const revSelect = document.getElementById('revProjectName');
-            if (revSelect) revSelect.value = newProjectName;
-            alert(`Project "${newProjectName}" added!`);
-            closeAddProjectModal();
-            updateDailyBudgetWithMemory();
-        }
-        
-        function populateDropdownsStatic() {
-            const managerSelects = ['revManager', 'invManager', 'projectManager'];
-            managerSelects.forEach(id => { let select = document.getElementById(id); if(select) { select.innerHTML = '<option value="">Select Manager</option>' + PROJECT_MANAGERS.map(m => `<option value="${m}">${m}</option>`).join(''); } });
-            const projectSelects = ['revProjectName', 'invProjectName'];
-            projectSelects.forEach(id => { let select = document.getElementById(id); if(select) { select.innerHTML = '<option value="">Select Project</option>' + dynamicProjectList.map(p => `<option value="${p}">${p}</option>`).join(''); } });
-        }
-        
-        function loadBudgetMemoryFromStorage() { const stored = localStorage.getItem('dailyBudgetMemory'); if (stored) { try { budgetMemoryMap = new Map(JSON.parse(stored)); } catch(e) {} } }
-        function saveBudgetMemoryToStorage() { localStorage.setItem('dailyBudgetMemory', JSON.stringify(Array.from(budgetMemoryMap.entries()))); }
-        function getStoredBudget(manager, projectName) { return budgetMemoryMap.get(`${manager}|${projectName}`); }
-        function setStoredBudget(manager, projectName, budgetAmount) { budgetMemoryMap.set(`${manager}|${projectName}`, budgetAmount); saveBudgetMemoryToStorage(); }
-        
-        function updateDailyBudgetWithMemory() {
-            const manager = document.getElementById('revManager').value;
-            const projectName = document.getElementById('revProjectName').value;
-            if (!manager || !projectName) { document.getElementById('budgetRevenue').value = formatCurrency(0); calculateVariance(); return; }
-            const storedBudget = getStoredBudget(manager, projectName);
-            if (storedBudget !== null) { document.getElementById('budgetRevenue').value = formatCurrency(storedBudget); calculateVariance(); return; }
-            const monthIdx = (new Date().getMonth() + 10) % 12;
-            const workingDays = 22;
-            let calculatedBudget = 0;
-            const matchedProject = projects.find(p => p.ProjectName === projectName && p.Manager === manager);
-            if (matchedProject) { calculatedBudget = (matchedProject.months?.[monthIdx] || matchedProject.TotalIncome/12) / workingDays; }
-            else { const anyProject = projects.find(p => p.ProjectName === projectName); if (anyProject) { calculatedBudget = (anyProject.months?.[monthIdx] || anyProject.TotalIncome/12) / workingDays; } }
-            document.getElementById('budgetRevenue').value = formatCurrency(calculatedBudget);
-            calculateVariance();
-        }
-        
-        function makeBudgetEditable() {
-            const budgetInput = document.getElementById('budgetRevenue');
-            budgetInput.addEventListener('click', function() { if (budgetInput.readOnly) { budgetInput.readOnly = false; budgetInput.classList.add('editable'); budgetInput.focus(); } });
-            budgetInput.addEventListener('blur', function() {
-                const manager = document.getElementById('revManager').value;
-                const projectName = document.getElementById('revProjectName').value;
-                if (manager && projectName) {
-                    let rawValue = parseFloat(budgetInput.value.replace(/[^0-9.-]/g, '')) || 0;
-                    setStoredBudget(manager, projectName, rawValue);
-                    budgetInput.value = formatCurrency(rawValue);
-                }
-                budgetInput.readOnly = true; budgetInput.classList.remove('editable'); calculateVariance();
-            });
-        }
-        
-        function calculateVariance() {
-            let actual = parseFloat(document.getElementById('revAmount').value) || 0;
-            let budgetStr = document.getElementById('budgetRevenue').value;
-            let budget = parseFloat(budgetStr.replace(/[^0-9.-]/g, '')) || 0;
-            let variance = actual - budget;
-            document.getElementById('varianceAmount').value = formatCurrency(variance);
-            document.getElementById('variancePercent').value = budget > 0 ? ((variance / budget) * 100).toFixed(1) + '%' : '0%';
-            document.getElementById('varianceAmount').style.color = variance >= 0 ? '#10b981' : '#ef4444';
-        }
-        
-        function initQualityStars() {
-            const stars = document.querySelectorAll('#qualityStars .rating-star');
-            stars.forEach(star => {
-                star.addEventListener('click', () => { const score = parseInt(star.dataset.score); document.getElementById('qualityScoreInput').value = score; stars.forEach(s => s.classList.remove('active')); stars.forEach(s => { if(parseInt(s.dataset.score) <= score) s.classList.add('active'); }); });
-                if(parseInt(star.dataset.score) <= 80) star.classList.add('active');
-            });
-        }
-        
-        function submitDailyRevenueWithQuality() {
-            let revenue = { date: document.getElementById('revDate').value, costCentre: document.getElementById('costCentre') ? document.getElementById('costCentre').value : 'Onpoint Group', manager: document.getElementById('revManager').value, projectName: document.getElementById('revProjectName').value, amount: parseFloat(document.getElementById('revAmount').value) || 0, quality: parseInt(document.getElementById('qualityScoreInput').value) || 80, safety: parseInt(document.getElementById('safetyIncidentsInput').value) || 0 };
-            if(!revenue.manager || !revenue.projectName || revenue.amount <= 0) { alert('Please fill all fields'); return; }
-            const saveButton = event?.target || document.querySelector('#revenue .btn-success');
-            const originalText = saveButton ? saveButton.innerHTML : '';
-            if (saveButton) { saveButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...'; saveButton.disabled = true; }
-            fetch(CONFIG.SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'addRevenue', data: revenue }) }).then(res => res.text()).then(text => { let result; try { result = JSON.parse(text); } catch { result = { success: false }; } if (result.success) { alert('✓ Revenue saved!'); loadAllData(); } else { alert('✗ Error: ' + (result.error || '')); } }).catch(err => { console.error(err); alert('⚠️ Connection error, saved locally'); dailyEntries.push(revenue); refreshAllUI(); }).finally(() => { if(saveButton) { saveButton.innerHTML = originalText; saveButton.disabled = false; } });
-            document.getElementById('revAmount').value = ''; document.getElementById('safetyIncidentsInput').value = '0';
-        }
-        
-        function submitInvoice() {
-            let invoice = { date: document.getElementById('invDate').value, manager: document.getElementById('invManager').value, projectName: document.getElementById('invProjectName').value, amount: parseFloat(document.getElementById('invAmount').value) || 0, paymentReceived: document.getElementById('paymentReceived') ? document.getElementById('paymentReceived').checked : false, paymentDate: document.getElementById('paymentDate') ? document.getElementById('paymentDate').value : '' };
-            if(!invoice.manager || !invoice.projectName || invoice.amount <= 0) { alert('Please fill all fields'); return; }
-            const saveButton = event?.target || document.querySelector('#invoices .btn-primary');
-            const originalText = saveButton ? saveButton.innerHTML : '';
-            if (saveButton) { saveButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...'; saveButton.disabled = true; }
-            fetch(CONFIG.SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'addInvoice', data: invoice }) }).then(res => res.text()).then(text => { let result; try { result = JSON.parse(text); } catch { result = { success: false }; } if (result.success) { alert('✓ Invoice saved!'); loadAllData(); } else { alert('✗ Error: ' + (result.error || '')); } }).catch(err => { console.error(err); alert('⚠️ Connection error, saved locally'); invoices.push(invoice); refreshAllUI(); }).finally(() => { if(saveButton) { saveButton.innerHTML = originalText; saveButton.disabled = false; } });
-            document.getElementById('invAmount').value = ''; if (document.getElementById('paymentReceived')) document.getElementById('paymentReceived').checked = false; if (document.getElementById('paymentDate')) document.getElementById('paymentDate').value = '';
-        }
-        
-        function submitProject() {
-            let project = { projectName: document.getElementById('projectName').value, costCentre: document.getElementById('costCentre').value, manager: document.getElementById('projectManager').value, status: document.getElementById('projectStatus').value, totalIncome: parseFloat(document.getElementById('totalIncome').value) || 0, margin: parseFloat(document.getElementById('margin').value) || 25 };
-            if(!project.projectName || !project.manager || project.totalIncome <= 0) { alert('Please fill all fields'); return; }
-            fetch(CONFIG.SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'addProject', data: project }) }).then(res => res.text()).then(text => { let result; try { result = JSON.parse(text); } catch { result = { success: false }; } if (result.success) { alert('Project saved!'); loadAllData(); document.getElementById('projectForm').reset(); } else { alert('Error: ' + (result.error || '')); } }).catch(err => { console.error(err); alert('Failed to connect.'); });
-        }
-        
-        function refreshAllUI() { 
-            updateDashboard(); 
-            updateOrderBook(); 
-            updateManagerChart(); 
-            updateRevenueChart(); 
-            updatePieChart(); 
-            updatePerformanceTable(); 
-            updateTodayInvoicesTable(); 
-            updateManagerComparisonTable(); 
-            updateProjectTimelineTable(); 
-            updateProgressBars(); 
-            updateDivisionProgress(); 
-            updateManagerProgress(); 
-            document.getElementById('revDate').value = new Date().toISOString().split('T')[0]; 
-            document.getElementById('invDate').value = new Date().toISOString().split('T')[0]; 
-            if(document.getElementById('revManager')) document.getElementById('revManager').addEventListener('change', updateDailyBudgetWithMemory); 
-            if(document.getElementById('revProjectName')) document.getElementById('revProjectName').addEventListener('change', updateDailyBudgetWithMemory); 
-            updateDailyBudgetWithMemory(); 
-        }
-        
-        async function loadAllData() {
-            showLoading("Fetching live data...");
-            try {
-                const projectsRaw = await safeFetch(`${CONFIG.SCRIPT_URL}?action=getProjects&_=${Date.now()}`);
-                let projectsData = projectsRaw.data || (Array.isArray(projectsRaw) ? projectsRaw : []);
-                projects = projectsData.map(p => ({ ...p, Division: p.Division || p.costCentre || 'Onpoint Group', Manager: p.Manager || p.manager || 'Unassigned', ProjectName: p.ProjectName || p.projectName || 'Unknown', Status: p.Status || 'Forecast', TotalIncome: parseNumber(p["Total Income"] || p.TotalIncome || 0), Margin: parseNumber(p.Margin || 20), months: [parseNumber(p.Mar26), parseNumber(p.Apr26), parseNumber(p.May26), parseNumber(p.Jun26), parseNumber(p.Jul26), parseNumber(p.Aug26), parseNumber(p.Sep26), parseNumber(p.Oct26), parseNumber(p.Nov26), parseNumber(p.Dec26), parseNumber(p.Jan27), parseNumber(p.Feb27)] }));
-                const revenueRaw = await safeFetch(`${CONFIG.SCRIPT_URL}?action=getRevenue&_=${Date.now()}`);
-                let revenueData = revenueRaw.data || (Array.isArray(revenueRaw) ? revenueRaw : []);
-                dailyEntries = revenueData.map(r => ({ date: (r.Date || r.date || '').toString().split('T')[0], manager: r.Manager || r.manager, projectName: r.ProjectName || r.projectName, amount: parseNumber(r.Amount || r.amount), quality: parseNumber(r.Quality || r.quality) || 80, safety: parseNumber(r.Safety || r.safety) || 0 }));
-                const invoiceRaw = await safeFetch(`${CONFIG.SCRIPT_URL}?action=getInvoices&_=${Date.now()}`);
-                let invoiceData = invoiceRaw.data || (Array.isArray(invoiceRaw) ? invoiceRaw : []);
-                invoices = invoiceData.map(i => ({ date: (i.Date || i.date || '').toString().split('T')[0], manager: i.Manager || i.manager, projectName: i.ProjectName || i.projectName, amount: parseNumber(i.Amount || i.amount), paymentReceived: i.PaymentReceived === true || i.PaymentReceived === 'TRUE' || i.PaymentReceived === 'true' || i.PaymentReceived === 1, paymentDate: i.PaymentDate || '' }));
-                document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-check-circle me-1"></i> Live Connected';
-                document.getElementById('connectionStatus').className = 'connection-status status-connected';
-                refreshAllUI();
-                hideLoading();
-            } catch(err) { console.error("Error:", err); document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> Connection Failed'; document.getElementById('connectionStatus').className = 'connection-status status-disconnected'; hideLoading(); }
-        }
-        
-        function initCharts() {
-            window.revenueChart = new ApexCharts(document.querySelector("#revenueChart"), { chart: { type: 'bar', height: 360 }, series: [{ name: 'Budget', data: [] }, { name: 'Actual', data: [] }], xaxis: { categories: [] }, colors: ['#1e3c72', '#10b981'] }); window.revenueChart.render();
-            window.pieChart = new ApexCharts(document.querySelector("#pieChart"), { chart: { type: 'pie', height: 280 }, series: [1], labels: ['Loading'] }); window.pieChart.render();
-            window.managerChart = new ApexCharts(document.querySelector("#managerPerformanceChart"), { chart: { type: 'bar', height: 400 }, series: [{ name: 'Variance %', data: [] }], xaxis: { categories: [] }, colors: ['#f59e0b'], plotOptions: { bar: { borderRadius: 8 } }, tooltip: { y: { formatter: v => v.toFixed(1) + '%' } } }); window.managerChart.render();
-        }
-        
-        document.querySelectorAll('#dashboardPeriodSelector .period-btn').forEach(btn => btn.addEventListener('click', () => { document.querySelectorAll('#dashboardPeriodSelector .period-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentDashboardPeriod = btn.dataset.period; updateDashboard(); }));
-        document.querySelectorAll('#revenueChartPeriod .period-btn').forEach(btn => btn.addEventListener('click', () => { document.querySelectorAll('#revenueChartPeriod .period-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentRevenueChartPeriod = btn.dataset.period; updateRevenueChart(); }));
-        document.querySelectorAll('#pieChartPeriod .period-btn').forEach(btn => btn.addEventListener('click', () => { document.querySelectorAll('#pieChartPeriod .period-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentPieChartPeriod = btn.dataset.period; updatePieChart(); }));
-        document.querySelectorAll('#managerChartPeriod .period-btn').forEach(btn => btn.addEventListener('click', () => { document.querySelectorAll('#managerChartPeriod .period-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentManagerPeriod = btn.dataset.period; updateManagerChart(); }));
-        document.querySelectorAll('#managerComparisonPeriod .manager-period-btn').forEach(btn => { btn.addEventListener('click', () => { document.querySelectorAll('#managerComparisonPeriod .manager-period-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentManagerComparisonPeriod = btn.dataset.period; updateManagerComparisonTable(); }); });
-        document.querySelectorAll('.nav-tab-modern').forEach(tab => tab.addEventListener('click', () => { document.querySelectorAll('.nav-tab-modern').forEach(t => t.classList.remove('active')); document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active')); tab.classList.add('active'); document.getElementById(tab.dataset.tab).classList.add('active'); if(tab.dataset.tab === 'orderbook') updateOrderBook(); if(tab.dataset.tab === 'performance') updatePerformanceTable(); }));
-        
-        function exportFullReport() { let csv = 'Division,Manager,Project,Status,Total Income,Margin %,Gross Profit\n' + projects.map(p => `${p.Division},${p.Manager},${p.ProjectName},${p.Status},${p.TotalIncome},${p.Margin},${p.TotalIncome * (p.Margin/100)}`).join('\n'); let blob = new Blob([csv], {type:'text/csv'}); let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'orderbook_report.csv'; a.click(); }
-        
-        loadBudgetMemoryFromStorage();
-        populateDropdownsStatic();
-        initQualityStars();
-        initCharts();
-        loadAllData();
-        makeBudgetEditable();
-        setInterval(() => loadAllData(), 900000);
-    </script>
+    <div class="hero">
+      <div style="flex:1; min-width:320px;">
+        <div class="muted" style="font-weight:600;">Standalone reporting tool</div>
+        <div class="pill" style="margin-top:12px;">Live Google Sheets version</div>
+        <h1>Revenue, Performance &amp; Action Reporting</h1>
+        <p class="muted">The dashboard now loads each Apps Script endpoint separately. If one endpoint fails, the others still render and the page falls back safely instead of crashing on a single failed fetch.</p>
+      </div>
+      <div class="controls">
+        <select id="period" class="control"></select>
+        <select id="division" class="control"></select>
+        <select id="managerFilter" class="control"></select>
+        <div class="searchbox"><input id="query" placeholder="Search division, PM or project..." /></div>
+      </div>
+    </div>
+
+    <div class="card section">
+      <h3>Connection settings</h3>
+      <div class="form-grid">
+        <div class="field span-8"><label>Apps Script Web App URL</label><input id="scriptUrlInput" type="url" placeholder="Paste deployed Apps Script web app URL" /></div>
+        <div class="field span-2"><label>Fallback mode</label><select id="fallbackMode"><option value="auto">Auto</option><option value="always">Always</option><option value="never">Never</option></select></div>
+        <div class="field span-2"><label>Save settings</label><button id="saveSettingsBtn">Save</button></div>
+      </div>
+      <div class="helper" style="margin-top:10px;">Use the exact deployed URL ending in <strong>/exec</strong>. The dashboard now handles partial endpoint failures such as <code>getInvoices</code> failing while <code>getProjects</code> and <code>getRevenue</code> still work.</div>
+    </div>
+
+    <div id="headlineKpis" class="section grid-6"></div>
+    <div class="section card"><h3>Group at a glance aggregation engine</h3><div id="summaryGrid" class="summary-grid"></div></div>
+    <div id="performanceKpis" class="section grid-5"></div>
+    <div class="filter-strip"><span><strong>Active KPI filter:</strong></span><span id="activeKpiBadge" class="badge b-slate">All records</span><button id="clearFilterBtn" class="btn-secondary" style="display:none;">Clear filter</button></div>
+    <div id="cashKpis" class="section grid-3"></div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="executive">Executive summary</button>
+      <button class="tab" data-tab="performance">Performance report</button>
+      <button class="tab" data-tab="actions">Action report</button>
+      <button class="tab" data-tab="dailyRevenue">Daily Revenue</button>
+      <button class="tab" data-tab="invoices">Invoices</button>
+      <button class="tab" data-tab="diagnostics">Diagnostics</button>
+    </div>
+
+    <div id="executive" class="tab-content active section">
+      <div class="row two">
+        <div class="card" style="grid-column:1/-1;"><h3>Budget vs actual and risk view</h3><div class="table-wrap"><table id="budgetRiskTable"></table></div></div>
+        <div class="card"><h3>Divisional performance at a glance</h3><div class="table-wrap"><table id="divisionTable"></table></div></div>
+        <div class="card"><h3>PM performance at a glance</h3><div class="table-wrap"><table id="pmTable"></table></div></div>
+      </div>
+      <div class="row two-wide section">
+        <div class="card"><h3>Reported revenue vs target</h3><canvas id="barChart"></canvas></div>
+        <div class="card"><h3>Division mix</h3><canvas id="pieChart" class="small-canvas"></canvas><div id="divisionMixLegend"></div></div>
+      </div>
+    </div>
+
+    <div id="performance" class="tab-content section">
+      <div class="card"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:14px;"><h3 style="margin:0;">PM balanced scorecard</h3><div class="pill">Per PM per day, week, month, quarter and year</div></div><div class="table-wrap"><table id="scorecardTable"></table></div></div>
+      <div class="card section"><h3>Performance report by division</h3><canvas id="areaChart"></canvas><div class="table-wrap" style="margin-top:18px;"><table id="projectPerfTable"></table></div></div>
+    </div>
+
+    <div id="actions" class="tab-content section"><div class="row two-wide"><div class="card"><h3>Action report</h3><div class="table-wrap"><table id="actionTable"></table></div></div><div class="card"><h3>Action summary</h3><div id="actionSummary"></div></div></div></div>
+
+    <div id="dailyRevenue" class="tab-content section">
+      <div class="card">
+        <h3>Daily revenue input</h3>
+        <div class="form-grid">
+          <div class="field span-2"><label>Date</label><input id="revDate" type="date" /></div>
+          <div class="field span-3"><label>Cost Center</label><select id="revCostCenter"></select></div>
+          <div class="field span-3"><label>Project Manager</label><select id="revManager"></select></div>
+          <div class="field span-4"><label>Project Name</label><select id="revProjectName"></select></div>
+          <div class="field span-3"><label>Actual Revenue</label><input id="revAmount" type="number" min="0" placeholder="0" /></div>
+          <div class="field span-3"><label>Budget Revenue</label><input id="revBudget" type="number" min="0" placeholder="0" /></div>
+          <div class="field span-2"><label>Quality %</label><input id="revQuality" type="number" min="0" max="100" value="80" /></div>
+          <div class="field span-2"><label>Safety Incidents</label><input id="revSafety" type="number" min="0" value="0" /></div>
+          <div class="field span-2"><label>Achievement %</label><input id="revAchievement" readonly /></div>
+          <div class="field span-12"><button id="saveRevenueBtn">Save Daily Revenue</button></div>
+        </div>
+      </div>
+      <div class="card section"><h3>Revenue log</h3><div class="table-wrap"><table id="revenueLogTable"></table></div></div>
+    </div>
+
+    <div id="invoices" class="tab-content section">
+      <div class="card">
+        <h3>Invoice input</h3>
+        <div class="form-grid">
+          <div class="field span-2"><label>Invoice Date</label><input id="invDate" type="date" /></div>
+          <div class="field span-3"><label>Project Manager</label><select id="invManager"></select></div>
+          <div class="field span-4"><label>Project Name</label><select id="invProjectName"></select></div>
+          <div class="field span-3"><label>Invoice Amount</label><input id="invAmount" type="number" min="0" placeholder="0" /></div>
+          <div class="field span-3"><label>Payment Received</label><select id="paymentReceived"><option value="false">No</option><option value="true">Yes</option></select></div>
+          <div class="field span-3"><label>Payment Date</label><input id="paymentDate" type="date" /></div>
+          <div class="field span-12"><button id="saveInvoiceBtn">Save Invoice</button></div>
+        </div>
+      </div>
+      <div class="card section"><h3>Invoice log</h3><div class="table-wrap"><table id="invoiceLogTable"></table></div></div>
+    </div>
+
+    <div id="diagnostics" class="tab-content section">
+      <div class="diagnostics">
+        <div class="card"><h3>Connection diagnostics</h3><pre id="diagnosticLog">No diagnostics yet.</pre></div>
+        <div class="card"><h3>Status summary</h3><div id="statusSummary" class="notice">Waiting for first connection test.</div><div class="notice" style="margin-top:12px;"><strong>Checklist</strong><br><br>1. Deploy Apps Script as a Web App.<br>2. Use the final <strong>/exec</strong> URL.<br>3. Access must be <strong>Anyone</strong>.<br>4. The script should return JSON for <code>getProjects</code>, <code>getRevenue</code>, and <code>getInvoices</code>.<br>5. If only one endpoint fails, the dashboard should still render the rest.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxSQQrBq3I0rZWyhj4aS-o5cEVXFzX9Sjoj4lsVpSFfLAa6aQLXWd2LclLPiR51EJhL/exec';
+    const STORAGE_KEYS = { scriptUrl:'onpoint.scriptUrl', fallbackMode:'onpoint.fallbackMode' };
+    const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
+    const DIVISION_COLORS = ['#0f172a','#334155','#475569','#64748b','#94a3b8','#1e293b','#475569'];
+    const COST_CENTERS = ['Onpoint Ontime','Aqua Telecoms','Nkanyezi','Distinct Hire'];
+    const PROJECT_OPTIONS = ['DBSA Generators','DBSA Rooiwal','Joe Gqabi','Temba','Midvaal','Coega','KZN General Buildings','Tshwane','Public Works Limpopo','Limpopo Eskom Substation Ephraim Mogale','Naizna','Cape Town','COT Streetlights','COT Electrification','COT Metering','COE Streetlights','Msunduzi E50','Msunduzi Streetlights','Msunduzi E33','Msunduzi E47','Moqhaka Streetlights','Moqhaka Metering','Centlec CD11','Centlec Transformers CD32','Centlec CD45','Midvaal Mechanical','Eskom SPU','Eskom FSOU Substation','Eskom ECOU','Eskom LOU General Buildings','Eskom KZN Minor Reticulation','Randwest Electrical','Randwest Roads & Stormwater','Randwest Water rand sanitation','Randwest Bulk','RAL','Stellenbosh','Liquid ECPG','Liquid ECSOD','Liquid Gauteng SOD','Telkom','MTN','Centlec','Eskom Harvard','City Power','Umhlathuze Municipality','Eskom WC','COE Buildings','Midvaal Water','Midvaal Electricity','Uthukela','Kgetleng River','Ray Nkonyeni Facility','Ray Nkonyeni Electrical Material','Ray Nkonyeni Mast','Ray Nkonyeni Meter Reading','Ramotshere Electrical Supplies','Newcastle Substations','Ubuntu','IDT North West Buidlings','Amajuba Generator','uPhongolo','Abaquilisi Battery Supplies','Abaquilisi Streetlights'];
+    const PROJECT_MANAGERS = ['Moses','Andrew','Govern','Phillip','Timothy','Stanley','Brian','Johan','Siyanda','Dave','James','Rayman','Tony','Graham','Ronald','Petros','Elroy','Mesh','Vusi','Tinotenda','Sydney','Moeti'];
+    const FALLBACK_DATA = {
+      projects:[
+        { id:'P1', Division:'Onpoint Ontime', Manager:'Moses', Client:'DBSA', ProjectName:'DBSA Generators', Status:'Confirmed', TotalIncome:24000000, Margin:24, StartDate:'2026-01-15', EndDate:'2026-12-10' },
+        { id:'P2', Division:'Onpoint Ontime', Manager:'Andrew', Client:'DBSA', ProjectName:'DBSA Rooiwal', Status:'Confirmed', TotalIncome:19500000, Margin:18, StartDate:'2026-02-01', EndDate:'2026-11-15' },
+        { id:'P3', Division:'Aqua Telecoms', Manager:'Govern', Client:'Liquid', ProjectName:'Liquid ECPG', Status:'Confirmed', TotalIncome:38100000, Margin:22, StartDate:'2026-01-20', EndDate:'2026-12-20' },
+        { id:'P4', Division:'Aqua Telecoms', Manager:'Phillip', Client:'MTN', ProjectName:'MTN', Status:'Forecast', TotalIncome:6500000, Margin:12, StartDate:'2026-03-01', EndDate:'2026-09-30' },
+        { id:'P5', Division:'Nkanyezi', Manager:'Timothy', Client:'Moqhaka', ProjectName:'Moqhaka Streetlights', Status:'Confirmed', TotalIncome:5900000, Margin:19, StartDate:'2026-01-10', EndDate:'2026-10-31' },
+        { id:'P6', Division:'Distinct Hire', Manager:'Stanley', Client:'RAL', ProjectName:'RAL', Status:'Forecast', TotalIncome:2800000, Margin:8, StartDate:'2026-02-12', EndDate:'2026-08-20' }
+      ],
+      revenue:[
+        { Date:'2026-03-27', Manager:'Moses', CostCenter:'Onpoint Ontime', ProjectName:'DBSA Generators', Amount:180000, Budget:92308, Quality:89, Safety:0 },
+        { Date:'2026-03-27', Manager:'Andrew', CostCenter:'Onpoint Ontime', ProjectName:'DBSA Rooiwal', Amount:70000, Budget:75000, Quality:81, Safety:0 },
+        { Date:'2026-03-27', Manager:'Govern', CostCenter:'Aqua Telecoms', ProjectName:'Liquid ECPG', Amount:110000, Budget:146538, Quality:74, Safety:0 },
+        { Date:'2026-03-27', Manager:'Phillip', CostCenter:'Aqua Telecoms', ProjectName:'MTN', Amount:20000, Budget:25000, Quality:63, Safety:1 },
+        { Date:'2026-03-27', Manager:'Timothy', CostCenter:'Nkanyezi', ProjectName:'Moqhaka Streetlights', Amount:25000, Budget:22692, Quality:78, Safety:0 },
+        { Date:'2026-03-27', Manager:'Stanley', CostCenter:'Distinct Hire', ProjectName:'RAL', Amount:12000, Budget:10769, Quality:58, Safety:2 }
+      ],
+      invoices:[
+        { Date:'2026-03-27', Manager:'Moses', ProjectName:'DBSA Generators', Amount:650000, PaymentReceived:true, PaymentDate:'2026-03-27' },
+        { Date:'2026-03-27', Manager:'Andrew', ProjectName:'DBSA Rooiwal', Amount:420000, PaymentReceived:true, PaymentDate:'2026-03-27' },
+        { Date:'2026-03-27', Manager:'Govern', ProjectName:'Liquid ECPG', Amount:550000, PaymentReceived:true, PaymentDate:'2026-03-27' },
+        { Date:'2026-03-27', Manager:'Phillip', ProjectName:'MTN', Amount:110000, PaymentReceived:false, PaymentDate:'' }
+      ]
+    };
+
+    const state = { period:'Daily', division:'All', manager:'All', query:'', activeKpi:'all' };
+    let charts = {}, projectsData = [], revenueData = [], invoiceData = [], lastDiagnostics = [], usingFallback = false;
+
+    const byId = id => document.getElementById(id);
+    const showLoading = msg => { byId('loadingOverlay').style.display='flex'; byId('loadingMessage').textContent = msg || 'Loading...'; };
+    const hideLoading = () => { byId('loadingOverlay').style.display='none'; };
+    const setConnection = (text, cls) => { const el = byId('connectionBadge'); el.className = 'badge ' + cls; el.textContent = text; };
+    const money = value => new Intl.NumberFormat('en-ZA',{style:'currency',currency:'ZAR',maximumFractionDigits:0}).format(Number(value)||0);
+    const num = value => Number(String(value ?? '').replace(/[^0-9.-]+/g,'')) || 0;
+    const pct = (actual,target) => target ? Math.round((actual/target)*100) : 0;
+    const badge = (text, cls) => `<span class="badge ${cls}">${text}</span>`;
+    const cell = (html, cls='') => ({ html, class: cls });
+    const statusTone = score => score >= 80 ? 'b-green' : score >= 50 ? 'b-amber' : 'b-red';
+    const actionTone = status => status === 'Closed' ? 'b-green' : status === 'In Progress' ? 'b-amber' : status === 'Escalated' ? 'b-red' : 'b-slate';
+    const kpiTone = (score, green, amber) => score >= green ? 'green' : score >= amber ? 'amber' : 'red';
+    const normaliseDate = value => value ? String(value).split('T')[0] : '';
+    const todayISO = () => new Date().toISOString().split('T')[0];
+    const safeDate = value => { const d = new Date(value); return isNaN(d.getTime()) ? null : d; };
+    const readScriptUrl = () => localStorage.getItem(STORAGE_KEYS.scriptUrl) || DEFAULT_SCRIPT_URL;
+    const readFallbackMode = () => localStorage.getItem(STORAGE_KEYS.fallbackMode) || 'auto';
+    const escapeHtml = str => String(str).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
+
+    function writeSettings(){
+      localStorage.setItem(STORAGE_KEYS.scriptUrl, byId('scriptUrlInput').value.trim() || DEFAULT_SCRIPT_URL);
+      localStorage.setItem(STORAGE_KEYS.fallbackMode, byId('fallbackMode').value);
+      logDiagnostic('Settings saved.');
+    }
+
+    function logDiagnostic(message, detail){
+      const time = new Date().toLocaleString();
+      const line = `[${time}] ${message}${detail ? `\n${detail}` : ''}`;
+      lastDiagnostics.unshift(line);
+      lastDiagnostics = lastDiagnostics.slice(0, 30);
+      byId('diagnosticLog').textContent = lastDiagnostics.join('\n\n');
+    }
+
+    function setStatusSummary(html){ byId('statusSummary').innerHTML = html; }
+
+    function buildTable(el, headers, rows){
+      el.innerHTML = `<thead><tr>${headers.map(h => `<th class="${h.class || ''}">${h.label}</th>`).join('')}</tr></thead><tbody>${rows.length ? rows.map(r => `<tr>${r.map(c => typeof c === 'string' ? c : `<td class="${c.class || ''}">${c.html}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${headers.length}">No data available</td></tr>`}</tbody>`;
+    }
+
+    function normaliseProjects(raw){
+      return raw.map((row, index) => ({
+        id: row.id || `P${index+1}`,
+        division: row.Division || row.division || row.costCentre || row.CostCenter || 'Onpoint Ontime',
+        pm: row.Manager || row.pm || row.manager || 'Unassigned',
+        client: row.Client || row.client || '',
+        project: row.ProjectName || row.project || row.projectName || 'Unknown Project',
+        status: row.Status || row.status || 'Forecast',
+        totalIncome: num(row.TotalIncome || row.totalIncome),
+        gpPercent: num(row.Margin || row.gpPercent || 20),
+        startDate: normaliseDate(row.StartDate || row.startDate),
+        endDate: normaliseDate(row.EndDate || row.endDate)
+      }));
+    }
+
+    function normaliseRevenue(raw){
+      return raw.map(row => ({
+        date: normaliseDate(row.Date || row.date),
+        manager: row.Manager || row.manager || '',
+        costCenter: row.CostCenter || row.Division || row.costCenter || '',
+        projectName: row.ProjectName || row.projectName || '',
+        amount: num(row.Amount || row.amount),
+        budget: num(row.Budget || row.budget),
+        quality: num(row.Quality || row.quality || 80),
+        safety: num(row.Safety || row.safety || 0)
+      }));
+    }
+
+    function normaliseInvoices(raw){
+      return raw.map(row => ({
+        date: normaliseDate(row.Date || row.date),
+        manager: row.Manager || row.manager || '',
+        projectName: row.ProjectName || row.projectName || '',
+        amount: num(row.Amount || row.amount),
+        paymentReceived: String(row.PaymentReceived || row.paymentReceived).toLowerCase() === 'true',
+        paymentDate: normaliseDate(row.PaymentDate || row.paymentDate)
+      }));
+    }
+
+    function getFetchOptions(method='GET', body){
+      const options = { method, mode:'cors', cache:'no-store', redirect:'follow', headers:{ Accept:'application/json' } };
+      if (body != null) {
+        options.headers['Content-Type'] = 'text/plain;charset=utf-8';
+        options.body = JSON.stringify(body);
+      }
+      return options;
+    }
+
+    async function fetchWithTimeout(url, options={}, timeoutMs=15000){
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        return await fetch(url, { ...options, signal: controller.signal });
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    async function safeFetchJson(url, options={}){
+      logDiagnostic(`Requesting ${url}`);
+      let response;
+      try {
+        response = await fetchWithTimeout(url, options, 15000);
+      } catch (error) {
+        if (error.name === 'AbortError') throw new Error(`Request timed out for ${url}`);
+        throw new Error(`Network request failed for ${url}. ${error.message || error}`);
+      }
+      if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText} for ${url}`);
+      const text = await response.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        throw new Error(`Endpoint did not return valid JSON for ${url}. Response: ${text.slice(0,300)}`);
+      }
+    }
+
+    async function loadEndpoint(scriptUrl, action){
+      try {
+        const payload = await safeFetchJson(`${scriptUrl}?action=${action}&_=${Date.now()}`, getFetchOptions('GET'));
+        const rows = Array.isArray(payload?.data) ? payload.data : [];
+        logDiagnostic(`${action} loaded successfully.`, `${rows.length} rows`);
+        return { ok:true, rows };
+      } catch (error) {
+        logDiagnostic(`${action} failed.`, error.message);
+        return { ok:false, error:error.message, rows:[] };
+      }
+    }
+
+    async function runConnectionTest(){
+      const scriptUrl = byId('scriptUrlInput').value.trim();
+      if (!scriptUrl) {
+        setStatusSummary('Please enter the Apps Script Web App URL.');
+        logDiagnostic('Connection test skipped because the script URL is empty.');
+        return false;
+      }
+      showLoading('Testing connection...');
+      setConnection('Testing', 'b-amber');
+      try {
+        const result = await loadEndpoint(scriptUrl, 'getProjects');
+        if (!result.ok) throw new Error(result.error);
+        setConnection('Live Connected', 'b-green');
+        setStatusSummary(`Connection test passed.<br><br>Projects endpoint returned ${result.rows.length} rows.`);
+        return true;
+      } catch (error) {
+        setConnection('Connection Failed', 'b-red');
+        setStatusSummary(`Connection test failed.<br><br><strong>${escapeHtml(error.message)}</strong>`);
+        return false;
+      } finally {
+        hideLoading();
+      }
+    }
+
+    function applyFallback(reason){
+      usingFallback = true;
+      projectsData = normaliseProjects(FALLBACK_DATA.projects);
+      revenueData = normaliseRevenue(FALLBACK_DATA.revenue);
+      invoiceData = normaliseInvoices(FALLBACK_DATA.invoices);
+      setConnection('Fallback Data', 'b-amber');
+      setStatusSummary(`Using fallback data.<br><br>${escapeHtml(reason)}`);
+      logDiagnostic('Fallback data activated.', reason);
+      populateInputs();
+      render();
+    }
+
+    async function loadLiveData(){
+      const scriptUrl = byId('scriptUrlInput').value.trim();
+      const fallbackMode = byId('fallbackMode').value;
+      usingFallback = false;
+
+      if (fallbackMode === 'always') {
+        applyFallback('Fallback mode is set to Always.');
+        return;
+      }
+      if (!scriptUrl) {
+        if (fallbackMode === 'auto') return applyFallback('No Apps Script URL was provided.');
+        setConnection('Missing URL', 'b-red');
+        setStatusSummary('No Apps Script URL provided.');
+        return;
+      }
+
+      showLoading('Loading live data from Google Sheets...');
+      setConnection('Connecting', 'b-amber');
+
+      const [projectsResult, revenueResult, invoicesResult] = await Promise.all([
+        loadEndpoint(scriptUrl, 'getProjects'),
+        loadEndpoint(scriptUrl, 'getRevenue'),
+        loadEndpoint(scriptUrl, 'getInvoices')
+      ]);
+
+      const successCount = [projectsResult, revenueResult, invoicesResult].filter(r => r.ok).length;
+
+      if (successCount === 0) {
+        hideLoading();
+        if (fallbackMode === 'auto') return applyFallback('All live endpoints failed.');
+        setConnection('Connection Failed', 'b-red');
+        setStatusSummary('All live endpoints failed. Check the Diagnostics tab.');
+        return;
+      }
+
+      projectsData = projectsResult.ok ? normaliseProjects(projectsResult.rows) : normaliseProjects(FALLBACK_DATA.projects);
+      revenueData = revenueResult.ok ? normaliseRevenue(revenueResult.rows) : normaliseRevenue([]);
+      invoiceData = invoicesResult.ok ? normaliseInvoices(invoicesResult.rows) : normaliseInvoices([]);
+
+      const warnings = [];
+      if (!projectsResult.ok) warnings.push('Projects failed, fallback projects were used.');
+      if (!revenueResult.ok) warnings.push('Revenue failed, revenue data is empty.');
+      if (!invoicesResult.ok) warnings.push('Invoices failed, invoice data is empty.');
+
+      setConnection(warnings.length ? 'Partially Connected' : 'Live Connected', warnings.length ? 'b-amber' : 'b-green');
+      setStatusSummary(`Loaded live data.<br><br>Projects: ${projectsData.length}<br>Revenue rows: ${revenueData.length}<br>Invoice rows: ${invoiceData.length}${warnings.length ? `<br><br><strong>Warnings:</strong><br>${warnings.map(escapeHtml).join('<br>')}` : ''}`);
+      populateInputs();
+      render();
+      hideLoading();
+    }
+
+    function projectRevenueForPeriod(project, period){
+      const rows = revenueData.filter(r => r.projectName === project.project && (!project.pm || !r.manager || r.manager === project.pm));
+      const now = new Date();
+      if (period === 'Daily') return rows.filter(r => r.date === todayISO()).reduce((s,r)=>s+r.amount,0);
+      if (period === 'Weekly') { const weekStart = new Date(); weekStart.setHours(0,0,0,0); weekStart.setDate(weekStart.getDate()-weekStart.getDay()); return rows.filter(r => safeDate(r.date) && safeDate(r.date) >= weekStart).reduce((s,r)=>s+r.amount,0); }
+      if (period === 'Monthly') return rows.filter(r => { const d=safeDate(r.date); return d && d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear(); }).reduce((s,r)=>s+r.amount,0);
+      if (period === 'Quarterly') return rows.filter(r => { const d=safeDate(r.date); return d && Math.floor(d.getMonth()/3)===Math.floor(now.getMonth()/3) && d.getFullYear()===now.getFullYear(); }).reduce((s,r)=>s+r.amount,0);
+      return rows.filter(r => { const d=safeDate(r.date); return d && d.getFullYear()===now.getFullYear(); }).reduce((s,r)=>s+r.amount,0);
+    }
+
+    function projectTargetForPeriod(project, period){ const annual = project.totalIncome || 0; if (period === 'Daily') return annual/260; if (period === 'Weekly') return annual/52; if (period === 'Monthly') return annual/12; if (period === 'Quarterly') return annual/4; return annual; }
+    function projectCashForPeriod(project, period){ const rows = invoiceData.filter(r => r.projectName === project.project && r.paymentReceived); const now = new Date(); if (period === 'Daily') return rows.filter(r=>r.date===todayISO()).reduce((s,r)=>s+r.amount,0); if (period === 'Weekly') { const weekStart = new Date(); weekStart.setHours(0,0,0,0); weekStart.setDate(weekStart.getDate()-weekStart.getDay()); return rows.filter(r=>safeDate(r.date)&&safeDate(r.date)>=weekStart).reduce((s,r)=>s+r.amount,0); } if (period === 'Monthly') return rows.filter(r=>{ const d=safeDate(r.date); return d&&d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear(); }).reduce((s,r)=>s+r.amount,0); if (period === 'Quarterly') return rows.filter(r=>{ const d=safeDate(r.date); return d&&Math.floor(d.getMonth()/3)===Math.floor(now.getMonth()/3)&&d.getFullYear()===now.getFullYear(); }).reduce((s,r)=>s+r.amount,0); return rows.filter(r=>{ const d=safeDate(r.date); return d&&d.getFullYear()===now.getFullYear(); }).reduce((s,r)=>s+r.amount,0); }
+    function projectQuality(project){ const rows = revenueData.filter(r => r.projectName === project.project); return rows.length ? Math.round(rows.reduce((s,r)=>s+(r.quality||80),0)/rows.length) : 80; }
+    function projectSafety(project){ const rows = revenueData.filter(r => r.projectName === project.project); return Math.max(0,100 - rows.reduce((s,r)=>s+(r.safety||0),0)*10); }
+    function projectDeadline(project){ const start=safeDate(project.startDate), end=safeDate(project.endDate); if (!start||!end) return 75; const total=end.getTime()-start.getTime(); if (total<=0) return 100; const elapsed=Math.min(Math.max(Date.now()-start.getTime(),0),total); return Math.round((elapsed/total)*100); }
+
+    function enrichedProjects(){
+      return projectsData.map(project => {
+        const revenueDaily = projectRevenueForPeriod(project,'Daily');
+        const revenueWeekly = projectRevenueForPeriod(project,'Weekly');
+        const revenueMonthly = projectRevenueForPeriod(project,'Monthly');
+        const revenueQuarterly = projectRevenueForPeriod(project,'Quarterly');
+        const revenueYearly = projectRevenueForPeriod(project,'Yearly');
+        const targetDaily = projectTargetForPeriod(project,'Daily');
+        const targetWeekly = projectTargetForPeriod(project,'Weekly');
+        const targetMonthly = projectTargetForPeriod(project,'Monthly');
+        const targetQuarterly = projectTargetForPeriod(project,'Quarterly');
+        const targetYearly = projectTargetForPeriod(project,'Yearly');
+        const performance = pct(projectRevenueForPeriod(project,state.period), projectTargetForPeriod(project,state.period));
+        return { ...project, revenueDaily, revenueWeekly, revenueMonthly, revenueQuarterly, revenueYearly, targetDaily, targetWeekly, targetMonthly, targetQuarterly, targetYearly, cashCollected:projectCashForPeriod(project,state.period), deadlineScore:projectDeadline(project), safetyScore:projectSafety(project), qualityScore:projectQuality(project), actionOwner:project.pm, actionDue:project.endDate || '-', actionStatus:performance>=100?'Closed':performance>=70?'In Progress':'Escalated', recovery:performance>=100?'On track':'Increase collections, accelerate delivery and close outstanding activities' };
+      });
+    }
+
+    function filteredProjects(){
+      return enrichedProjects().filter(project => {
+        const passDivision = state.division === 'All' || project.division === state.division;
+        const passManager = state.manager === 'All' || project.pm === state.manager;
+        const passQuery = `${project.project} ${project.client} ${project.pm} ${project.division}`.toLowerCase().includes(state.query.toLowerCase());
+        const revenue = project['revenue'+state.period], target = project['target'+state.period];
+        const passKpi = state.activeKpi === 'all' ? true : state.activeKpi === 'revenue' ? revenue < target : state.activeKpi === 'profitability' ? project.gpPercent < 15 : state.activeKpi === 'deadlines' ? project.deadlineScore < 80 : state.activeKpi === 'safety' ? project.safetyScore < 100 : state.activeKpi === 'quality' ? project.qualityScore < 80 : state.activeKpi === 'cash' ? project.cashCollected < revenue : project.actionStatus !== 'Closed';
+        return passDivision && passManager && passQuery && passKpi;
+      });
+    }
+
+    function aggregateGroup(projects){
+      const empty = { daily:0, weekly:0, monthly:0, quarterly:0, yearly:0 };
+      const result = { revenue:{...empty}, target:{...empty}, cash:{...empty}, profitability:{...empty}, deadlines:{...empty}, safety:{...empty}, quality:{...empty}, achievement:{...empty} };
+      PERIODS.forEach(label => {
+        const key = label.toLowerCase();
+        const revenue = projects.reduce((s,p)=>s+p['revenue'+label],0);
+        const target = projects.reduce((s,p)=>s+p['target'+label],0);
+        const cash = projects.reduce((s,p)=>s+p.cashCollected,0);
+        const weightedMargin = projects.reduce((s,p)=>s+p['revenue'+label]*(p.gpPercent/100),0);
+        result.revenue[key]=revenue; result.target[key]=target; result.cash[key]=cash;
+        result.profitability[key]=Math.round((weightedMargin/Math.max(revenue,1))*100);
+        result.deadlines[key]=Math.round(projects.reduce((s,p)=>s+p.deadlineScore,0)/Math.max(projects.length,1));
+        result.safety[key]=Math.round(projects.reduce((s,p)=>s+p.safetyScore,0)/Math.max(projects.length,1));
+        result.quality[key]=Math.round(projects.reduce((s,p)=>s+p.qualityScore,0)/Math.max(projects.length,1));
+        result.achievement[key]=pct(revenue,target);
+      });
+      return result;
+    }
+
+    function aggregateByDimension(projects, dimension){
+      const map = new Map();
+      projects.forEach(project => {
+        const key = project[dimension];
+        const current = map.get(key) || { name:key, daily:0, weekly:0, monthly:0, quarterly:0, yearly:0, targetDaily:0, targetWeekly:0, targetMonthly:0, targetQuarterly:0, targetYearly:0 };
+        current.daily += project.revenueDaily; current.weekly += project.revenueWeekly; current.monthly += project.revenueMonthly; current.quarterly += project.revenueQuarterly; current.yearly += project.revenueYearly;
+        current.targetDaily += project.targetDaily; current.targetWeekly += project.targetWeekly; current.targetMonthly += project.targetMonthly; current.targetQuarterly += project.targetQuarterly; current.targetYearly += project.targetYearly;
+        map.set(key, current);
+      });
+      return Array.from(map.values());
+    }
+
+    function render(){
+      const filtered = filteredProjects();
+      const activeBucket = state.period.toLowerCase();
+      const groupRollup = aggregateGroup(filtered);
+      const divisionRollup = aggregateByDimension(filtered,'division');
+      const pmRollup = aggregateByDimension(filtered,'pm');
+      const totals = { revenue:groupRollup.revenue[activeBucket], target:groupRollup.target[activeBucket], cash:groupRollup.cash[activeBucket], margin:Math.round((groupRollup.profitability[activeBucket]/100)*groupRollup.revenue[activeBucket]), deadline:groupRollup.deadlines[activeBucket], safety:groupRollup.safety[activeBucket], quality:groupRollup.quality[activeBucket] };
+      const revenueAchievement = pct(totals.revenue, totals.target), profitability = Math.round((totals.margin/Math.max(totals.revenue,1))*100), deadlineScore = Math.round(totals.deadline), safetyScore = Math.round(totals.safety), qualityScore = Math.round(totals.quality), cashConversion = pct(totals.cash, Math.max(totals.revenue,1));
+      const allProjects = enrichedProjects();
+      const confirmedTotal = allProjects.filter(p => String(p.status).toLowerCase() === 'confirmed').reduce((s,p) => s + p.totalIncome, 0);
+      const forecastTotal = allProjects.filter(p => String(p.status).toLowerCase() === 'forecast').reduce((s,p) => s + p.totalIncome, 0);
+      const totalOrderBook = confirmedTotal + forecastTotal;
+      const ytd = allProjects.reduce((s,p) => s + p.revenueYearly, 0);
+      const btye = Math.max(0, confirmedTotal - ytd);
+      const mtd = revenueData.filter(r => { const d = safeDate(r.date); const now = new Date(); return d && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); }).reduce((s,r) => s + r.amount, 0);
+      const dailyActualTotal = revenueData.filter(r => r.date === todayISO()).reduce((s,r) => s + r.amount, 0);
+      const dailyTargetTotal = revenueData.filter(r => r.date === todayISO()).reduce((s,r) => s + (r.budget || 0), 0);
+
+      byId('headlineKpis').innerHTML = [
+        { title:'Total Confirmed', value:money(confirmedTotal), sub:'All confirmed from Projects' },
+        { title:'Total Forecast', value:money(forecastTotal), sub:'All forecast from Projects' },
+        { title:'Total Order Book', value:money(totalOrderBook), sub:'Confirmed + forecast' },
+        { title:'MTD Actual', value:money(mtd), sub:'This month actual revenue' },
+        { title:'Group YTD', value:money(ytd), sub:'Year-to-date revenue' },
+        { title:'Group BTYE', value:money(btye), sub:'Total Confirmed - Group YTD' }
+      ].map(kpi => `<div class="kpi"><div class="kpi-title">${kpi.title}</div><div class="kpi-value">${kpi.value}</div><div class="kpi-sub">${kpi.sub}</div></div>`).join('');
+
+      const performanceKpis = [
+        { title:'Revenue', value:money(totals.revenue), sub:`${state.period} reported revenue`, tone:kpiTone(revenueAchievement,80,50), filterKey:'revenue' },
+        { title:'Profitability', value:`${profitability}%`, sub:`${state.period} margin`, tone:kpiTone(profitability,18,12), filterKey:'profitability' },
+        { title:'Deadlines', value:`${deadlineScore}%`, sub:`${state.period} on-time performance`, tone:kpiTone(deadlineScore,80,50), filterKey:'deadlines' },
+        { title:'Safety', value:`${safetyScore}%`, sub:`${state.period} safety score`, tone:safetyScore===100?'green':'amber', filterKey:'safety' },
+        { title:'Quality', value:`${qualityScore}%`, sub:`${state.period} quality score`, tone:kpiTone(qualityScore,80,50), filterKey:'quality' }
+      ];
+      const cashKpis = [
+        { title:'Cash Collected', value:money(totals.cash), sub:`${state.period} collections`, tone:kpiTone(cashConversion,80,50), filterKey:'cash' },
+        { title:'Cash Conversion', value:`${cashConversion}%`, sub:`${state.period} revenue to cash`, tone:kpiTone(cashConversion,80,50), filterKey:'cash' },
+        { title:'Open Actions', value:String(filtered.filter(p=>p.actionStatus!=='Closed').length), sub:'live action count', tone:filtered.some(p=>p.actionStatus==='Escalated')?'red':'amber', filterKey:'actions' }
+      ];
+      byId('performanceKpis').innerHTML = performanceKpis.map(kpi => `<div class="kpi ${state.activeKpi===kpi.filterKey?'active':''}" data-kpi="${kpi.filterKey}"><div class="kpi-title">${kpi.title}</div><div class="kpi-value">${kpi.value}</div><div class="kpi-sub">${kpi.sub}</div></div>`).join('');
+      byId('cashKpis').innerHTML = cashKpis.map(kpi => `<div class="kpi ${state.activeKpi===kpi.filterKey?'active':''}" data-kpi="${kpi.filterKey}"><div class="kpi-title">${kpi.title}</div><div class="kpi-value">${kpi.value}</div><div class="kpi-sub">${kpi.sub}</div></div>`).join('');
+      byId('activeKpiBadge').textContent = state.activeKpi==='all' ? 'All records' : state.activeKpi; byId('clearFilterBtn').style.display = state.activeKpi==='all' ? 'none' : 'inline-block';
+
+      byId('summaryGrid').innerHTML = PERIODS.map(label => {
+        const key = label.toLowerCase();
+        const revenueValue = label === 'Daily' ? dailyActualTotal : groupRollup.revenue[key];
+        const targetValue = label === 'Daily' ? dailyTargetTotal : groupRollup.target[key];
+        const achievementValue = pct(revenueValue, targetValue);
+        return `<div class="summary-box"><div class="muted" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">${label}</div><div class="big">${money(revenueValue)}</div><div class="muted" style="margin-top:6px;">Target ${money(targetValue)}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;"><span class="muted">Achievement</span>${badge(achievementValue+'%', statusTone(achievementValue))}</div></div>`;
+      }).join('');
+
+      const budgetVsActualRisk = ['Daily','Weekly','Monthly','Yearly'].map(label => {
+        const key = label.toLowerCase();
+        const budget = label === 'Daily' ? dailyTargetTotal : groupRollup.target[key];
+        const actual = label === 'Daily' ? dailyActualTotal : groupRollup.revenue[key];
+        const achievement = pct(actual, budget);
+        return { label, budget, actual, gap: budget - actual, achievement, riskTone:achievement>=85?'b-green':achievement>=65?'b-amber':'b-red', risk:achievement>=85?'Low':achievement>=65?'Medium':'High' };
+      });
+      buildTable(byId('budgetRiskTable'), [{label:'Period'},{label:'Budget',class:'right'},{label:'Actual',class:'right'},{label:'Gap',class:'right'},{label:'Ach %',class:'right'},{label:'Risk',class:'right'}], budgetVsActualRisk.map(item => [cell(item.label),cell(money(item.budget),'right'),cell(money(item.actual),'right'),cell(`<span style="color:${item.gap>0?'#b91c1c':'#15803d'}">${money(item.gap)}</span>`,'right'),cell(item.achievement+'%','right'),cell(badge(item.risk,item.riskTone),'right')]));
+
+      const divisionAtGlance = divisionRollup.map(row => ({ name:row.name, actual:row[activeBucket], target:row['target'+state.period], score:pct(row[activeBucket],row['target'+state.period]) })).sort((a,b)=>b.actual-a.actual);
+      buildTable(byId('divisionTable'), [{label:'Division'},{label:'Actual',class:'right'},{label:'Target',class:'right'},{label:'Score',class:'right'}], divisionAtGlance.map(item => [cell(item.name),cell(money(item.actual),'right'),cell(money(item.target),'right'),cell(badge(item.score+'%',statusTone(item.score)),'right')]));
+
+      const pmBalancedScorecard = pmRollup.map(row => { const pmProjects = filtered.filter(p=>p.pm===row.name), dailyScore=pct(row.daily,row.targetDaily), weeklyScore=pct(row.weekly,row.targetWeekly), monthlyScore=pct(row.monthly,row.targetMonthly), quarterlyScore=pct(row.quarterly,row.targetQuarterly), yearlyScore=pct(row.yearly,row.targetYearly), profitability=Math.round(pmProjects.reduce((s,p)=>s+p.gpPercent,0)/Math.max(pmProjects.length,1)), deadlines=Math.round(pmProjects.reduce((s,p)=>s+p.deadlineScore,0)/Math.max(pmProjects.length,1)), safety=Math.round(pmProjects.reduce((s,p)=>s+p.safetyScore,0)/Math.max(pmProjects.length,1)), quality=Math.round(pmProjects.reduce((s,p)=>s+p.qualityScore,0)/Math.max(pmProjects.length,1)), overallScore=Math.round(dailyScore*.15+weeklyScore*.15+monthlyScore*.2+quarterlyScore*.1+yearlyScore*.1+profitability*.1+deadlines*.05+safety*.05+quality*.1); return { name:row.name, dailyActual:row.daily, dailyTarget:row.targetDaily, dailyScore, weeklyActual:row.weekly, weeklyTarget:row.targetWeekly, weeklyScore, monthlyActual:row.monthly, monthlyTarget:row.targetMonthly, monthlyScore, quarterlyActual:row.quarterly, quarterlyTarget:row.targetQuarterly, quarterlyScore, yearlyActual:row.yearly, yearlyTarget:row.targetYearly, yearlyScore, profitability, deadlines, safety, quality, cash:pmProjects.reduce((s,p)=>s+p.cashCollected,0), actionCount:pmProjects.filter(p=>p.actionStatus!=='Closed').length, overallScore }; }).sort((a,b)=>b.overallScore-a.overallScore).map((row,index)=>({ ...row, rank:index+1 }));
+      buildTable(byId('pmTable'), [{label:'Rank',class:'right'},{label:'PM'},{label:'Actual',class:'right'},{label:'Target',class:'right'},{label:'Score',class:'right'}], pmBalancedScorecard.slice(0,8).map(item => [cell('#'+item.rank,'right'),cell(item.name),cell(money(item.dailyActual),'right'),cell(money(item.dailyTarget),'right'),cell(badge(item.dailyScore+'%',statusTone(item.dailyScore)),'right')]));
+      buildTable(byId('scorecardTable'), [{label:'Rank',class:'right'},{label:'PM'},{label:'Daily A',class:'right'},{label:'Daily T',class:'right'},{label:'Daily %',class:'right'},{label:'Weekly A',class:'right'},{label:'Weekly T',class:'right'},{label:'Weekly %',class:'right'},{label:'Monthly A',class:'right'},{label:'Monthly T',class:'right'},{label:'Monthly %',class:'right'},{label:'Quarter A',class:'right'},{label:'Quarter T',class:'right'},{label:'Quarter %',class:'right'},{label:'Year A',class:'right'},{label:'Year T',class:'right'},{label:'Year %',class:'right'},{label:'GP%',class:'right'},{label:'DDL',class:'right'},{label:'SFT',class:'right'},{label:'QLT',class:'right'},{label:'Cash',class:'right'},{label:'Acts',class:'right'},{label:'Overall',class:'right'}], pmBalancedScorecard.map(row => [cell('#'+row.rank,'right'),cell(row.name),cell(money(row.dailyActual),'right'),cell(money(row.dailyTarget),'right'),cell(badge(row.dailyScore+'%',statusTone(row.dailyScore)),'right'),cell(money(row.weeklyActual),'right'),cell(money(row.weeklyTarget),'right'),cell(badge(row.weeklyScore+'%',statusTone(row.weeklyScore)),'right'),cell(money(row.monthlyActual),'right'),cell(money(row.monthlyTarget),'right'),cell(badge(row.monthlyScore+'%',statusTone(row.monthlyScore)),'right'),cell(money(row.quarterlyActual),'right'),cell(money(row.quarterlyTarget),'right'),cell(badge(row.quarterlyScore+'%',statusTone(row.quarterlyScore)),'right'),cell(money(row.yearlyActual),'right'),cell(money(row.yearlyTarget),'right'),cell(badge(row.yearlyScore+'%',statusTone(row.yearlyScore)),'right'),cell(row.profitability+'%','right'),cell(row.deadlines+'%','right'),cell(row.safety+'%','right'),cell(row.quality+'%','right'),cell(money(row.cash),'right'),cell(String(row.actionCount),'right'),cell(badge(row.overallScore+'%',statusTone(row.overallScore)),'right')]));
+
+      const actionLayer = filtered.map(project => ({ ...project, periodRevenue:project['revenue'+state.period], periodTarget:project['target'+state.period], score:pct(project['revenue'+state.period],project['target'+state.period]) })).sort((a,b)=>a.score-b.score);
+      buildTable(byId('projectPerfTable'), [{label:'Project'},{label:'Revenue',class:'right'},{label:'Target',class:'right'},{label:'Profit',class:'right'},{label:'Deadline',class:'right'},{label:'Quality',class:'right'}], actionLayer.map(item => [cell(`<div><div style="font-weight:600;">${item.project}</div><div class="muted" style="font-size:12px;">${item.division} • ${item.pm}</div></div>`),cell(money(item.periodRevenue),'right'),cell(money(item.periodTarget),'right'),cell(badge(item.gpPercent+'%',statusTone(item.gpPercent*4)),'right'),cell(badge(item.deadlineScore+'%',statusTone(item.deadlineScore)),'right'),cell(badge(item.qualityScore+'%',statusTone(item.qualityScore)),'right')]));
+      buildTable(byId('actionTable'), [{label:'Project'},{label:'Owner'},{label:'Due'},{label:'Status',class:'right'},{label:'Recovery'}], actionLayer.map(item => [cell(`<div><div style="font-weight:600;">${item.project}</div><div class="muted" style="font-size:12px;">${item.pm} • ${item.client}</div></div>`),cell(item.actionOwner),cell(item.actionDue),cell(badge(item.actionStatus,actionTone(item.actionStatus)),'right'),cell(item.recovery)]));
+      byId('actionSummary').innerHTML = actionLayer.slice(0,4).map(item => `<div class="action-mini"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;"><div><div style="font-weight:600;">${item.project}</div><div class="muted" style="font-size:12px;margin-top:4px;">Owner: ${item.actionOwner}</div></div>${badge(item.actionStatus,actionTone(item.actionStatus))}</div><div style="margin-top:10px;color:var(--muted);font-size:14px;">Due: ${item.actionDue}</div><div style="margin-top:10px;">${item.recovery}</div></div>`).join('');
+
+      const divisionMix = Array.from(filtered.reduce((map,p)=>{ map.set(p.division,(map.get(p.division)||0)+p['revenue'+state.period]); return map; }, new Map()).entries()).map(([name,value],index)=>({ name,value,color:DIVISION_COLORS[index % DIVISION_COLORS.length] })).sort((a,b)=>b.value-a.value);
+      byId('divisionMixLegend').innerHTML = divisionMix.map(item => `<div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;margin-top:10px;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:12px;height:12px;display:inline-block;border-radius:50%;background:${item.color};"></span>${item.name}</div><strong>${money(item.value)}</strong></div>`).join('');
+      renderCharts(divisionRollup.map(row => ({ name:row.name, target:row['target'+state.period], actual:row[activeBucket] })), divisionMix);
+      renderRevenueLog(); renderInvoiceLog(); bindDynamicEvents();
+    }
+
+    function renderRevenueLog(){ buildTable(byId('revenueLogTable'), [{label:'Date'},{label:'Cost Center'},{label:'Manager'},{label:'Project'},{label:'Amount',class:'right'},{label:'Budget',class:'right'},{label:'Ach %',class:'right'}], revenueData.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(item => [cell(item.date),cell(item.costCenter || '-'),cell(item.manager),cell(item.projectName),cell(money(item.amount),'right'),cell(money(item.budget || 0),'right'),cell(badge(pct(item.amount,item.budget || 0)+'%',statusTone(pct(item.amount,item.budget || 0))),'right')])); }
+    function renderInvoiceLog(){ buildTable(byId('invoiceLogTable'), [{label:'Date'},{label:'Manager'},{label:'Project'},{label:'Amount',class:'right'},{label:'Paid',class:'right'},{label:'Payment Date'}], invoiceData.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(item => [cell(item.date),cell(item.manager),cell(item.projectName),cell(money(item.amount),'right'),cell(badge(item.paymentReceived?'Yes':'No',item.paymentReceived?'b-green':'b-amber'),'right'),cell(item.paymentDate || '-')])); }
+
+    function renderCharts(performanceTrend, divisionMix){
+      Object.values(charts).forEach(chart => chart?.destroy?.()); charts = {};
+      charts.bar = new Chart(byId('barChart'), { type:'bar', data:{ labels:performanceTrend.map(d=>d.name), datasets:[{ label:'Target', data:performanceTrend.map(d=>d.target), backgroundColor:'#cbd5e1', borderRadius:10 },{ label:'Actual', data:performanceTrend.map(d=>d.actual), backgroundColor:'#0f172a', borderRadius:10 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'top' }, tooltip:{ callbacks:{ label:(ctx)=>`${ctx.dataset.label}: ${money(ctx.raw)}` } } }, scales:{ y:{ ticks:{ callback:(v)=>Math.round(v/1000)+'k' }, grid:{ color:'#e2e8f0' } }, x:{ grid:{ display:false } } } } });
+      charts.pie = new Chart(byId('pieChart'), { type:'doughnut', data:{ labels:divisionMix.map(d=>d.name), datasets:[{ data:divisionMix.map(d=>d.value), backgroundColor:divisionMix.map(d=>d.color), borderWidth:0 }] }, options:{ responsive:true, maintainAspectRatio:false, cutout:'60%', plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:(ctx)=>`${ctx.label}: ${money(ctx.raw)}` } } } } });
+      charts.area = new Chart(byId('areaChart'), { type:'line', data:{ labels:performanceTrend.map(d=>d.name), datasets:[{ label:'Target', data:performanceTrend.map(d=>d.target), fill:true, tension:.35, borderColor:'#94a3b8', backgroundColor:'rgba(203,213,225,.35)' },{ label:'Actual', data:performanceTrend.map(d=>d.actual), fill:true, tension:.35, borderColor:'#0f172a', backgroundColor:'rgba(15,23,42,.12)' }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ tooltip:{ callbacks:{ label:(ctx)=>`${ctx.dataset.label}: ${money(ctx.raw)}` } } }, scales:{ y:{ ticks:{ callback:(v)=>Math.round(v/1000)+'k' }, grid:{ color:'#e2e8f0' } }, x:{ grid:{ display:false } } } } });
+    }
+
+    function bindDynamicEvents(){ document.querySelectorAll('[data-kpi]').forEach(el => { el.onclick = () => { const key = el.getAttribute('data-kpi'); state.activeKpi = state.activeKpi === key ? 'all' : key; render(); }; }); }
+
+    function populateInputs(){
+      byId('period').innerHTML = PERIODS.map(p => `<option value="${p}">${p}</option>`).join(''); byId('period').value = state.period;
+      const divisions = ['All', ...new Set([...COST_CENTERS, ...projectsData.map(p => p.division)])];
+      byId('division').innerHTML = divisions.map(v => `<option value="${v}">${v === 'All' ? 'All divisions' : v}</option>`).join(''); byId('division').value = divisions.includes(state.division) ? state.division : 'All';
+      const managers = ['All', ...new Set([...PROJECT_MANAGERS, ...projectsData.map(p => p.pm)])];
+      byId('managerFilter').innerHTML = managers.map(v => `<option value="${v}">${v === 'All' ? 'All managers' : v}</option>`).join(''); byId('managerFilter').value = managers.includes(state.manager) ? state.manager : 'All';
+      byId('revCostCenter').innerHTML = COST_CENTERS.map(v => `<option value="${v}">${v}</option>`).join('');
+      byId('revProjectName').innerHTML = PROJECT_OPTIONS.map(v => `<option value="${v}">${v}</option>`).join('');
+      byId('invProjectName').innerHTML = PROJECT_OPTIONS.map(v => `<option value="${v}">${v}</option>`).join('');
+      byId('revManager').innerHTML = PROJECT_MANAGERS.map(v => `<option value="${v}">${v}</option>`).join('');
+      byId('invManager').innerHTML = PROJECT_MANAGERS.map(v => `<option value="${v}">${v}</option>`).join('');
+      byId('revDate').value = todayISO(); byId('invDate').value = todayISO(); byId('scriptUrlInput').value = readScriptUrl(); byId('fallbackMode').value = readFallbackMode();
+    }
+
+    function updateAchievement(){ byId('revAchievement').value = pct(num(byId('revAmount').value), num(byId('revBudget').value)) + '%'; }
+
+    async function postJsonToScript(payload){
+      const scriptUrl = byId('scriptUrlInput').value.trim();
+      if (!scriptUrl) throw new Error('No Apps Script URL configured.');
+      return safeFetchJson(scriptUrl, getFetchOptions('POST', payload));
+    }
+
+    async function saveRevenue(){
+      const payload = { action:'addRevenue', data:{ date:byId('revDate').value, manager:byId('revManager').value, costCenter:byId('revCostCenter').value, projectName:byId('revProjectName').value, amount:num(byId('revAmount').value), budget:num(byId('revBudget').value), quality:num(byId('revQuality').value), safety:num(byId('revSafety').value) } };
+      if (!payload.data.date || !payload.data.projectName || payload.data.amount <= 0) return alert('Please complete the daily revenue fields.');
+      showLoading('Saving revenue...');
+      try { await postJsonToScript(payload); logDiagnostic('Revenue saved successfully.'); await loadLiveData(); } catch (error) { logDiagnostic('Revenue save failed.', error.message); alert(`Could not save revenue.\n\n${error.message}`); } finally { hideLoading(); }
+    }
+
+    async function saveInvoice(){
+      const payload = { action:'addInvoice', data:{ date:byId('invDate').value, manager:byId('invManager').value, projectName:byId('invProjectName').value, amount:num(byId('invAmount').value), paymentReceived:byId('paymentReceived').value === 'true', paymentDate:byId('paymentDate').value } };
+      if (!payload.data.date || !payload.data.projectName || payload.data.amount <= 0) return alert('Please complete the invoice fields.');
+      showLoading('Saving invoice...');
+      try { await postJsonToScript(payload); logDiagnostic('Invoice saved successfully.'); await loadLiveData(); } catch (error) { logDiagnostic('Invoice save failed.', error.message); alert(`Could not save invoice.\n\n${error.message}`); } finally { hideLoading(); }
+    }
+
+    function exportCsv(){
+      const rows = filteredProjects().map(row => ({ Division:row.division, PM:row.pm, Client:row.client, Project:row.project, Revenue:row['revenue'+state.period], Target:row['target'+state.period], Profitability:`${row.gpPercent}%`, Deadlines:`${row.deadlineScore}%`, Safety:`${row.safetyScore}%`, Quality:`${row.qualityScore}%`, ActionOwner:row.actionOwner, ActionDue:row.actionDue, ActionStatus:row.actionStatus }));
+      if (!rows.length) return;
+      const headers = Object.keys(rows[0]).join(','), body = rows.map(r => Object.values(r).map(v => `"${String(v).replaceAll('"','""')}"`).join(',')).join('\n');
+      const blob = new Blob([headers+'\n'+body], { type:'text/csv;charset=utf-8;' }), url = URL.createObjectURL(blob), a = document.createElement('a');
+      a.href = url; a.download = `revenue-report-${state.period.toLowerCase()}.csv`; a.click(); URL.revokeObjectURL(url);
+    }
+
+    function initTabs(){ document.querySelectorAll('.tab').forEach(btn => { btn.onclick = () => { document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active')); btn.classList.add('active'); byId(btn.dataset.tab).classList.add('active'); }; }); }
+
+    function runSelfTests(){
+      const tests = [
+        { name:'num parses currency', pass:num('R 12,500') === 12500 },
+        { name:'pct avoids divide by zero', pass:pct(100,0) === 0 },
+        { name:'normaliseDate trims timestamp', pass:normaliseDate('2026-03-27T12:00:00Z') === '2026-03-27' },
+        { name:'fallback projects exist', pass:FALLBACK_DATA.projects.length > 0 },
+        { name:'fallback revenue exists', pass:FALLBACK_DATA.revenue.length > 0 },
+        { name:'fallback invoices exist', pass:FALLBACK_DATA.invoices.length > 0 },
+        { name:'normaliseProjects maps division', pass:normaliseProjects([{ Division:'Onpoint Ontime', Manager:'Moses', ProjectName:'DBSA Generators' }])[0].division === 'Onpoint Ontime' },
+        { name:'normaliseRevenue maps budget', pass:normaliseRevenue([{ Budget:'1200' }])[0].budget === 1200 },
+        { name:'normaliseInvoices maps boolean', pass:normaliseInvoices([{ PaymentReceived:'true' }])[0].paymentReceived === true }
+      ];
+      const failed = tests.filter(t => !t.pass);
+      logDiagnostic(failed.length ? 'Self-tests failed.' : 'Self-tests passed.', failed.length ? failed.map(t => t.name).join(', ') : `${tests.length} checks completed.`);
+    }
+
+    function init(){
+      initTabs(); populateInputs(); runSelfTests();
+      byId('period').onchange = e => { state.period = e.target.value; render(); };
+      byId('division').onchange = e => { state.division = e.target.value; render(); };
+      byId('managerFilter').onchange = e => { state.manager = e.target.value; render(); };
+      byId('query').oninput = e => { state.query = e.target.value; render(); };
+      byId('clearFilterBtn').onclick = () => { state.activeKpi = 'all'; render(); };
+      byId('exportBtn').onclick = exportCsv;
+      byId('refreshBtn').onclick = loadLiveData;
+      byId('testConnectionBtn').onclick = runConnectionTest;
+      byId('saveRevenueBtn').onclick = saveRevenue;
+      byId('saveInvoiceBtn').onclick = saveInvoice;
+      byId('saveSettingsBtn').onclick = () => { writeSettings(); loadLiveData(); };
+      byId('revAmount').oninput = updateAchievement; byId('revBudget').oninput = updateAchievement;
+      loadLiveData();
+    }
+
+    init();
+  </script>
 </body>
 </html>
