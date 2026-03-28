@@ -1,1339 +1,764 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Onpoint Group | Live Revenue Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Onpoint Group · Fuel Recon Google Sheets</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
-    :root{
-      --bg:#f1f5f9; --card:#fff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b; --soft:#f8fafc;
-      --green-bg:#dcfce7; --green-text:#15803d; --amber-bg:#fef3c7; --amber-text:#b45309;
-      --red-bg:#fee2e2; --red-text:#b91c1c; --slate-bg:#e2e8f0; --slate-text:#334155;
-      --shadow:0 10px 30px rgba(15,23,42,.06);
-    }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--text)}
-    .container{max-width:1500px;margin:0 auto;padding:18px}
-    .topbar,.hero,.card{background:var(--card);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow)}
-    .topbar{padding:12px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-    .hero{margin-top:18px;padding:24px;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
-    .hero h1{margin:8px 0;font-size:34px}
-    .muted{color:var(--muted)}
-    .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:var(--soft);color:var(--muted);font-size:12px;font-weight:600}
-    .controls,.form-grid{display:grid;gap:12px}
-    .controls{grid-template-columns:repeat(4,minmax(160px,1fr));align-content:start;min-width:420px;flex:1}
-    .form-grid{grid-template-columns:repeat(12,1fr);gap:14px}
-    .control,.searchbox input,button,.btn-secondary,.field input,.field select{border-radius:16px;border:1px solid var(--line);background:var(--soft);padding:12px 14px;font-size:14px;color:var(--text);font-family:inherit}
-    .searchbox{grid-column:span 2}
-    .searchbox input{width:100%}
-    button{cursor:pointer;background:var(--text);color:#fff;border-color:var(--text)}
-    .btn-secondary{background:#fff;color:var(--text)}
-    .section{margin-top:18px}
-    .grid-6,.grid-5,.grid-3{display:grid;gap:16px}
-    .grid-6{grid-template-columns:repeat(6,1fr)}
-    .grid-5{grid-template-columns:repeat(5,1fr)}
-    .grid-3{grid-template-columns:repeat(3,1fr)}
-    .card{padding:18px;overflow:hidden}
-    .card h3{margin:0 0 14px;font-size:18px}
-    .kpi{padding:18px;border-radius:24px;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);cursor:pointer}
-    .kpi.active{outline:2px solid #0f172a20;border-color:var(--text)}
-    .kpi-title{color:var(--muted);font-size:14px}
-    .kpi-value{font-size:28px;font-weight:700;margin:10px 0 4px}
-    .kpi-sub{color:var(--muted);font-size:12px}
-    .badge{display:inline-flex;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid transparent;white-space:nowrap}
-    .b-green{background:var(--green-bg);color:var(--green-text);border-color:#bbf7d0}
-    .b-amber{background:var(--amber-bg);color:var(--amber-text);border-color:#fde68a}
-    .b-red{background:var(--red-bg);color:var(--red-text);border-color:#fecaca}
-    .b-slate{background:var(--slate-bg);color:var(--slate-text);border-color:#cbd5e1}
-    .tabs{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;background:#cbd5e166;border-radius:18px;padding:8px;margin-top:18px}
-    .tab{background:transparent;color:var(--text);border:none;border-radius:14px;padding:12px;font-weight:700;cursor:pointer}
-    .tab.active{background:#fff;box-shadow:var(--shadow)}
-    .tab-content{display:none}
-    .tab-content.active{display:block}
-    .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:22px;background:#fff}
-    table{width:100%;border-collapse:collapse;min-width:900px}
-    thead{background:#f1f5f9}
-    th,td{padding:14px 16px;text-align:left;border-bottom:1px solid var(--line);font-size:14px;vertical-align:middle}
-    th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
-    td.right,th.right{text-align:right}
-    .summary-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
-    .summary-box{border:1px solid var(--line);border-radius:24px;background:var(--soft);padding:16px}
-    .summary-box .big{font-size:24px;font-weight:700;margin-top:10px}
-    .action-mini{border:1px solid var(--line);border-radius:20px;background:var(--soft);padding:16px;margin-bottom:12px}
-    .row{display:grid;gap:16px}
-    .row.two{grid-template-columns:1fr 1fr}
-    .row.two-wide{grid-template-columns:2fr 1fr}
-    .small-canvas{height:280px!important}
-    canvas{width:100%!important;height:320px!important}
-    .filter-strip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;color:var(--muted);font-size:14px}
-    .field{display:flex;flex-direction:column;gap:8px}
-    .field label{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em}
-    .span-2{grid-column:span 2}.span-3{grid-column:span 3}.span-4{grid-column:span 4}.span-8{grid-column:span 8}.span-12{grid-column:span 12}
-    .loading{position:fixed;inset:0;background:rgba(15,23,42,.35);display:none;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(4px)}
-    .loading-card{background:#fff;border-radius:24px;padding:24px 30px;box-shadow:var(--shadow);border:1px solid var(--line);min-width:260px;text-align:center}
-    .spinner{width:36px;height:36px;border-radius:50%;border:4px solid #e2e8f0;border-top-color:#0f172a;animation:spin .8s linear infinite;margin:0 auto 14px}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .helper{font-size:12px;color:var(--muted)}
-    .diagnostics{display:grid;grid-template-columns:2fr 1fr;gap:16px}
-    .diagnostics pre{margin:0;white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#e2e8f0;padding:14px;border-radius:16px;min-height:160px}
-    .notice{padding:14px 16px;border:1px solid var(--line);border-radius:18px;background:var(--soft);font-size:14px}
-.hidden{display:none!important}
-.connection-shell{display:grid;grid-template-columns:1.2fr 1.8fr;gap:16px;align-items:start}
-.connection-actions{display:grid;grid-template-columns:repeat(2,minmax(160px,1fr));gap:12px}
-.progress-panel{border:1px solid var(--line);border-radius:24px;background:var(--soft);padding:16px}
-.progress-panel h4{margin:0 0 12px;font-size:16px}
-.progress-list{display:grid;gap:12px}
-.progress-item{border:1px solid var(--line);background:#fff;border-radius:18px;padding:12px 14px}
-.progress-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px}
-.analysis-toolbar{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:12px;margin-bottom:16px}
-.mini-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}
-.mini-stat{border:1px solid var(--line);border-radius:18px;background:var(--soft);padding:12px}
-.mini-stat .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-.mini-stat .value{font-size:20px;font-weight:700;margin-top:6px}
-.progress-cell{min-width:220px}
-    .progress-track{width:100%;height:12px;background:#e2e8f0;border-radius:999px;overflow:hidden;position:relative}
-    .progress-fill{height:100%;border-radius:999px}
-    .progress-label{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);margin-top:6px}
-    .fill-green{background:#16a34a}.fill-amber{background:#f59e0b}.fill-red{background:#dc2626}
-    @media (max-width:1280px){.grid-6{grid-template-columns:repeat(3,1fr)}.grid-5{grid-template-columns:repeat(2,1fr)}.summary-grid{grid-template-columns:repeat(2,1fr)}.row.two,.row.two-wide,.grid-3,.diagnostics,.connection-shell,.analysis-toolbar,.mini-stats{grid-template-columns:1fr}.tabs{grid-template-columns:repeat(3,1fr)}}
-    @media (max-width:900px){.controls,.form-grid,.grid-6,.grid-5,.summary-grid,.tabs,.connection-actions,.analysis-toolbar,.mini-stats{grid-template-columns:1fr}.searchbox{grid-column:span 1}.span-2,.span-3,.span-4,.span-8,.span-12{grid-column:span 1}.hero h1{font-size:28px}}
+    body { background:#eef4fb; font-family:Segoe UI, system-ui, sans-serif; color:#16324a; }
+    .card-shell { background:#fff; border-radius:22px; box-shadow:0 12px 34px rgba(10,30,60,.08); border:0; }
+    .kpi { border-radius:18px; background:#fff; padding:1rem; box-shadow:0 8px 20px rgba(10,30,60,.06); height:100%; }
+    .kpi .value { font-size:1.55rem; font-weight:700; color:#0b2b4a; }
+    .btn-onpoint { background:#0b2b4a; color:#fff; border:none; border-radius:999px; padding:.65rem 1.25rem; }
+    .btn-onpoint:hover { background:#1f4a6e; color:#fff; }
+    .pill { border-radius:999px !important; }
+    .section-title { font-weight:700; color:#0b2b4a; margin-bottom:.85rem; }
+    .small-help { color:#6a7d91; font-size:.88rem; }
+    .table thead th { position:sticky; top:0; background:#f8fbff; z-index:1; }
+    .dropzone { border:2px dashed #c9d7e6; border-radius:18px; background:#f8fbff; padding:1rem; text-align:center; }
+    .status-badge { display:inline-flex; align-items:center; gap:.45rem; border-radius:999px; padding:.35rem .8rem; font-size:.85rem; }
+    .status-ok { background:#e8f7ea; color:#1f7a35; }
+    .status-warn { background:#fff4db; color:#9f6500; }
+    .status-bad { background:#fde8e8; color:#b33232; }
+    .badge-soft { border-radius:999px; padding:.35rem .7rem; font-weight:600; }
+    .bg-soft-success { background:#dff4e5; color:#216a35; }
+    .bg-soft-warning { background:#fff2d8; color:#9a6604; }
+    .bg-soft-danger { background:#fde4e4; color:#a12f2f; }
+    .bg-soft-info { background:#e6f1ff; color:#195fa6; }
+    .chart-box { min-height:320px; position:relative; }
+    .mono { font-variant-numeric: tabular-nums; }
+    .sticky-lite { position:sticky; top:10px; }
+    .nav-pills .nav-link.active { background:#0b2b4a; }
   </style>
 </head>
 <body>
-  <div class="loading" id="loadingOverlay"><div class="loading-card"><div class="spinner"></div><div id="loadingMessage">Loading live data from Google Sheets...</div></div></div>
-  <div class="container">
-    <div class="topbar">
-      <div class="pill">Onpoint Group live dashboard</div>
-      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-        <div id="connectionBadge" class="badge b-amber">Connecting</div>
-        <button id="testConnectionBtn">Test connection</button>
-        <button id="refreshBtn">Refresh</button>
-        <button id="exportBtn">Export report</button>
+<div class="container-fluid py-4 px-3 px-lg-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <i class="fas fa-gas-pump fa-3x" style="color:#0b2b4a;"></i>
+      <div>
+        <h2 class="fw-bold mb-0" style="color:#0b2b4a;">Onpoint Group · Fuel Reconciliation</h2>
+        <div class="small-help">Google Sheets connected dashboard for approvals, swipes, and fuel log analysis</div>
       </div>
     </div>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <span id="connectionStatus" class="status-badge status-warn"><i class="fas fa-circle-notch fa-spin"></i>Not tested</span>
+      <button class="btn btn-outline-secondary pill" id="testConnectionBtn"><i class="fas fa-plug me-2"></i>Test Apps Script</button>
+      <button class="btn btn-onpoint" id="loadGoogleBtn"><i class="fas fa-cloud-arrow-down me-2"></i>Load Fuel Log</button>
+      <button class="btn btn-outline-secondary pill" id="exportPdfBtn"><i class="far fa-file-pdf me-2"></i>Export PDF</button>
+    </div>
+  </div>
 
-    <div class="hero">
-      <div style="flex:1; min-width:320px;">
-        <div class="muted" style="font-weight:600;">Standalone reporting tool</div>
-        <div class="pill" style="margin-top:12px;">Live Google Sheets version</div>
-        <h1>Revenue, Performance &amp; Action Reporting</h1>
-        <p class="muted">The dashboard loads each Apps Script endpoint separately. If one endpoint fails, the others still render and the page stays usable.</p>
-      </div>
-      <div class="controls">
-        <select id="period" class="control"></select>
-        <select id="division" class="control"></select>
-        <select id="managerFilter" class="control"></select>
-        <div class="searchbox"><input id="query" placeholder="Search division, PM or project..." /></div>
+  <div class="row g-3 mb-4">
+    <div class="col-md-2"><div class="kpi"><div class="text-secondary">Fuel Log Rows</div><div class="value mono" id="kpiFuelLogRows">0</div></div></div>
+    <div class="col-md-2"><div class="kpi"><div class="text-secondary">Swipe Rows</div><div class="value mono" id="kpiSwipes">0</div></div></div>
+    <div class="col-md-2"><div class="kpi"><div class="text-secondary">Authorised</div><div class="value mono" id="kpiAuthorized">0</div></div></div>
+    <div class="col-md-2"><div class="kpi"><div class="text-secondary">Unauthorised</div><div class="value mono" id="kpiUnauthorized">0</div></div></div>
+    <div class="col-md-2"><div class="kpi"><div class="text-secondary">Variance Total</div><div class="value mono" id="kpiVariance">R0.00</div></div></div>
+    <div class="col-md-2"><div class="kpi"><div class="text-secondary">Alarm Rows</div><div class="value mono" id="kpiAlarms">0</div></div></div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-lg-8">
+      <div class="card-shell p-4">
+        <div class="section-title">Configuration embedded in this HTML</div>
+        <div class="small-help mb-2">Spreadsheet IDs and names are already embedded. After deploying the Apps Script web app, paste its URL into <code>CONFIG.GAS_URL</code> in this file.</div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <tbody>
+              <tr><th style="width:220px;">FuelRecon spreadsheet</th><td class="mono">16ijC8ODRMDtC_FtMpZEcukxuuOTCBlA9TLRKAmBrI2w</td></tr>
+              <tr><th>FuelRecon sheet</th><td class="mono">FuelRecon</td></tr>
+              <tr><th>Fuel Log spreadsheet</th><td class="mono">1SnhLTWgzJfkKNmIvtj8uwa-8x7TsnRtqkfX3deEuHIQ</td></tr>
+              <tr><th>Fuel Log sheet</th><td class="mono">Fuel Log</td></tr>
+              <tr><th>Apps Script URL</th><td class="mono" id="gasUrlCell">PASTE_DEPLOYED_WEB_APP_URL_HERE</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
-
-    <div class="card section">
-      <h3>Connection settings</h3>
-      <div class="connection-shell">
-        <div class="progress-panel">
-          <h4>Dashboard controls</h4>
-          <div class="form-grid">
-            <div class="field span-12 hidden"><label>Apps Script Web App URL</label><input id="scriptUrlInput" type="url" placeholder="Paste deployed Apps Script web app URL" /></div>
-            <div class="field span-12"><label>Fallback mode</label><select id="fallbackMode"><option value="auto">Auto</option><option value="always">Always</option><option value="never">Never</option></select></div>
-            <div class="field span-12"><label>Save settings</label><button id="saveSettingsBtn">Save</button></div>
+    <div class="col-lg-4">
+      <div class="card-shell p-4 sticky-lite">
+        <div class="section-title">Alarm thresholds</div>
+        <div class="row g-3">
+          <div class="col-6">
+            <label class="form-label">Low KM/L below</label>
+            <input id="thresholdKmpl" type="number" class="form-control pill" value="4.5" step="0.1">
+          </div>
+          <div class="col-6">
+            <label class="form-label">Frequent fills count</label>
+            <input id="thresholdFrequentCount" type="number" class="form-control pill" value="3" min="2">
+          </div>
+          <div class="col-6">
+            <label class="form-label">Within days</label>
+            <input id="thresholdFrequentDays" type="number" class="form-control pill" value="7" min="1">
+          </div>
+          <div class="col-6">
+            <label class="form-label">Variance tolerance (R)</label>
+            <input id="thresholdVariance" type="number" class="form-control pill" value="5" step="0.01">
           </div>
         </div>
-        <div class="progress-panel">
-          <h4>Cost center target progress</h4>
-          <div id="connectionProgressBars" class="progress-list"><div class="muted">Loading progress bars...</div></div>
-        </div>
-      </div>
-    </div>
-
-    <div id="headlineKpis" class="section grid-6"></div>
-    <div class="section card"><h3>Group at a glance aggregation engine</h3><div id="summaryGrid" class="summary-grid"></div></div>
-    <div id="performanceKpis" class="section grid-5"></div>
-    <div class="filter-strip"><span><strong>Active KPI filter:</strong></span><span id="activeKpiBadge" class="badge b-slate">All records</span><button id="clearFilterBtn" class="btn-secondary" style="display:none;">Clear filter</button></div>
-    <div id="cashKpis" class="section grid-3"></div>
-
-    <div class="tabs">
-      <button class="tab active" data-tab="executive">Executive summary</button>
-      <button class="tab" data-tab="performance">Performance report</button>
-      <button class="tab" data-tab="actions">Action report</button>
-      <button class="tab" data-tab="dailyRevenue">Daily Revenue</button>
-      <button class="tab" data-tab="invoices">Invoices</button>
-      <button class="tab" data-tab="diagnostics">Diagnostics</button>
-    </div>
-
-    <div id="executive" class="tab-content active section">
-      <div class="row two">
-        <div class="card" style="grid-column:1/-1;"><h3>Budget vs actual and risk view</h3><div class="table-wrap"><table id="budgetRiskTable"></table></div></div>
-        <div class="card"><h3>Divisional performance at a glance</h3><div class="table-wrap"><table id="divisionTable"></table></div></div>
-        <div class="card"><h3>PM performance at a glance</h3><div class="table-wrap"><table id="pmTable"></table></div></div>
-      </div>
-      <div class="row two-wide section">
-        <div class="card"><h3>Reported revenue vs target</h3><canvas id="barChart"></canvas></div>
-        <div class="card"><h3>Division mix</h3><canvas id="pieChart" class="small-canvas"></canvas><div id="divisionMixLegend"></div></div>
-      </div>
-    </div>
-
-    <div id="performance" class="tab-content section">
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:14px;"><h3 style="margin:0;">PM balanced scorecard</h3><div class="pill">Per PM per day, week, month, quarter and year</div></div>
-        <div class="analysis-toolbar">
-          <div class="field"><label>View by</label><select id="analysisMode"><option value="costCenter">Cost center</option><option value="project">Project</option><option value="manager">Manager</option></select></div>
-          <div class="field"><label>Focus item</label><select id="analysisValue"></select></div>
-          <div class="field"><label>Variance period</label><select id="analysisPeriod"><option value="Daily">Daily</option><option value="Weekly">Weekly</option><option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option></select></div>
-          <div class="field"><label>Quick note</label><div class="notice" id="analysisSummary">Loading performance focus...</div></div>
-        </div>
-        <div id="focusedProgressBars" class="progress-list" style="margin-bottom:16px;"></div>
-        <div class="table-wrap"><table id="scorecardTable"></table></div>
-      </div>
-      <div class="card section"><h3>Performance report by division</h3><canvas id="areaChart"></canvas><div class="table-wrap" style="margin-top:18px;"><table id="projectPerfTable"></table></div></div>
-      <div class="card section"><h3>Performance by cost center / division variance</h3><div class="table-wrap"><table id="divisionVarianceTable"></table></div></div>
-    </div>
-
-    <div id="actions" class="tab-content section"><div class="row two-wide"><div class="card"><h3>Action report</h3><div class="table-wrap"><table id="actionTable"></table></div></div><div class="card"><h3>Action summary</h3><div id="actionSummary"></div></div></div></div>
-
-    <div id="dailyRevenue" class="tab-content section">
-      <div class="card">
-        <h3>Daily revenue input</h3>
-        <div class="form-grid">
-          <div class="field span-2"><label>Date</label><input id="revDate" type="date" /></div>
-          <div class="field span-3"><label>Cost Center</label><select id="revCostCenter"></select></div>
-          <div class="field span-3"><label>Project Manager</label><select id="revManager"></select></div>
-          <div class="field span-4"><label>Project Name</label><select id="revProjectName"></select><div class="helper" style="margin-top:6px;">If the project is not on the list, add it here and save it first.</div><button type="button" id="showQuickProjectBtn" class="btn-secondary" style="margin-top:8px;">Add New Project Name</button></div>
-          <div class="field span-3"><label>Actual Revenue</label><input id="revAmount" type="number" min="0" placeholder="0" /></div>
-          <div class="field span-3"><label>Budget Revenue</label><input id="revBudget" type="number" min="0" placeholder="0" /></div>
-          <div class="field span-2"><label>Quality %</label><input id="revQuality" type="number" min="0" max="100" value="80" /></div>
-          <div class="field span-2"><label>Safety Incidents</label><input id="revSafety" type="number" min="0" value="0" /></div>
-          <div class="field span-2"><label>Achievement %</label><input id="revAchievement" readonly /></div>
-          <div class="field span-12"><button id="saveRevenueBtn">Save Daily Revenue</button></div>
-        </div>
-        <div id="quickProjectPanel" class="form-grid hidden" style="margin-top:14px; padding-top:14px; border-top:1px solid var(--line);">
-          <div class="field span-4"><label>New Project Name</label><input id="quickNewProjectName" placeholder="Enter new project name" /></div>
-          <div class="field span-2"><label>Total Income</label><input id="quickNewProjectIncome" type="number" min="0" placeholder="0" /></div>
-          <div class="field span-2"><label>Margin %</label><input id="quickNewProjectMargin" type="number" min="0" placeholder="0" /></div>
-          <div class="field span-2"><label>Start Date</label><input id="quickNewProjectStartDate" type="date" /></div>
-          <div class="field span-2"><label>End Date</label><input id="quickNewProjectEndDate" type="date" /></div>
-          <div class="field span-12" style="display:flex; gap:12px; flex-wrap:wrap;"><button type="button" id="quickSaveProjectBtn">Save New Project Name</button><button type="button" id="cancelQuickProjectBtn" class="btn-secondary">Cancel</button></div>
-        </div>
-      </div>
-      <div class="card section">
-        <h3>Add New Project to Projects Sheet</h3><div class="helper" style="margin-bottom:12px;">Use this when the project is not in the Daily Revenue project list. It saves directly into the Projects sheet.</div>
-        <div class="form-grid">
-          <div class="field span-2"><label>Date</label><input id="newProjCreatedAt" type="date" /></div>
-          <div class="field span-2"><label>Division</label><select id="newProjDivision"></select></div>
-          <div class="field span-2"><label>Manager</label><select id="newProjManager"></select></div>
-          <div class="field span-3"><label>Project Name</label><input id="newProjName" placeholder="Enter new project name" /></div>
-          <div class="field span-3"><label>Location</label><input id="newProjLocation" placeholder="Location" /></div>
-          <div class="field span-2"><label>Status</label><select id="newProjStatus"><option value="Confirmed">Confirmed</option><option value="Forecast">Forecast</option></select></div>
-          <div class="field span-2"><label>Total Income</label><input id="newProjTotalIncome" type="number" min="0" placeholder="0" /></div>
-          <div class="field span-2"><label>Margin %</label><input id="newProjMargin" type="number" min="0" placeholder="0" /></div>
-          <div class="field span-2"><label>Start Date</label><input id="newProjStartDate" type="date" /></div>
-          <div class="field span-2"><label>End Date</label><input id="newProjEndDate" type="date" /></div>
-          <div class="field span-4"><label>Remarks</label><input id="newProjRemarks" placeholder="Remarks" /></div>
-          <div class="field span-12"><button id="saveProjectBtn">Save New Project</button></div>
-        </div>
-        <div class="helper" style="margin-top:10px;">This saves Date, Project Name, Project Manager and Cost Center into the Projects sheet, then refreshes the dashboard and adds the project to the Daily Revenue project list.</div>
-      </div>
-      <div class="card section">
-        <h3>Revenue summary</h3>
-        <div id="dailyRevenueSummary" class="mini-stats"></div>
-      </div>
-      <div class="card section"><h3>Revenue log</h3><div class="table-wrap"><table id="revenueLogTable"></table></div></div>
-    </div>
-
-    <div id="invoices" class="tab-content section">
-      <div class="card">
-        <h3>Invoice input</h3>
-        <div class="form-grid">
-          <div class="field span-2"><label>Invoice Date</label><input id="invDate" type="date" /></div>
-          <div class="field span-3"><label>Project Manager</label><select id="invManager"></select></div>
-          <div class="field span-4"><label>Project Name</label><select id="invProjectName"></select></div>
-          <div class="field span-3"><label>Invoice Amount</label><input id="invAmount" type="number" min="0" placeholder="0" /></div>
-          <div class="field span-3"><label>Payment Received</label><select id="paymentReceived"><option value="false">No</option><option value="true">Yes</option></select></div>
-          <div class="field span-3"><label>Payment Date</label><input id="paymentDate" type="date" /></div>
-          <div class="field span-12"><button id="saveInvoiceBtn">Save Invoice</button></div>
-        </div>
-      </div>
-      <div class="card section"><h3>Invoice log</h3><div class="table-wrap"><table id="invoiceLogTable"></table></div></div>
-    </div>
-
-    <div id="diagnostics" class="tab-content section">
-      <div class="diagnostics">
-        <div class="card"><h3>Connection diagnostics</h3><pre id="diagnosticLog">No diagnostics yet.</pre></div>
-        <div class="card"><h3>Status summary</h3><div id="statusSummary" class="notice">Waiting for first connection test.</div></div>
+        <button class="btn btn-onpoint w-100 mt-3" id="recalcBtn"><i class="fas fa-arrows-rotate me-2"></i>Recalculate</button>
       </div>
     </div>
   </div>
 
-  <script>
-    const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxXqomp1iTMG6Pi2pmGdNb2FmHtcO2--U0D697YroV4FTRlRNP6CWHo7X65lIn5ofDa/exec';
-    const STORAGE_KEYS = { scriptUrl:'onpoint.scriptUrl', fallbackMode:'onpoint.fallbackMode', revenueBudgetMemory:'onpoint.revenueBudgetMemory', formDraft:'onpoint.formDraft' };
-    const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
-    const DIVISION_COLORS = ['#0f172a','#334155','#475569','#64748b','#94a3b8','#1e293b','#475569'];
-    const COST_CENTERS = ['Onpoint Ontime','Aqua Telecoms','Nkanyezi','Distinct Hire'];
-    const PROJECT_OPTIONS = ['DBSA Generators','DBSA Rooiwal','Joe Gqabi','Temba','Midvaal','Coega','KZN General Buildings','Tshwane','Public Works Limpopo','Limpopo Eskom Substation Ephraim Mogale','Naizna','Cape Town','COT Streetlights','COT Electrification','COT Metering','COE Streetlights','Msunduzi E50','Msunduzi Streetlights','Msunduzi E33','Msunduzi E47','Moqhaka Streetlights','Moqhaka Metering','Centlec CD11','Centlec Transformers CD32','Centlec CD45','Midvaal Mechanical','Eskom SPU','Eskom FSOU Substation','Eskom ECOU','Eskom LOU General Buildings','Eskom KZN Minor Reticulation','Randwest Electrical','Randwest Roads & Stormwater','Randwest Water rand sanitation','Randwest Bulk','RAL','Stellenbosh','Liquid ECPG','Liquid ECSOD','Liquid Gauteng SOD','Telkom','MTN','Centlec','Eskom Harvard','City Power','Umhlathuze Municipality','Eskom WC','COE Buildings','Midvaal Water','Midvaal Electricity','Uthukela','Kgetleng River','Ray Nkonyeni Facility','Ray Nkonyeni Electrical Material','Ray Nkonyeni Mast','Ray Nkonyeni Meter Reading','Ramotshere Electrical Supplies','Newcastle Substations','Ubuntu','IDT North West Buidlings','Amajuba Generator','uPhongolo','Abaquilisi Battery Supplies','Abaquilisi Streetlights'];
-    const PROJECT_MANAGERS = ['Moses','Andrew','Govern','Phillip','Timothy','Stanley','Brian','Johan','Siyanda','Dave','James','Rayman','Tony','Graham','Ronald','Petros','Elroy','Mesh','Vusi','Tinotenda','Sydney','Moeti'];
+  <div class="row g-3 mb-4">
+    <div class="col-lg-8">
+      <div class="card-shell p-4 h-100">
+        <div class="section-title">Upload exported files</div>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="dropzone">
+              <div class="fw-semibold mb-2"><i class="fas fa-file-excel text-success me-2"></i>Zoho approvals</div>
+              <div class="small-help mb-2">ER Number, approved amount, reg no, driver, cost center, department</div>
+              <input type="file" id="approvalFile" class="form-control" accept=".xlsx,.xls,.csv">
+              <button class="btn btn-sm btn-outline-secondary pill mt-2 w-100" id="uploadApprovalsBtn">Upload to Google</button>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="dropzone">
+              <div class="fw-semibold mb-2"><i class="fas fa-building-columns text-primary me-2"></i>Bank / swipe export</div>
+              <div class="small-help mb-2">Date, amount, litres, reg no, merchant, ER number if available</div>
+              <input type="file" id="swipeFile" class="form-control" accept=".xlsx,.xls,.csv">
+              <button class="btn btn-sm btn-outline-secondary pill mt-2 w-100" id="uploadSwipesBtn">Upload to Google</button>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="dropzone">
+              <div class="fw-semibold mb-2"><i class="fas fa-road text-warning me-2"></i>Driver fuel log export</div>
+              <div class="small-help mb-2">Will also compare against live Fuel Log sheet values</div>
+              <input type="file" id="driverLogFile" class="form-control" accept=".xlsx,.xls,.csv">
+              <button class="btn btn-sm btn-outline-secondary pill mt-2 w-100" id="uploadDriverLogBtn">Upload to Google</button>
+            </div>
+          </div>
+        </div>
+        <div class="small-help mt-3">Uploaded files are saved into a Drive folder created by the Apps Script called <strong>FuelRecon Uploads</strong>. Parsed rows are also stored into import sheets for reuse.</div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card-shell p-4 h-100">
+        <div class="section-title">Manual fuel recon entry</div>
+        <div class="row g-2">
+          <div class="col-6"><input id="manualDate" type="date" class="form-control pill"></div>
+          <div class="col-6"><input id="manualDriver" type="text" class="form-control pill" placeholder="Driver"></div>
+          <div class="col-6"><input id="manualVehicle" type="text" class="form-control pill" placeholder="Vehicle / Reg No"></div>
+          <div class="col-6"><input id="manualErNo" type="text" class="form-control pill" placeholder="ER Number"></div>
+          <div class="col-6"><input id="manualApprovedAmount" type="number" class="form-control pill" placeholder="Approved Amount"></div>
+          <div class="col-6"><input id="manualSwipeAmount" type="number" class="form-control pill" placeholder="Swiped Amount"></div>
+          <div class="col-6"><input id="manualLiters" type="number" class="form-control pill" placeholder="Liters"></div>
+          <div class="col-6"><input id="manualMerchant" type="text" class="form-control pill" placeholder="Merchant"></div>
+          <div class="col-6"><input id="manualCostCenter" type="text" class="form-control pill" placeholder="Cost Center"></div>
+          <div class="col-6"><input id="manualDepartment" type="text" class="form-control pill" placeholder="Department"></div>
+          <div class="col-12"><input id="manualNotes" type="text" class="form-control pill" placeholder="Notes"></div>
+        </div>
+        <button class="btn btn-onpoint w-100 mt-3" id="saveManualBtn"><i class="fas fa-save me-2"></i>Save to FuelRecon Sheet</button>
+      </div>
+    </div>
+  </div>
 
-    const state = { period:'Daily', division:'All', manager:'All', query:'', activeKpi:'all', analysisMode:'costCenter', analysisValue:'All', analysisPeriod:'Daily' };
-    let charts = {}, projectsData = [], revenueData = [], invoiceData = [], lastDiagnostics = [], autoRefreshHandle = null, isLoadingData = false;
+  <div class="card-shell p-4 mb-4">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">Filter driver</label>
+        <input id="filterDriver" class="form-control pill" placeholder="All drivers">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Filter cost center</label>
+        <input id="filterCostCenter" class="form-control pill" placeholder="All cost centers">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Filter department</label>
+        <input id="filterDepartment" class="form-control pill" placeholder="All departments">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Search</label>
+        <input id="searchInput" class="form-control pill" placeholder="ER, reg, merchant, notes">
+      </div>
+    </div>
+  </div>
 
-    const byId = id => document.getElementById(id);
-    const showLoading = msg => { byId('loadingOverlay').style.display='flex'; byId('loadingMessage').textContent = msg || 'Loading...'; };
-    const hideLoading = () => { byId('loadingOverlay').style.display='none'; };
-    const setConnection = (text, cls) => { const el = byId('connectionBadge'); el.className = 'badge ' + cls; el.textContent = text; };
-    const money = value => new Intl.NumberFormat('en-ZA',{style:'currency',currency:'ZAR',maximumFractionDigits:0}).format(Number(value)||0);
-    const num = value => Number(String(value ?? '').replace(/[^0-9.-]+/g,'')) || 0;
-    const pct = (actual,target) => target ? Math.round((actual/target)*100) : 0;
-    const badge = (text, cls) => `<span class="badge ${cls}">${text}</span>`;
-    const cell = (html, cls='') => ({ html, class: cls });
-    const progressBar = value => {
-      const pctValue = Math.max(0, Math.min(100, Math.round(value || 0)));
-      const fillClass = pctValue < 50 ? 'fill-red' : pctValue < 80 ? 'fill-amber' : 'fill-green';
-      return `<div class="progress-cell"><div class="progress-track"><div class="progress-fill ${fillClass}" style="width:${pctValue}%"></div></div><div class="progress-label"><span>${pctValue}%</span><span>${pctValue < 50 ? 'Below target' : pctValue < 80 ? 'Watch' : 'On track'}</span></div></div>`;
+  <div class="card-shell p-4">
+    <ul class="nav nav-pills mb-3 gap-2" role="tablist">
+      <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tabOverview" type="button">Overview</button></li>
+      <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabExceptions" type="button">Exceptions</button></li>
+      <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabComparisons" type="button">Comparisons</button></li>
+      <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabDrivers" type="button">Drivers</button></li>
+      <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabUploads" type="button">Uploads</button></li>
+    </ul>
+
+    <div class="tab-content">
+      <div class="tab-pane fade show active" id="tabOverview">
+        <div class="table-responsive" style="max-height:520px; overflow:auto;">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Date</th><th>Driver</th><th>Vehicle</th><th>ER Number</th><th>Approved</th><th>Swiped</th><th>Liters</th><th>KM</th><th>KM/L</th><th>Cost Center</th><th>Department</th><th>Status</th><th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="overviewBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="tabExceptions">
+        <div class="table-responsive" style="max-height:520px; overflow:auto;">
+          <table class="table table-sm align-middle">
+            <thead><tr><th>Date</th><th>Driver</th><th>Vehicle</th><th>ER Number</th><th>Approved</th><th>Swiped</th><th>Variance</th><th>KM/L</th><th>Issue</th></tr></thead>
+            <tbody id="exceptionsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="tabComparisons">
+        <div class="row g-3 mb-3">
+          <div class="col-lg-6"><div class="chart-box"><canvas id="costCenterChart"></canvas></div></div>
+          <div class="col-lg-6"><div class="chart-box"><canvas id="departmentChart"></canvas></div></div>
+        </div>
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <div class="table-responsive" style="max-height:420px; overflow:auto;">
+              <table class="table table-sm"><thead><tr><th>Cost Center</th><th>Swipes</th><th>Approved</th><th>Swiped</th><th>Variance</th><th>Unauthorised</th></tr></thead><tbody id="costCenterTable"></tbody></table>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="table-responsive" style="max-height:420px; overflow:auto;">
+              <table class="table table-sm"><thead><tr><th>Department</th><th>Swipes</th><th>Approved</th><th>Swiped</th><th>Variance</th><th>Unauthorised</th></tr></thead><tbody id="departmentTable"></tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="tabDrivers">
+        <div class="row g-3 mb-3">
+          <div class="col-lg-6"><div class="chart-box"><canvas id="driverKmplChart"></canvas></div></div>
+          <div class="col-lg-6"><div class="chart-box"><canvas id="driverFillChart"></canvas></div></div>
+        </div>
+        <div class="table-responsive" style="max-height:460px; overflow:auto;">
+          <table class="table table-sm"><thead><tr><th>Driver</th><th>Department</th><th>Cost Center</th><th>Swipes</th><th>Liters</th><th>KM</th><th>Avg KM/L</th><th>Unauthorised</th><th>Variance</th><th>Alarms</th></tr></thead><tbody id="driverTable"></tbody></table>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="tabUploads">
+        <div class="row g-3">
+          <div class="col-lg-4"><div class="section-title">Approvals preview</div><div class="table-responsive" style="max-height:360px; overflow:auto;"><table class="table table-sm"><thead><tr><th>ER</th><th>Driver</th><th>Reg</th><th>Approved</th></tr></thead><tbody id="approvalPreview"></tbody></table></div></div>
+          <div class="col-lg-4"><div class="section-title">Swipes preview</div><div class="table-responsive" style="max-height:360px; overflow:auto;"><table class="table table-sm"><thead><tr><th>Date</th><th>Driver</th><th>Reg</th><th>Swiped</th><th>Liters</th></tr></thead><tbody id="swipePreview"></tbody></table></div></div>
+          <div class="col-lg-4"><div class="section-title">Fuel Log preview</div><div class="table-responsive" style="max-height:360px; overflow:auto;"><table class="table table-sm"><thead><tr><th>Date</th><th>Driver</th><th>Vehicle</th><th>Odo Start</th><th>Odo Finish</th><th>KM</th></tr></thead><tbody id="logPreview"></tbody></table></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(() => {
+  const CONFIG = {
+    GAS_URL: 'https://script.google.com/macros/s/AKfycbyG1F7KHbkH2ZNT9F6H78JiV1DBM3Pp4JycyijIy1zePTXmPJcCIqrbpl6cWfw0VHg7CA/exec',
+    RECON_SHEET_ID: '16ijC8ODRMDtC_FtMpZEcukxuuOTCBlA9TLRKAmBrI2w',
+    RECON_SHEET_NAME: 'FuelRecon',
+    FUEL_LOG_SHEET_ID: '1SnhLTWgzJfkKNmIvtj8uwa-8x7TsnRtqkfX3deEuHIQ',
+    FUEL_LOG_SHEET_NAME: 'Fuel Log'
+  };
+  document.getElementById('gasUrlCell').textContent = CONFIG.GAS_URL;
+
+  const state = { approvals: [], swipes: [], logs: [], analysis: [], charts: {} };
+  const aliases = {
+    timestamp: ['timestamp'],
+    date: ['date','transaction date','swipe date','fuel date','day'],
+    driver: ['driver','driver name','employee','operator','user'],
+    vehicle: ['vehicle','vehicle reg','registration','reg','reg no','vehicle registration','registration no'],
+    erNumber: ['er number','er no','er','request no','approval no','auth no'],
+    merchant: ['merchant','station','vendor','garage','fuel station'],
+    odoStart: ['odo start','odometer start','odo opening'],
+    odoFinish: ['odo finish','odometer finish','odo closing'],
+    fuelType: ['fuel type'],
+    pricePerL: ['price/l','price per l','price per litre','price per liter'],
+    liters: ['liters','litres','volume','qty','quantity'],
+    fuelTotal: ['fuel total','swipe amount','swiped amount','amount','bank amount','fuel amount','card amount'],
+    lubrication: ['lubrication','lube'],
+    lubeCost: ['lube cost','lubrication cost'],
+    tolls: ['tolls','toll'],
+    tollTotal: ['toll total'],
+    grandTotal: ['grand total','total'],
+    costCenter: ['cost center','cost centre','costcenter','costcentre','cc'],
+    department: ['department','dept','division'],
+    notes: ['notes','comment','remarks'],
+    kmTraveled: ['km traveled','km travelled','km','distance','trip km'],
+    kmPerLiter: ['km/liter','km/litre','km per liter','km per litre'],
+    submissionId: ['submission id'],
+    status: ['status'],
+    approvedAmount: ['approved amount','authorised amount','authorized amount','request amount','er amount'],
+  };
+
+  const qs = id => document.getElementById(id);
+  const money = n => 'R' + Number(n || 0).toFixed(2);
+  const num = (n,d=2) => Number(n || 0).toFixed(d);
+  const safe = v => (v ?? '').toString().trim();
+  const normKey = v => safe(v).toLowerCase().replace(/[_\-/]+/g,' ').replace(/\s+/g,' ').trim();
+
+  function parseNum(v){
+    if(v === null || v === undefined || v === '') return 0;
+    if(typeof v === 'number') return v;
+    const n = parseFloat(String(v).replace(/[^0-9.\-]/g,''));
+    return isNaN(n) ? 0 : n;
+  }
+  function parseDate(v){
+    if(v === null || v === undefined || v === '') return '';
+    if(typeof v === 'number') {
+      const excelEpoch = new Date(Date.UTC(1899,11,30));
+      return new Date(excelEpoch.getTime() + v * 86400000).toISOString().slice(0,10);
+    }
+    const s = String(v).trim();
+    if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const d = new Date(s);
+    return isNaN(d) ? s : d.toISOString().slice(0,10);
+  }
+  function matchField(row, wanted){
+    for (const [key, names] of Object.entries(aliases)) {
+      if (key !== wanted) continue;
+      const rowKey = Object.keys(row).find(k => names.includes(normKey(k)));
+      if (rowKey) return row[rowKey];
+    }
+    return '';
+  }
+  function mapGenericRow(row){
+    return {
+      timestamp: safe(matchField(row,'timestamp')),
+      date: parseDate(matchField(row,'date')),
+      driver: safe(matchField(row,'driver')),
+      vehicle: safe(matchField(row,'vehicle')).toUpperCase(),
+      erNumber: safe(matchField(row,'erNumber')),
+      merchant: safe(matchField(row,'merchant')),
+      odoStart: parseNum(matchField(row,'odoStart')),
+      odoFinish: parseNum(matchField(row,'odoFinish')),
+      fuelType: safe(matchField(row,'fuelType')),
+      pricePerL: parseNum(matchField(row,'pricePerL')),
+      liters: parseNum(matchField(row,'liters')),
+      fuelTotal: parseNum(matchField(row,'fuelTotal')),
+      lubrication: safe(matchField(row,'lubrication')),
+      lubeCost: parseNum(matchField(row,'lubeCost')),
+      tolls: safe(matchField(row,'tolls')),
+      tollTotal: parseNum(matchField(row,'tollTotal')),
+      grandTotal: parseNum(matchField(row,'grandTotal')),
+      costCenter: safe(matchField(row,'costCenter')),
+      department: safe(matchField(row,'department')),
+      notes: safe(matchField(row,'notes')),
+      kmTraveled: parseNum(matchField(row,'kmTraveled')),
+      kmPerLiter: parseNum(matchField(row,'kmPerLiter')),
+      submissionId: safe(matchField(row,'submissionId')),
+      status: safe(matchField(row,'status')),
+      approvedAmount: parseNum(matchField(row,'approvedAmount')),
     };
-    const variancePercent = (actual, target) => target ? Math.round(((actual - target) / target) * 100) : 0;
-    const varianceFillClass = value => value >= 0 ? 'fill-green' : value >= -10 ? 'fill-amber' : 'fill-red';
-    const varianceProgressBar = value => {
-      const signedValue = Math.round(value || 0);
-      const width = Math.max(0, Math.min(100, Math.abs(signedValue)));
-      const fillClass = varianceFillClass(signedValue);
-      const status = signedValue >= 0 ? 'Above budget' : signedValue >= -10 ? 'Slightly below' : 'Below budget';
-      const sign = signedValue > 0 ? '+' : '';
-      return `<div class="progress-cell"><div class="progress-track"><div class="progress-fill ${fillClass}" style="width:${width}%"></div></div><div class="progress-label"><span>${sign}${signedValue}%</span><span>${status}</span></div></div>`;
-    };
-    const statusTone = score => score >= 80 ? 'b-green' : score >= 50 ? 'b-amber' : 'b-red';
-    const actionTone = status => status === 'Closed' ? 'b-green' : status === 'In Progress' ? 'b-amber' : status === 'Escalated' ? 'b-red' : 'b-slate';
-    const kpiTone = (score, green, amber) => score >= green ? 'green' : score >= amber ? 'amber' : 'red';
-    const normaliseDate = value => value ? String(value).split('T')[0] : '';
-    const todayISO = () => {
-      const now = new Date();
-      const y = now.getFullYear();
-      const m = String(now.getMonth() + 1).padStart(2, '0');
-      const d = String(now.getDate()).padStart(2, '0');
-      return `${y}-${m}-${d}`;
-    };
-    const safeDate = value => { const d = new Date(value); return isNaN(d.getTime()) ? null : d; };
-    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-    function getBudgetMemory(){
-      try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.revenueBudgetMemory) || '{}') || {}; } catch { return {}; }
+  }
+
+  async function readWorkbook(file){
+    const buffer = await file.arrayBuffer();
+    const wb = XLSX.read(buffer, {type:'array'});
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    return XLSX.utils.sheet_to_json(sheet, {defval:''});
+  }
+
+  async function testConnection() {
+    if (CONFIG.GAS_URL.includes('PASTE_DEPLOYED_WEB_APP_URL_HERE')) {
+      setStatus('Please paste the deployed Apps Script URL first.', 'warn');
+      return;
     }
-    function setBudgetMemory(memory){
-      localStorage.setItem(STORAGE_KEYS.revenueBudgetMemory, JSON.stringify(memory || {}));
+    try {
+      setStatus('Testing Apps Script...', 'warn', true);
+      const res = await fetch(`${CONFIG.GAS_URL}?action=test`);
+      const data = await res.json();
+      if (data.success) setStatus('Connected to Apps Script', 'ok');
+      else setStatus(data.error || 'Connection failed', 'bad');
+    } catch (err) {
+      setStatus('Connection failed: ' + err.message, 'bad');
     }
-    function revenueBudgetKey(projectName, manager='', costCenter=''){
-      return [String(projectName || '').trim().toLowerCase(), String(manager || '').trim().toLowerCase(), normalizeCostCenterName(costCenter)].join('|');
-    }
-    function rememberBudgetValue(projectName, manager, costCenter, budget){
-      const numericBudget = num(budget);
-      if (!projectName || numericBudget <= 0) return;
-      const memory = getBudgetMemory();
-      const key = revenueBudgetKey(projectName, manager, costCenter);
-      memory[key] = numericBudget;
-      setBudgetMemory(memory);
-    }
-    function latestBudgetForSelection(projectName, manager='', costCenter=''){
-      if (!projectName) return 0;
-      const matchingRows = revenueData
-        .filter(row => String(row.projectName || '').trim() === String(projectName || '').trim())
-        .filter(row => !manager || String(row.manager || '').trim() === String(manager || '').trim())
-        .filter(row => !costCenter || normalizeCostCenterName(row.costCenter) === normalizeCostCenterName(costCenter))
-        .filter(row => num(row.budget) > 0)
-        .sort((a,b) => String(b.date || '').localeCompare(String(a.date || '')));
-      if (matchingRows.length) return num(matchingRows[0].budget);
-      const memory = getBudgetMemory();
-      const exactKey = revenueBudgetKey(projectName, manager, costCenter);
-      if (memory[exactKey] != null) return num(memory[exactKey]);
-      const managerAgnosticKey = revenueBudgetKey(projectName, '', costCenter);
-      if (memory[managerAgnosticKey] != null) return num(memory[managerAgnosticKey]);
-      const projectOnlyKey = revenueBudgetKey(projectName, '', '');
-      if (memory[projectOnlyKey] != null) return num(memory[projectOnlyKey]);
-      return 0;
-    }
-    function captureDashboardInputs(){
-      const ids = ['revDate','revCostCenter','revManager','revProjectName','revAmount','revBudget','revQuality','revSafety','revAchievement','invDate','invManager','invProjectName','invAmount','paymentReceived','paymentDate','newProjCreatedAt','newProjDivision','newProjManager','newProjName','newProjLocation','newProjStatus','newProjTotalIncome','newProjMargin','newProjStartDate','newProjEndDate','newProjRemarks','quickNewProjectName','quickNewProjectIncome','quickNewProjectMargin','quickNewProjectStartDate','quickNewProjectEndDate','query'];
-      const values = {};
-      ids.forEach(id => {
-        const el = byId(id);
-        if (el) values[id] = el.value;
-      });
+  }
+
+  function setStatus(msg, type='warn', spin=false){
+    const el = qs('connectionStatus');
+    const cls = type === 'ok' ? 'status-ok' : type === 'bad' ? 'status-bad' : 'status-warn';
+    el.className = `status-badge ${cls}`;
+    el.innerHTML = `<i class="fas ${spin ? 'fa-circle-notch fa-spin' : type==='ok' ? 'fa-check-circle' : type==='bad' ? 'fa-triangle-exclamation' : 'fa-circle-info'}"></i>${msg}`;
+  }
+
+  async function getJson(action){
+    const res = await fetch(`${CONFIG.GAS_URL}?action=${encodeURIComponent(action)}`);
+    return await res.json();
+  }
+  async function postJson(payload){
+    const res = await fetch(CONFIG.GAS_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(payload)
+    });
+    return await res.json();
+  }
+
+  function buildApprovalsFromRows(rows){
+    return rows.map(r => {
+      const x = mapGenericRow(r);
       return {
-        values,
-        quickProjectOpen: byId('quickProjectPanel') ? !byId('quickProjectPanel').classList.contains('hidden') : false,
-        activeTab: document.querySelector('.tab.active')?.dataset?.tab || 'executive',
-        focusedId: document.activeElement?.id || ''
+        date: x.date,
+        driver: x.driver,
+        vehicle: x.vehicle,
+        erNumber: x.erNumber || '0',
+        approvedAmount: x.approvedAmount || x.fuelTotal || x.grandTotal || 0,
+        costCenter: x.costCenter,
+        department: x.department,
+        merchant: x.merchant,
+        notes: x.notes
       };
-    }
-    function restoreDashboardInputs(snapshot){
-      if (!snapshot) return;
-      Object.entries(snapshot.values || {}).forEach(([id, value]) => {
-        const el = byId(id);
-        if (!el) return;
-        if (el.tagName === 'SELECT') {
-          const hasOption = Array.from(el.options).some(option => option.value === value);
-          if (hasOption) el.value = value;
-        } else {
-          el.value = value ?? '';
-        }
-      });
-      if (byId('quickProjectPanel')) {
-        byId('quickProjectPanel').classList.toggle('hidden', !snapshot.quickProjectOpen);
-      }
-      if (snapshot.activeTab) {
-        document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === snapshot.activeTab));
-        document.querySelectorAll('.tab-content').forEach(panel => panel.classList.toggle('active', panel.id === snapshot.activeTab));
-      }
-      updateAchievement();
-      const focused = snapshot.focusedId ? byId(snapshot.focusedId) : null;
-      if (focused && typeof focused.focus === 'function') {
-        try { focused.focus({ preventScroll:true }); } catch { focused.focus(); }
-      }
-    }
-    function applyRememberedBudget(force=false){
-      const projectName = byId('revProjectName')?.value;
-      const manager = byId('revManager')?.value;
-      const costCenter = byId('revCostCenter')?.value;
-      const budgetEl = byId('revBudget');
-      if (!budgetEl || !projectName) return;
-      const currentBudget = num(budgetEl.value);
-      if (!force && currentBudget > 0) return;
-      const remembered = latestBudgetForSelection(projectName, manager, costCenter);
-      if (remembered > 0) {
-        budgetEl.value = remembered;
-        updateAchievement();
-      }
-    }
-    function bindRevenueDefaults(){
-      ['revProjectName','revManager','revCostCenter'].forEach(id => {
-        const el = byId(id);
-        if (!el) return;
-        el.onchange = () => {
-          if (id !== 'revProjectName' && byId('revBudget') && !num(byId('revBudget').value)) applyRememberedBudget(true);
-          if (id === 'revProjectName') applyRememberedBudget(true);
-          updateAchievement();
-        };
-      });
-      const budgetEl = byId('revBudget');
-      if (budgetEl) {
-        budgetEl.onblur = () => {
-          rememberBudgetValue(byId('revProjectName').value, byId('revManager').value, byId('revCostCenter').value, budgetEl.value);
-          updateAchievement();
-        };
-      }
-    }
-    function normalizeTextKey(value){
-      return String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    }
-    function normalizeCostCenterName(value){
-      const raw = String(value ?? '').trim();
-      if (!raw) return '';
-      const key = normalizeTextKey(raw);
-      const aliases = {
-        onpointgroup: 'Onpoint Ontime',
-        onpointontime: 'Onpoint Ontime',
-        onpoint: 'Onpoint Ontime',
-        aquatelecoms: 'Aqua Telecoms',
-        nkanyezi: 'Nkanyezi',
-        distincthire: 'Distinct Hire'
+    }).filter(r => r.erNumber || r.vehicle || r.driver || r.approvedAmount);
+  }
+  function buildSwipesFromRows(rows){
+    return rows.map(r => {
+      const x = mapGenericRow(r);
+      return {
+        date: x.date,
+        driver: x.driver,
+        vehicle: x.vehicle,
+        erNumber: x.erNumber || '0',
+        merchant: x.merchant,
+        liters: x.liters,
+        swipeAmount: x.fuelTotal || x.grandTotal || 0,
+        costCenter: x.costCenter,
+        department: x.department,
+        notes: x.notes
       };
-      return aliases[key] || raw;
-    }
-    function getLocalDateString(value){
-      if (value == null || value === '') return '';
-      if (typeof value === 'string') {
-        const trimmed = value.trim();
-        const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
-        if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
-        const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-        if (slashMatch) {
-          const day = String(Number(slashMatch[1])).padStart(2, '0');
-          const month = String(Number(slashMatch[2])).padStart(2, '0');
-          return `${slashMatch[3]}-${month}-${day}`;
+    }).filter(r => r.date || r.vehicle || r.driver || r.swipeAmount);
+  }
+  function buildLogsFromRows(rows){
+    return rows.map(r => mapGenericRow(r)).filter(r => r.date || r.driver || r.vehicle || r.grandTotal || r.fuelTotal);
+  }
+
+  function lower(v){ return safe(v).toLowerCase(); }
+  function dateDiffDays(a,b){
+    if(!a || !b) return 9999;
+    return Math.abs((new Date(a) - new Date(b)) / 86400000);
+  }
+  function groupBy(arr, keyFn){
+    return arr.reduce((m, item) => {
+      const k = keyFn(item);
+      if (!m[k]) m[k] = [];
+      m[k].push(item);
+      return m;
+    }, {});
+  }
+  function badge(label, cls){ return `<span class="badge-soft ${cls}">${label}</span>`; }
+
+  function recalculate(){
+    const varianceTolerance = parseNum(qs('thresholdVariance').value) || 5;
+    const lowKmpl = parseNum(qs('thresholdKmpl').value) || 4.5;
+    const frequentCount = parseNum(qs('thresholdFrequentCount').value) || 3;
+    const frequentDays = parseNum(qs('thresholdFrequentDays').value) || 7;
+
+    const approvalsByEr = new Map();
+    const approvalsByVehicleDate = new Map();
+    state.approvals.forEach(a => {
+      if (a.erNumber && a.erNumber !== '0') approvalsByEr.set(a.erNumber.toUpperCase(), a);
+      approvalsByVehicleDate.set(`${a.vehicle}|${a.date}`, a);
+    });
+
+    const logsByVehicleDate = groupBy(state.logs, r => `${safe(r.vehicle).toUpperCase()}|${r.date}`);
+    const swipes = state.swipes.length ? state.swipes : state.logs.map(l => ({
+      date: l.date,
+      driver: l.driver,
+      vehicle: l.vehicle,
+      erNumber: l.erNumber || '0',
+      merchant: l.merchant,
+      liters: l.liters,
+      swipeAmount: l.fuelTotal || l.grandTotal || 0,
+      costCenter: l.costCenter,
+      department: l.department,
+      notes: l.notes
+    })).filter(r => r.swipeAmount || r.liters || r.vehicle);
+
+    const perVehicleDates = groupBy(swipes, r => safe(r.vehicle).toUpperCase());
+    const frequentFlags = new Set();
+    Object.values(perVehicleDates).forEach(rows => {
+      rows.sort((a,b) => String(a.date).localeCompare(String(b.date)));
+      for (let i = 0; i < rows.length; i++) {
+        const base = rows[i];
+        let fills = 1;
+        for (let j = i + 1; j < rows.length; j++) {
+          if (dateDiffDays(base.date, rows[j].date) <= frequentDays) fills++;
         }
+        if (fills >= frequentCount) frequentFlags.add(`${base.vehicle}|${base.date}|${base.swipeAmount}`);
       }
-      const d = safeDate(value);
-      if (!d) return '';
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    }
-    function getPeriodRange(periodLabel, referenceDate = new Date()){
-      const ref = safeDate(referenceDate) || new Date();
-      const start = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
-      const end = new Date(start);
-      if (periodLabel === 'Daily') {
-        end.setDate(end.getDate() + 1);
-        return { start, end };
+    });
+
+    state.analysis = swipes.map(s => {
+      const er = safe(s.erNumber).toUpperCase();
+      const approval = approvalsByEr.get(er) || approvalsByVehicleDate.get(`${safe(s.vehicle).toUpperCase()}|${s.date}`) || null;
+      const linkedLogs = logsByVehicleDate[`${safe(s.vehicle).toUpperCase()}|${s.date}`] || [];
+      const log = linkedLogs[0] || {};
+      const approvedAmount = approval ? parseNum(approval.approvedAmount) : 0;
+      const swipeAmount = parseNum(s.swipeAmount);
+      const liters = parseNum(s.liters || log.liters);
+      const km = parseNum(log.kmTraveled || (parseNum(log.odoFinish) - parseNum(log.odoStart)));
+      const kmpl = parseNum(log.kmPerLiter) || (liters > 0 ? km / liters : 0);
+      const variance = swipeAmount - approvedAmount;
+      const authorized = !!(approval && approval.erNumber && approval.erNumber !== '0');
+      const issues = [];
+      if (!authorized) issues.push('Not authorised');
+      if (authorized && Math.abs(variance) > varianceTolerance) issues.push(`Variance ${money(variance)}`);
+      if (kmpl > 0 && kmpl < lowKmpl) issues.push(`Low KM/L ${num(kmpl)}`);
+      if (frequentFlags.has(`${s.vehicle}|${s.date}|${s.swipeAmount}`)) issues.push('Frequent filling');
+      return {
+        date: s.date,
+        driver: s.driver || log.driver || approval?.driver || '',
+        vehicle: safe(s.vehicle).toUpperCase() || safe(log.vehicle).toUpperCase() || safe(approval?.vehicle).toUpperCase(),
+        erNumber: s.erNumber || approval?.erNumber || log.erNumber || '0',
+        approvedAmount,
+        swipeAmount,
+        liters,
+        km,
+        kmpl,
+        merchant: s.merchant || approval?.merchant || log.merchant || '',
+        costCenter: s.costCenter || log.costCenter || approval?.costCenter || '',
+        department: s.department || log.department || approval?.department || '',
+        notes: s.notes || log.notes || approval?.notes || '',
+        authorized,
+        variance,
+        issues
+      };
+    });
+
+    renderAll();
+  }
+
+  function getVisibleAnalysis(){
+    const fd = lower(qs('filterDriver').value);
+    const fc = lower(qs('filterCostCenter').value);
+    const fdep = lower(qs('filterDepartment').value);
+    const search = lower(qs('searchInput').value);
+    return state.analysis.filter(r => {
+      if (fd && !lower(r.driver).includes(fd)) return false;
+      if (fc && !lower(r.costCenter).includes(fc)) return false;
+      if (fdep && !lower(r.department).includes(fdep)) return false;
+      if (search) {
+        const blob = [r.erNumber, r.vehicle, r.driver, r.merchant, r.notes, r.costCenter, r.department].join(' ').toLowerCase();
+        if (!blob.includes(search)) return false;
       }
-      if (periodLabel === 'Weekly') {
-        const day = start.getDay();
-        start.setDate(start.getDate() - day);
-        end.setTime(start.getTime());
-        end.setDate(end.getDate() + 7);
-        return { start, end };
-      }
-      if (periodLabel === 'Monthly') {
-        start.setDate(1);
-        end.setFullYear(start.getFullYear(), start.getMonth() + 1, 1);
-        return { start, end };
-      }
-      if (periodLabel === 'Quarterly') {
-        const quarterStartMonth = Math.floor(start.getMonth() / 3) * 3;
-        start.setMonth(quarterStartMonth, 1);
-        end.setFullYear(start.getFullYear(), quarterStartMonth + 3, 1);
-        return { start, end };
-      }
-      start.setMonth(0, 1);
-      end.setFullYear(start.getFullYear() + 1, 0, 1);
-      return { start, end };
-    }
-    function isDateInPeriod(dateValue, periodLabel){
-      const localDate = getLocalDateString(dateValue);
-      if (!localDate) return false;
-      if (periodLabel === 'Daily') return localDate === todayISO();
-      const d = safeDate(`${localDate}T00:00:00`);
-      if (!d) return false;
-      const range = getPeriodRange(periodLabel);
-      return d >= range.start && d < range.end;
-    }
-    function getProjectRecord(projectName, manager='', costCenter=''){
-      const direct = projectsData.find(p => p.project === projectName && (!manager || !p.pm || p.pm === manager) && (!costCenter || !p.division || normalizeCostCenterName(p.division) === normalizeCostCenterName(costCenter)));
-      return direct || projectsData.find(p => p.project === projectName) || null;
-    }
-    function marginForRevenueRow(row){
-      const project = getProjectRecord(row.projectName, row.manager, row.costCenter);
-      return num(project?.gpPercent);
-    }
-    function profitabilityForRows(rows){
-      const revenue = rows.reduce((sum, row) => sum + num(row.amount), 0);
-      if (!revenue) return 0;
-      const grossProfit = rows.reduce((sum, row) => sum + (num(row.amount) * marginForRevenueRow(row) / 100), 0);
-      return Math.round((grossProfit / revenue) * 100);
-    }
-    function periodRevenueRows(periodLabel, filters = {}){
-      return revenueData.filter(row => {
-        if (!isDateInPeriod(row.date, periodLabel)) return false;
-        if (filters.costCenter && filters.costCenter !== 'All' && normalizeCostCenterName(row.costCenter) !== normalizeCostCenterName(filters.costCenter)) return false;
-        if (filters.manager && filters.manager !== 'All' && String(row.manager || '').trim() !== String(filters.manager || '').trim()) return false;
-        if (filters.project && filters.project !== 'All' && String(row.projectName || '').trim() !== String(filters.project || '').trim()) return false;
-        return true;
-      });
-    }
-    const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    function normaliseKeyName(value){ return String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
-    function buildRowLookup(row){
-      const lookup = {};
-      Object.keys(row || {}).forEach(key => {
-        lookup[normaliseKeyName(key)] = row[key];
-      });
-      return lookup;
-    }
-    function firstNumericFromLookup(lookup, candidates){
-      for (const candidate of candidates){
-        const key = normaliseKeyName(candidate);
-        if (Object.prototype.hasOwnProperty.call(lookup, key)){
-          const rawValue = lookup[key];
-          if (rawValue !== '' && rawValue != null) return num(rawValue);
-        }
-      }
-      return null;
-    }
-    function extractMonthlyTargets(row){
-      const lookup = buildRowLookup(row);
-      const targets = {};
-      MONTH_NAMES.forEach((monthName, monthIndex) => {
-        const shortName = MONTH_SHORT[monthIndex];
-        const value = firstNumericFromLookup(lookup, [
-          monthName, shortName,
-          `${monthName} Target`, `${monthName}_Target`, `${monthName}Target`,
-          `${monthName} Budget`, `${monthName}_Budget`, `${monthName}Budget`,
-          `Target ${monthName}`, `Budget ${monthName}`,
-          `${shortName} Target`, `${shortName}_Target`, `${shortName}Target`,
-          `${shortName} Budget`, `${shortName}_Budget`, `${shortName}Budget`,
-          `Target ${shortName}`, `Budget ${shortName}`
-        ]);
-        if (value != null) targets[monthIndex] = value;
-      });
-      return targets;
-    }
-    function daysInMonth(dateLike){
-      const d = safeDate(dateLike) || new Date();
-      return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-    }
-    function getMonthTargetForProject(project, dateLike = new Date()){
-      const d = safeDate(dateLike) || new Date();
-      const monthIndex = d.getMonth();
-      if (project?.monthlyTargets && Object.prototype.hasOwnProperty.call(project.monthlyTargets, monthIndex)) return num(project.monthlyTargets[monthIndex]);
-      if (num(project?.monthlyTarget) > 0) return num(project.monthlyTarget);
-      const annual = num(project?.totalIncome);
-      return annual ? annual / 12 : 0;
-    }
-    function projectMatchesFilters(project, filters = {}){
-      if (filters.costCenter && filters.costCenter !== 'All' && normalizeCostCenterName(project.division) !== normalizeCostCenterName(filters.costCenter)) return false;
-      if (filters.manager && filters.manager !== 'All' && project.pm !== filters.manager) return false;
-      if (filters.project && filters.project !== 'All' && project.project !== filters.project) return false;
       return true;
+    });
+  }
+
+  function renderAll(){
+    const rows = getVisibleAnalysis();
+    qs('kpiFuelLogRows').textContent = state.logs.length;
+    qs('kpiSwipes').textContent = rows.length;
+    qs('kpiAuthorized').textContent = rows.filter(r => r.authorized).length;
+    qs('kpiUnauthorized').textContent = rows.filter(r => !r.authorized).length;
+    qs('kpiVariance').textContent = money(rows.reduce((s,r) => s + r.variance, 0));
+    qs('kpiAlarms').textContent = rows.filter(r => r.issues.length).length;
+
+    qs('overviewBody').innerHTML = rows.map(r => {
+      const status = !r.authorized ? badge('Not authorised', 'bg-soft-warning') : (Math.abs(r.variance) > parseNum(qs('thresholdVariance').value) ? badge('Variance', 'bg-soft-danger') : badge('Authorised', 'bg-soft-success'));
+      return `<tr>
+        <td>${r.date || ''}</td><td>${r.driver || ''}</td><td>${r.vehicle || ''}</td><td>${r.erNumber || '0'}</td>
+        <td>${money(r.approvedAmount)}</td><td>${money(r.swipeAmount)}</td><td>${num(r.liters)}</td><td>${num(r.km)}</td><td>${r.kmpl ? num(r.kmpl) : ''}</td>
+        <td>${r.costCenter || ''}</td><td>${r.department || ''}</td><td>${status}</td><td>${r.notes || ''}</td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="13" class="text-center">No rows</td></tr>';
+
+    const exceptions = rows.filter(r => r.issues.length);
+    qs('exceptionsBody').innerHTML = exceptions.map(r => `<tr>
+      <td>${r.date || ''}</td><td>${r.driver || ''}</td><td>${r.vehicle || ''}</td><td>${r.erNumber || '0'}</td>
+      <td>${money(r.approvedAmount)}</td><td>${money(r.swipeAmount)}</td><td class="${r.variance >= 0 ? 'text-danger' : 'text-success'}">${money(r.variance)}</td><td>${r.kmpl ? num(r.kmpl) : ''}</td><td>${r.issues.join(', ')}</td>
+    </tr>`).join('') || '<tr><td colspan="9" class="text-center">No exceptions</td></tr>';
+
+    renderComparisonTables(rows);
+    renderDriverTable(rows);
+    renderPreviews();
+    renderCharts(rows);
+  }
+
+  function summarizeRows(rows, key){
+    const map = {};
+    rows.forEach(r => {
+      const k = r[key] || 'Unassigned';
+      if (!map[k]) map[k] = { name:k, swipes:0, approved:0, swiped:0, variance:0, unauthorized:0 };
+      map[k].swipes += 1;
+      map[k].approved += r.approvedAmount || 0;
+      map[k].swiped += r.swipeAmount || 0;
+      map[k].variance += r.variance || 0;
+      if (!r.authorized) map[k].unauthorized += 1;
+    });
+    return Object.values(map).sort((a,b) => b.swiped - a.swiped);
+  }
+
+  function renderComparisonTables(rows){
+    const cc = summarizeRows(rows, 'costCenter');
+    const dep = summarizeRows(rows, 'department');
+    qs('costCenterTable').innerHTML = cc.map(r => `<tr><td>${r.name}</td><td>${r.swipes}</td><td>${money(r.approved)}</td><td>${money(r.swiped)}</td><td>${money(r.variance)}</td><td>${r.unauthorized}</td></tr>`).join('') || '<tr><td colspan="6" class="text-center">No data</td></tr>';
+    qs('departmentTable').innerHTML = dep.map(r => `<tr><td>${r.name}</td><td>${r.swipes}</td><td>${money(r.approved)}</td><td>${money(r.swiped)}</td><td>${money(r.variance)}</td><td>${r.unauthorized}</td></tr>`).join('') || '<tr><td colspan="6" class="text-center">No data</td></tr>';
+  }
+
+  function renderDriverTable(rows){
+    const map = {};
+    rows.forEach(r => {
+      const k = r.driver || 'Unknown';
+      if (!map[k]) map[k] = { driver:k, department:r.department || '', costCenter:r.costCenter || '', swipes:0, liters:0, km:0, unauthorized:0, variance:0, alarms:0 };
+      map[k].swipes += 1;
+      map[k].liters += r.liters || 0;
+      map[k].km += r.km || 0;
+      map[k].variance += r.variance || 0;
+      if (!r.authorized) map[k].unauthorized += 1;
+      if (r.issues.length) map[k].alarms += 1;
+    });
+    const data = Object.values(map).map(r => ({...r, kmpl: r.liters > 0 ? r.km / r.liters : 0})).sort((a,b) => b.swipes - a.swipes);
+    qs('driverTable').innerHTML = data.map(r => `<tr><td>${r.driver}</td><td>${r.department}</td><td>${r.costCenter}</td><td>${r.swipes}</td><td>${num(r.liters)}</td><td>${num(r.km)}</td><td>${r.kmpl ? num(r.kmpl) : ''}</td><td>${r.unauthorized}</td><td>${money(r.variance)}</td><td>${r.alarms}</td></tr>`).join('') || '<tr><td colspan="10" class="text-center">No data</td></tr>';
+  }
+
+  function renderPreviews(){
+    qs('approvalPreview').innerHTML = state.approvals.slice(0,40).map(r => `<tr><td>${r.erNumber || '0'}</td><td>${r.driver || ''}</td><td>${r.vehicle || ''}</td><td>${money(r.approvedAmount)}</td></tr>`).join('') || '<tr><td colspan="4" class="text-center">No approvals loaded</td></tr>';
+    qs('swipePreview').innerHTML = state.swipes.slice(0,40).map(r => `<tr><td>${r.date || ''}</td><td>${r.driver || ''}</td><td>${r.vehicle || ''}</td><td>${money(r.swipeAmount)}</td><td>${num(r.liters)}</td></tr>`).join('') || '<tr><td colspan="5" class="text-center">No swipes loaded</td></tr>';
+    qs('logPreview').innerHTML = state.logs.slice(0,40).map(r => `<tr><td>${r.date || ''}</td><td>${r.driver || ''}</td><td>${r.vehicle || ''}</td><td>${num(r.odoStart)}</td><td>${num(r.odoFinish)}</td><td>${num(r.kmTraveled)}</td></tr>`).join('') || '<tr><td colspan="6" class="text-center">No fuel log loaded</td></tr>';
+  }
+
+  function destroyChart(name){ if (state.charts[name]) { state.charts[name].destroy(); state.charts[name] = null; } }
+  function renderCharts(rows){
+    const costCenter = summarizeRows(rows, 'costCenter').slice(0,10);
+    const department = summarizeRows(rows, 'department').slice(0,10);
+    const driverMap = {};
+    rows.forEach(r => {
+      const k = r.driver || 'Unknown';
+      if (!driverMap[k]) driverMap[k] = {driver:k, liters:0, km:0, swipes:0};
+      driverMap[k].liters += r.liters || 0; driverMap[k].km += r.km || 0; driverMap[k].swipes += 1;
+    });
+    const driverRows = Object.values(driverMap).map(r => ({...r, kmpl:r.liters>0?r.km/r.liters:0}));
+
+    destroyChart('costCenterChart');
+    state.charts.costCenterChart = new Chart(qs('costCenterChart'), { type:'bar', data:{ labels: costCenter.map(x=>x.name), datasets:[{ label:'Swiped Amount', data: costCenter.map(x=>x.swiped) }] }, options:{ responsive:true, maintainAspectRatio:false } });
+    destroyChart('departmentChart');
+    state.charts.departmentChart = new Chart(qs('departmentChart'), { type:'bar', data:{ labels: department.map(x=>x.name), datasets:[{ label:'Unauthorised Count', data: department.map(x=>x.unauthorized) }] }, options:{ responsive:true, maintainAspectRatio:false } });
+    destroyChart('driverKmplChart');
+    state.charts.driverKmplChart = new Chart(qs('driverKmplChart'), { type:'bar', data:{ labels: driverRows.map(x=>x.driver), datasets:[{ label:'Avg KM/L', data: driverRows.map(x=>x.kmpl) }] }, options:{ responsive:true, maintainAspectRatio:false } });
+    destroyChart('driverFillChart');
+    state.charts.driverFillChart = new Chart(qs('driverFillChart'), { type:'bar', data:{ labels: driverRows.map(x=>x.driver), datasets:[{ label:'Swipe Count', data: driverRows.map(x=>x.swipes) }] }, options:{ responsive:true, maintainAspectRatio:false } });
+  }
+
+  async function loadFuelLogFromGoogle(){
+    if (CONFIG.GAS_URL.includes('PASTE_DEPLOYED_WEB_APP_URL_HERE')) {
+      setStatus('Paste the deployed Apps Script URL first.', 'warn');
+      return;
     }
-    function projectTargetForPeriod(project, period, dateLike = new Date()){
-      const d = safeDate(dateLike) || new Date();
-      const monthTarget = getMonthTargetForProject(project, d);
-      const annual = num(project?.totalIncome);
-      if (period === 'Daily') return monthTarget / Math.max(daysInMonth(d), 1);
-      if (period === 'Weekly') return (monthTarget / Math.max(daysInMonth(d), 1)) * 7;
-      if (period === 'Monthly') return monthTarget;
-      if (period === 'Quarterly') {
-        const quarterStart = Math.floor(d.getMonth() / 3) * 3;
-        let total = 0;
-        for (let i = 0; i < 3; i += 1){
-          total += getMonthTargetForProject(project, new Date(d.getFullYear(), quarterStart + i, 1));
-        }
-        return total;
+    try {
+      setStatus('Loading Fuel Log from Google Sheets...', 'warn', true);
+      const data = await getJson('getFuelLog');
+      if (!data.success) throw new Error(data.error || 'Unable to load Fuel Log');
+      state.logs = (data.rows || []).map(mapGenericRow);
+      recalculate();
+      setStatus(`Loaded ${state.logs.length} Fuel Log rows`, 'ok');
+    } catch (err) {
+      setStatus('Load failed: ' + err.message, 'bad');
+    }
+  }
+
+  async function uploadFile(kind, inputId){
+    const file = qs(inputId).files[0];
+    if (!file) { alert('Please choose a file first.'); return; }
+    if (CONFIG.GAS_URL.includes('PASTE_DEPLOYED_WEB_APP_URL_HERE')) {
+      alert('Paste the deployed Apps Script URL into CONFIG.GAS_URL first.');
+      return;
+    }
+    try {
+      setStatus(`Reading ${file.name}...`, 'warn', true);
+      const raw = await readWorkbook(file);
+      let rows = [];
+      if (kind === 'approvals') rows = buildApprovalsFromRows(raw);
+      if (kind === 'swipes') rows = buildSwipesFromRows(raw);
+      if (kind === 'driverLog') rows = buildLogsFromRows(raw);
+      if (kind === 'approvals') state.approvals = rows;
+      if (kind === 'swipes') state.swipes = rows;
+      if (kind === 'driverLog') state.logs = rows;
+      recalculate();
+
+      const base64 = await fileToBase64(file);
+      setStatus(`Uploading ${file.name} to Google Drive...`, 'warn', true);
+      const response = await postJson({ action:'uploadSourceFile', fileName:file.name, mimeType:file.type || 'application/octet-stream', kind, base64, rows });
+      if (!response.success) throw new Error(response.error || 'Upload failed');
+      setStatus(`${file.name} uploaded and stored in Google`, 'ok');
+    } catch (err) {
+      setStatus('Upload failed: ' + err.message, 'bad');
+    }
+  }
+
+  function fileToBase64(file){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function saveManualRecord(){
+    const payload = {
+      action:'saveReconRow',
+      record:{
+        reconDate: qs('manualDate').value,
+        driver: qs('manualDriver').value,
+        vehicle: qs('manualVehicle').value,
+        erNumber: qs('manualErNo').value || '0',
+        approvedAmount: parseNum(qs('manualApprovedAmount').value),
+        swipeAmount: parseNum(qs('manualSwipeAmount').value),
+        liters: parseNum(qs('manualLiters').value),
+        merchant: qs('manualMerchant').value,
+        costCenter: qs('manualCostCenter').value,
+        department: qs('manualDepartment').value,
+        notes: qs('manualNotes').value,
+        source:'Manual HTML Entry'
       }
-      if (period === 'Yearly') {
-        let total = 0;
-        for (let i = 0; i < 12; i += 1){
-          total += getMonthTargetForProject(project, new Date(d.getFullYear(), i, 1));
-        }
-        return total || annual;
-      }
-      return monthTarget;
+    };
+    if (!payload.record.reconDate || !payload.record.vehicle || !payload.record.driver) {
+      alert('Enter date, driver and vehicle first.');
+      return;
     }
-    function sumProjectTargets(periodLabel, filters = {}, dateLike = new Date()){
-      return projectsData
-        .filter(project => projectMatchesFilters(project, filters))
-        .reduce((sum, project) => sum + projectTargetForPeriod(project, periodLabel, dateLike), 0);
+    try {
+      setStatus('Saving manual entry to FuelRecon...', 'warn', true);
+      const response = await postJson(payload);
+      if (!response.success) throw new Error(response.error || 'Save failed');
+      setStatus('Manual entry saved to FuelRecon sheet', 'ok');
+    } catch (err) {
+      setStatus('Save failed: ' + err.message, 'bad');
     }
+  }
 
-    function actualRevenueForPeriod(periodLabel, filters = {}){
-      return periodRevenueRows(periodLabel, filters).reduce((sum, row) => sum + num(row.amount), 0);
-    }
-    function actualBudgetForPeriod(periodLabel, filters = {}){
-      return periodRevenueRows(periodLabel, filters).reduce((sum, row) => sum + num(row.budget), 0);
-    }
-    function projectMatchesQuery(project, queryText = ''){
-      const query = String(queryText || '').trim().toLowerCase();
-      if (!query) return true;
-      return `${project.project} ${project.pm} ${project.division} ${project.client}`.toLowerCase().includes(query);
-    }
-    function rowMatchesQuery(row, queryText = ''){
-      const query = String(queryText || '').trim().toLowerCase();
-      if (!query) return true;
-      return `${row.projectName} ${row.manager} ${row.costCenter}`.toLowerCase().includes(query);
-    }
-    function sumProjectTargetsForPeriodWithQuery(periodLabel, filters = {}, queryText = ''){
-      return projectsData
-        .filter(project => projectMatchesFilters(project, filters) && projectMatchesQuery(project, queryText))
-        .reduce((sum, project) => sum + projectTargetForPeriod(project, periodLabel), 0);
-    }
-    function invoiceTotalForPeriod(periodLabel, filters = {}){
-      return invoiceData.filter(row => {
-        if (!isDateInPeriod(row.date, periodLabel)) return false;
-        if (filters.manager && filters.manager !== 'All' && String(row.manager || '').trim() !== String(filters.manager || '').trim()) return false;
-        if (filters.project && filters.project !== 'All' && String(row.projectName || '').trim() !== String(filters.project || '').trim()) return false;
-        if (filters.costCenter && filters.costCenter !== 'All') {
-          const project = getProjectRecord(row.projectName, row.manager, filters.costCenter);
-          if (!project || normalizeCostCenterName(project.division) !== normalizeCostCenterName(filters.costCenter)) return false;
-        }
-        return true;
-      }).reduce((sum, row) => sum + num(row.amount), 0);
-    }
-    function aggregateDimensionFromSheets(dimension, filters = {}){
-      const names = new Set();
-      if (dimension === 'division') {
-        COST_CENTERS.forEach(v => names.add(normalizeCostCenterName(v)));
-        projectsData.forEach(p => p.division && names.add(normalizeCostCenterName(p.division)));
-        revenueData.forEach(r => r.costCenter && names.add(normalizeCostCenterName(r.costCenter)));
-      } else if (dimension === 'pm') {
-        PROJECT_MANAGERS.forEach(v => names.add(v));
-        projectsData.forEach(p => p.pm && names.add(p.pm));
-        revenueData.forEach(r => r.manager && names.add(r.manager));
-      } else if (dimension === 'project') {
-        PROJECT_OPTIONS.forEach(v => names.add(v));
-        projectsData.forEach(p => p.project && names.add(p.project));
-        revenueData.forEach(r => r.projectName && names.add(r.projectName));
-      }
-      const rows = [];
-      names.forEach(name => {
-        if (!name) return;
-        const dimFilters = { ...filters };
-        if (dimension === 'division') dimFilters.costCenter = name;
-        if (dimension === 'pm') dimFilters.manager = name;
-        if (dimension === 'project') dimFilters.project = name;
-        const row = {
-          name,
-          daily: actualRevenueForPeriod('Daily', dimFilters),
-          weekly: actualRevenueForPeriod('Weekly', dimFilters),
-          monthly: actualRevenueForPeriod('Monthly', dimFilters),
-          quarterly: actualRevenueForPeriod('Quarterly', dimFilters),
-          yearly: actualRevenueForPeriod('Yearly', dimFilters),
-          targetDaily: sumProjectTargets('Daily', dimFilters),
-          targetWeekly: sumProjectTargets('Weekly', dimFilters),
-          targetMonthly: sumProjectTargets('Monthly', dimFilters),
-          targetQuarterly: sumProjectTargets('Quarterly', dimFilters),
-          targetYearly: sumProjectTargets('Yearly', dimFilters)
-        };
-        const hasData = row.daily || row.weekly || row.monthly || row.quarterly || row.yearly || row.targetDaily || row.targetWeekly || row.targetMonthly || row.targetQuarterly || row.targetYearly;
-        if (hasData) rows.push(row);
-      });
-      return rows.sort((a,b) => (b.yearly || 0) - (a.yearly || 0));
-    }
+  function exportPdf(){
+    const html = `<div style="padding:20px;font-family:Arial,sans-serif;">
+      <h2 style="text-align:center;color:#0b2b4a;">Onpoint Group - Fuel Reconciliation Report</h2>
+      <p style="text-align:center;color:#666;">Generated ${new Date().toLocaleString()}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr style="background:#0b2b4a;color:white;"><th style="padding:8px;border:1px solid #ddd;">Date</th><th style="padding:8px;border:1px solid #ddd;">Driver</th><th style="padding:8px;border:1px solid #ddd;">Vehicle</th><th style="padding:8px;border:1px solid #ddd;">ER</th><th style="padding:8px;border:1px solid #ddd;">Approved</th><th style="padding:8px;border:1px solid #ddd;">Swiped</th><th style="padding:8px;border:1px solid #ddd;">Variance</th><th style="padding:8px;border:1px solid #ddd;">Issue</th></tr></thead>
+        <tbody>${getVisibleAnalysis().map(r => `<tr><td style="padding:6px;border:1px solid #ddd;">${r.date||''}</td><td style="padding:6px;border:1px solid #ddd;">${r.driver||''}</td><td style="padding:6px;border:1px solid #ddd;">${r.vehicle||''}</td><td style="padding:6px;border:1px solid #ddd;">${r.erNumber||'0'}</td><td style="padding:6px;border:1px solid #ddd;">${money(r.approvedAmount)}</td><td style="padding:6px;border:1px solid #ddd;">${money(r.swipeAmount)}</td><td style="padding:6px;border:1px solid #ddd;">${money(r.variance)}</td><td style="padding:6px;border:1px solid #ddd;">${r.issues.join(', ')}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+    const el = document.createElement('div');
+    el.innerHTML = html;
+    document.body.appendChild(el);
+    html2pdf().from(el).set({ margin:[0.4,0.4,0.4,0.4], filename:`fuel_recon_${new Date().toISOString().slice(0,10)}.pdf`, image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2}, jsPDF:{unit:'in',format:'a4',orientation:'landscape'} }).save().then(() => el.remove());
+  }
 
-    function writeSettings(){
-      localStorage.setItem(STORAGE_KEYS.scriptUrl, byId('scriptUrlInput').value.trim() || DEFAULT_SCRIPT_URL);
-      localStorage.setItem(STORAGE_KEYS.fallbackMode, byId('fallbackMode').value);
-      logDiagnostic('Settings saved.');
-    }
-    function logDiagnostic(message, detail){
-      const time = new Date().toLocaleString();
-      const line = `[${time}] ${message}${detail ? `\n${detail}` : ''}`;
-      lastDiagnostics.unshift(line);
-      lastDiagnostics = lastDiagnostics.slice(0, 30);
-      byId('diagnosticLog').textContent = lastDiagnostics.join('\n\n');
-    }
-    function setStatusSummary(html){ byId('statusSummary').innerHTML = html; }
+  ['filterDriver','filterCostCenter','filterDepartment','searchInput','thresholdKmpl','thresholdFrequentCount','thresholdFrequentDays','thresholdVariance'].forEach(id => qs(id).addEventListener('input', recalculate));
+  qs('testConnectionBtn').addEventListener('click', testConnection);
+  qs('loadGoogleBtn').addEventListener('click', loadFuelLogFromGoogle);
+  qs('uploadApprovalsBtn').addEventListener('click', () => uploadFile('approvals', 'approvalFile'));
+  qs('uploadSwipesBtn').addEventListener('click', () => uploadFile('swipes', 'swipeFile'));
+  qs('uploadDriverLogBtn').addEventListener('click', () => uploadFile('driverLog', 'driverLogFile'));
+  qs('saveManualBtn').addEventListener('click', saveManualRecord);
+  qs('recalcBtn').addEventListener('click', recalculate);
+  qs('exportPdfBtn').addEventListener('click', exportPdf);
 
-    function buildTable(el, headers, rows){
-      el.innerHTML = `<thead><tr>${headers.map(h => `<th class="${h.class || ''}">${h.label}</th>`).join('')}</tr></thead><tbody>${rows.length ? rows.map(r => `<tr>${r.map(c => typeof c === 'string' ? c : `<td class="${c.class || ''}">${c.html}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${headers.length}">No data available</td></tr>`}</tbody>`;
-    }
-
-    function normaliseProjects(raw){
-      return raw.map((row, index) => {
-        const monthlyTargets = extractMonthlyTargets(row);
-        const rowLookup = buildRowLookup(row);
-        const genericMonthlyTarget = firstNumericFromLookup(rowLookup, ['MonthlyTarget','Monthly Target','monthlyTarget','monthly_target','MonthlyBudget','Monthly Budget','monthlyBudget','Budget Per Month','BudgetPerMonth']);
-        return {
-          id: row.id || `P${index+1}`,
-          division: normalizeCostCenterName(row.Division || row.division || row.costCentre || row.CostCenter || 'Onpoint Ontime'),
-          pm: row.Manager || row.pm || row.manager || 'Unassigned',
-          client: row.Client || row.client || '',
-          project: row.ProjectName || row.project || row.projectName || 'Unknown Project',
-          status: row.Status || row.status || 'Forecast',
-          totalIncome: num(row.TotalIncome || row.totalIncome),
-          gpPercent: num(row.Margin || row.gpPercent || 20),
-          startDate: normaliseDate(row.StartDate || row.startDate),
-          endDate: normaliseDate(row.EndDate || row.endDate),
-          monthlyTargets,
-          monthlyTarget: genericMonthlyTarget != null ? num(genericMonthlyTarget) : 0,
-          raw: row
-        };
-      });
-    }
-    function normaliseRevenue(raw){
-      return raw.map(row => ({
-        date: normaliseDate(row.Date || row.date),
-        manager: row.Manager || row.manager || '',
-        costCenter: normalizeCostCenterName(row.CostCenter || row.Division || row.costCenter || ''),
-        projectName: row.ProjectName || row.projectName || '',
-        amount: num(row.Amount || row.amount),
-        budget: num(row.Budget || row.budget),
-        quality: num(row.Quality || row.quality || 80),
-        safety: num(row.Safety || row.safety || 0)
-      }));
-    }
-    function normaliseInvoices(raw){
-      return raw.map(row => ({
-        date: normaliseDate(row.Date || row.date),
-        manager: row.Manager || row.manager || '',
-        projectName: row.ProjectName || row.projectName || '',
-        amount: num(row.Amount || row.amount),
-        paymentReceived: String(row.PaymentReceived || row.paymentReceived).toLowerCase() === 'true',
-        paymentDate: normaliseDate(row.PaymentDate || row.paymentDate)
-      }));
-    }
-
-    function getFetchOptions(method='GET', body){
-      const options = { method, mode:'cors', cache:'no-store', redirect:'follow', headers:{ Accept:'application/json' } };
-      if (body != null) {
-        options.headers['Content-Type'] = 'text/plain;charset=utf-8';
-        options.body = JSON.stringify(body);
-      }
-      return options;
-    }
-    async function safeFetchJson(url, options={}){
-      logDiagnostic(`Requesting ${url}`);
-      const response = await fetch(url, options);
-      if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText} for ${url}`);
-      return await response.json();
-    }
-    async function loadEndpoint(scriptUrl, action){
-      try {
-        const payload = await safeFetchJson(`${scriptUrl}?action=${action}&_=${Date.now()}`, getFetchOptions('GET'));
-        const rows = Array.isArray(payload?.data) ? payload.data : [];
-        return { ok:true, rows };
-      } catch (error) {
-        logDiagnostic(`${action} failed.`, error.message);
-        return { ok:false, error:error.message, rows:[] };
-      }
-    }
-
-    async function runConnectionTest(){
-      const scriptUrl = byId('scriptUrlInput').value.trim();
-      if (!scriptUrl) return false;
-      showLoading('Testing connection...');
-      try {
-        const result = await loadEndpoint(scriptUrl, 'getProjects');
-        if (!result.ok) throw new Error(result.error);
-        setConnection('Live Connected', 'b-green');
-        setStatusSummary(`Connection test passed.<br><br>Projects endpoint returned ${result.rows.length} rows.`);
-        return true;
-      } catch (error) {
-        setConnection('Connection Failed', 'b-red');
-        setStatusSummary(`Connection test failed.<br><br>${error.message}`);
-        return false;
-      } finally { hideLoading(); }
-    }
-
-    async function loadLiveData(showOverlay = true){
-      if (isLoadingData) return;
-      const scriptUrl = byId('scriptUrlInput').value.trim() || DEFAULT_SCRIPT_URL;
-      const snapshot = captureDashboardInputs();
-      isLoadingData = true;
-      if (showOverlay) showLoading('Loading live data from Google Sheets...');
-      setConnection('Connecting', 'b-amber');
-      try {
-        const [projectsResult, revenueResult, invoicesResult] = await Promise.all([
-          loadEndpoint(scriptUrl, 'getProjects'),
-          loadEndpoint(scriptUrl, 'getRevenue'),
-          loadEndpoint(scriptUrl, 'getInvoices')
-        ]);
-        projectsData = projectsResult.ok ? normaliseProjects(projectsResult.rows) : [];
-        revenueData = revenueResult.ok ? normaliseRevenue(revenueResult.rows) : [];
-        invoiceData = invoicesResult.ok ? normaliseInvoices(invoicesResult.rows) : [];
-        const warnings = [];
-        if (!projectsResult.ok) warnings.push('Projects failed.');
-        if (!revenueResult.ok) warnings.push('Revenue failed.');
-        if (!invoicesResult.ok) warnings.push('Invoices failed.');
-        setConnection(warnings.length ? 'Partially Connected' : 'Live Connected', warnings.length ? 'b-amber' : 'b-green');
-        setStatusSummary(`Loaded live data.<br><br>Projects: ${projectsData.length}<br>Revenue rows: ${revenueData.length}<br>Invoice rows: ${invoiceData.length}<br>Last sync: ${new Date().toLocaleTimeString()}`);
-        populateInputs(snapshot);
-        render();
-      } finally {
-        isLoadingData = false;
-        hideLoading();
-      }
-    }
-
-    function projectRevenueForPeriod(project, period){
-      return revenueData
-        .filter(r => r.projectName === project.project && (!project.pm || !r.manager || r.manager === project.pm) && (!project.division || !r.costCenter || normalizeCostCenterName(r.costCenter) === normalizeCostCenterName(project.division)))
-        .filter(r => isDateInPeriod(r.date, period))
-        .reduce((s,r)=>s+r.amount,0);
-    }
-    function projectCashForPeriod(project, period){
-      return invoiceData
-        .filter(r => r.projectName === project.project && r.paymentReceived)
-        .filter(r => isDateInPeriod(r.date, period))
-        .reduce((s,r)=>s+r.amount,0);
-    }
-    const projectQuality = project => { const rows = revenueData.filter(r => r.projectName === project.project); return rows.length ? Math.round(rows.reduce((s,r)=>s+(r.quality||80),0)/rows.length) : 80; };
-    const projectSafety = project => { const rows = revenueData.filter(r => r.projectName === project.project); return Math.max(0,100 - rows.reduce((s,r)=>s+(r.safety||0),0)*10); };
-    const projectDeadline = project => { const start=safeDate(project.startDate), end=safeDate(project.endDate); if (!start||!end) return 75; const total=end.getTime()-start.getTime(); if (total<=0) return 100; const elapsed=Math.min(Math.max(Date.now()-start.getTime(),0),total); return Math.round((elapsed/total)*100); };
-
-    function enrichedProjects(){
-      return projectsData.map(project => {
-        const revenueDaily = projectRevenueForPeriod(project,'Daily');
-        const revenueWeekly = projectRevenueForPeriod(project,'Weekly');
-        const revenueMonthly = projectRevenueForPeriod(project,'Monthly');
-        const revenueQuarterly = projectRevenueForPeriod(project,'Quarterly');
-        const revenueYearly = projectRevenueForPeriod(project,'Yearly');
-        const targetDaily = projectTargetForPeriod(project,'Daily');
-        const targetWeekly = projectTargetForPeriod(project,'Weekly');
-        const targetMonthly = projectTargetForPeriod(project,'Monthly');
-        const targetQuarterly = projectTargetForPeriod(project,'Quarterly');
-        const targetYearly = projectTargetForPeriod(project,'Yearly');
-        const performance = pct(projectRevenueForPeriod(project,state.period), projectTargetForPeriod(project,state.period));
-        return { ...project, revenueDaily, revenueWeekly, revenueMonthly, revenueQuarterly, revenueYearly, targetDaily, targetWeekly, targetMonthly, targetQuarterly, targetYearly, cashCollected:projectCashForPeriod(project,state.period), deadlineScore:projectDeadline(project), safetyScore:projectSafety(project), qualityScore:projectQuality(project), actionOwner:project.pm, actionDue:project.endDate || '-', actionStatus:performance>=100?'Closed':performance>=70?'In Progress':'Escalated', recovery:performance>=100?'On track':'Increase collections, accelerate delivery and close outstanding activities' };
-      });
-    }
-
-    function filteredProjects(){
-      return enrichedProjects().filter(project => {
-        const passDivision = state.division === 'All' || project.division === state.division;
-        const passManager = state.manager === 'All' || project.pm === state.manager;
-        const passQuery = `${project.project} ${project.client} ${project.pm} ${project.division}`.toLowerCase().includes(state.query.toLowerCase());
-        const revenue = project['revenue'+state.period], target = project['target'+state.period];
-        const passKpi = state.activeKpi === 'all' ? true : state.activeKpi === 'revenue' ? revenue < target : state.activeKpi === 'profitability' ? project.gpPercent < 15 : state.activeKpi === 'deadlines' ? project.deadlineScore < 80 : state.activeKpi === 'safety' ? project.safetyScore < 100 : state.activeKpi === 'quality' ? project.qualityScore < 80 : state.activeKpi === 'cash' ? project.cashCollected < revenue : project.actionStatus !== 'Closed';
-        return passDivision && passManager && passQuery && passKpi;
-      });
-    }
-
-    function aggregateGroup(projects){
-      const empty = { daily:0, weekly:0, monthly:0, quarterly:0, yearly:0 };
-      const result = { revenue:{...empty}, target:{...empty}, cash:{...empty}, profitability:{...empty}, deadlines:{...empty}, safety:{...empty}, quality:{...empty}, achievement:{...empty} };
-      PERIODS.forEach(label => {
-        const key = label.toLowerCase();
-        const revenue = projects.reduce((s,p)=>s+p['revenue'+label],0);
-        const target = projects.reduce((s,p)=>s+p['target'+label],0);
-        const cash = projects.reduce((s,p)=>s+p.cashCollected,0);
-        const weightedMargin = projects.reduce((s,p)=>s+p['revenue'+label]*(p.gpPercent/100),0);
-        result.revenue[key]=revenue; result.target[key]=target; result.cash[key]=cash;
-        result.profitability[key]=Math.round((weightedMargin/Math.max(revenue,1))*100);
-        result.deadlines[key]=Math.round(projects.reduce((s,p)=>s+p.deadlineScore,0)/Math.max(projects.length,1));
-        result.safety[key]=Math.round(projects.reduce((s,p)=>s+p.safetyScore,0)/Math.max(projects.length,1));
-        result.quality[key]=Math.round(projects.reduce((s,p)=>s+p.qualityScore,0)/Math.max(projects.length,1));
-        result.achievement[key]=pct(revenue,target);
-      });
-      return result;
-    }
-    function aggregateByDimension(projects, dimension){
-      const map = new Map();
-      projects.forEach(project => {
-        const key = project[dimension];
-        const current = map.get(key) || { name:key, daily:0, weekly:0, monthly:0, quarterly:0, yearly:0, targetDaily:0, targetWeekly:0, targetMonthly:0, targetQuarterly:0, targetYearly:0 };
-        current.daily += project.revenueDaily; current.weekly += project.revenueWeekly; current.monthly += project.revenueMonthly; current.quarterly += project.revenueQuarterly; current.yearly += project.revenueYearly;
-        current.targetDaily += project.targetDaily; current.targetWeekly += project.targetWeekly; current.targetMonthly += project.targetMonthly; current.targetQuarterly += project.targetQuarterly; current.targetYearly += project.targetYearly;
-        map.set(key, current);
-      });
-      return Array.from(map.values());
-    }
-
-    function getAnalysisOptions(mode){
-      if (mode === 'project') return [...new Set(projectsData.map(p => p.project).filter(Boolean).concat(revenueData.map(r => r.projectName).filter(Boolean)))].sort((a,b)=>a.localeCompare(b));
-      if (mode === 'manager') return [...new Set(projectsData.map(p => p.pm).filter(Boolean).concat(revenueData.map(r => r.manager).filter(Boolean)))].sort((a,b)=>a.localeCompare(b));
-      return [...new Set(COST_CENTERS.concat(projectsData.map(p => p.division).filter(Boolean)).concat(revenueData.map(r => r.costCenter).filter(Boolean)))].sort((a,b)=>a.localeCompare(b));
-    }
-
-    function populateAnalysisFilters(){
-      const modeEl = byId('analysisMode');
-      const valueEl = byId('analysisValue');
-      const periodEl = byId('analysisPeriod');
-      if (!modeEl || !valueEl || !periodEl) return;
-      modeEl.value = state.analysisMode;
-      periodEl.value = state.analysisPeriod;
-      const options = getAnalysisOptions(state.analysisMode);
-      const allLabel = state.analysisMode === 'project' ? 'All projects' : state.analysisMode === 'manager' ? 'All managers' : 'All cost centers';
-      valueEl.innerHTML = [`<option value="All">${allLabel}</option>`].concat(options.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`)).join('');
-      valueEl.value = options.includes(state.analysisValue) ? state.analysisValue : 'All';
-      if (!options.includes(state.analysisValue) && state.analysisValue !== 'All') state.analysisValue = 'All';
-    }
-
-    function renderConnectionProgressBars(){
-      const container = byId('connectionProgressBars');
-      const activePeriod = state.period || 'Daily';
-      const costCenters = getAnalysisOptions('costCenter');
-      if (!costCenters.length){
-        container.innerHTML = '<div class="muted">No cost center data loaded yet.</div>';
-        return;
-      }
-      container.innerHTML = costCenters.map(name => {
-        const rows = periodRevenueRows(activePeriod, { costCenter:name });
-        const actual = rows.reduce((sum, row) => sum + num(row.amount), 0);
-        const target = sumProjectTargets(activePeriod, { costCenter:name });
-        const achievementPct = pct(actual, target);
-        const variance = actual - target;
-        const tone = statusTone(achievementPct);
-        const progressStatus = achievementPct >= 100 ? 'Target achieved' : achievementPct >= 80 ? 'Near target' : 'Below target';
-        return `<div class="progress-item"><div class="progress-head"><strong>${escapeHtml(name)}</strong>${badge(achievementPct + '%', tone)}</div>${progressBar(achievementPct)}<div class="progress-label"><span>${activePeriod} actual ${money(actual)}</span><span>${activePeriod} target ${money(target)} · ${progressStatus}</span></div><div class="progress-label"><span>Variance ${money(variance)}</span><span>Progress towards target</span></div></div>`;
-      }).join('');
-    }
-
-    function renderFocusedProgressBars(){
-      const container = byId('focusedProgressBars');
-      const summary = byId('analysisSummary');
-      const period = state.analysisPeriod || 'Daily';
-      const mode = state.analysisMode;
-      const selected = state.analysisValue;
-      const filters = {
-        costCenter: mode === 'costCenter' ? selected : 'All',
-        manager: mode === 'manager' ? selected : 'All',
-        project: mode === 'project' ? selected : 'All'
-      };
-      const rows = periodRevenueRows(period, filters);
-      const actual = rows.reduce((sum, row) => sum + num(row.amount), 0);
-      const target = sumProjectTargets(period, filters);
-      const variance = actual - target;
-      const variancePct = target ? Math.round((variance / target) * 100) : 0;
-      const profitability = profitabilityForRows(rows);
-      const title = selected === 'All' ? (mode === 'project' ? 'All projects' : mode === 'manager' ? 'All managers' : 'All cost centers') : selected;
-      summary.innerHTML = `<strong>${escapeHtml(title)}</strong><br>${period} actual ${money(actual)} vs target ${money(target)} · Variance ${money(variance)} (${variancePct}%)`;
-      const groupNames = mode === 'project'
-        ? getAnalysisOptions('project')
-        : mode === 'manager'
-        ? getAnalysisOptions('manager')
-        : getAnalysisOptions('costCenter');
-      const relevantNames = selected === 'All' ? groupNames : [selected];
-      const entries = relevantNames.map(name => {
-        const groupFilters = {
-          costCenter: mode === 'costCenter' ? name : 'All',
-          manager: mode === 'manager' ? name : 'All',
-          project: mode === 'project' ? name : 'All'
-        };
-        const items = periodRevenueRows(period, groupFilters);
-        const groupActual = items.reduce((sum,row)=>sum+num(row.amount),0);
-        const groupTarget = sumProjectTargets(period, groupFilters);
-        return [name, items, groupActual, groupTarget];
-      }).filter(([, items, groupActual, groupTarget]) => items.length || groupTarget > 0)
-        .sort((a,b) => b[2] - a[2]);
-      if (!entries.length){
-        container.innerHTML = '<div class="notice">No revenue rows found for this selection and period.</div>';
-        return;
-      }
-      container.innerHTML = entries.map(([name, items, groupActual, groupTarget]) => {
-        const groupVariance = groupActual - groupTarget;
-        const groupVariancePct = groupTarget ? Math.round((groupVariance / groupTarget) * 100) : 0;
-        const groupProfitability = profitabilityForRows(items);
-        const score = pct(groupActual, groupTarget);
-        return `<div class="progress-item"><div class="progress-head"><strong>${escapeHtml(name)}</strong>${badge(groupVariancePct + '%', statusTone(score))}</div>${progressBar(score)}<div class="progress-label"><span>Variance ${money(groupVariance)} (${groupVariancePct}%)</span><span>Profitability ${groupProfitability}%</span></div></div>`;
-      }).join('');
-    }
-
-    function renderDailyRevenueSummary(){
-      const todayRows = periodRevenueRows('Daily');
-      const todayRevenue = todayRows.reduce((sum,row)=>sum+num(row.amount),0);
-      const todayTarget = sumProjectTargets('Daily');
-      const todayVariance = todayRevenue - todayTarget;
-      const todayProfitability = profitabilityForRows(todayRows);
-      byId('dailyRevenueSummary').innerHTML = [
-        { label:'Daily reported revenue', value:money(todayRevenue), note:'Sum of all totals from Revenue sheet for today' },
-        { label:'Daily target', value:money(todayTarget), note:'Sum of all project daily targets for today' },
-        { label:'Daily variance', value:money(todayVariance), note:'Actual minus project daily target for today' },
-        { label:'Daily profitability %', value:todayProfitability + '%', note:'Weighted from project margin % set per project' }
-      ].map(item => `<div class="mini-stat"><div class="label">${item.label}</div><div class="value">${item.value}</div><div class="muted" style="margin-top:6px;">${item.note}</div></div>`).join('');
-    }
-
-    function render(){
-      const filtered = filteredProjects();
-      const activeBucket = state.period.toLowerCase();
-      const baseFilters = { costCenter: state.division, manager: state.manager, project: 'All' };
-      const periodSummaries = Object.fromEntries(PERIODS.map(label => {
-        const rows = periodRevenueRows(label, baseFilters).filter(row => rowMatchesQuery(row, state.query));
-        const actual = rows.reduce((sum, row) => sum + num(row.amount), 0);
-        const target = sumProjectTargetsForPeriodWithQuery(label, baseFilters, state.query);
-        const cash = invoiceTotalForPeriod(label, baseFilters);
-        const profitability = profitabilityForRows(rows);
-        return [label, { rows, actual, target, cash, profitability, achievement: pct(actual, target), cashConversion: pct(cash, actual) }];
-      }));
-      const activeSummary = periodSummaries[state.period];
-      const groupRollup = aggregateGroup(filtered);
-      const divisionRollup = aggregateDimensionFromSheets('division', { costCenter: state.division, manager: state.manager, project: 'All' });
-      const pmRollup = aggregateDimensionFromSheets('pm', { costCenter: state.division, manager: 'All', project: 'All' });
-      const filteredRevenueRows = activeSummary.rows;
-      const filteredActualRevenue = activeSummary.actual;
-      const filteredTargetRevenue = activeSummary.target;
-      const totals = {
-        revenue: filteredActualRevenue,
-        target: filteredTargetRevenue,
-        cash: activeSummary.cash,
-        margin: Math.round((activeSummary.profitability / 100) * filteredActualRevenue),
-        deadline: groupRollup.deadlines[activeBucket],
-        safety: groupRollup.safety[activeBucket],
-        quality: groupRollup.quality[activeBucket]
-      };
-      const revenueAchievement = pct(totals.revenue, totals.target), profitability = activeSummary.profitability || groupRollup.profitability[activeBucket] || Math.round((totals.margin/Math.max(totals.revenue,1))*100), deadlineScore = Math.round(totals.deadline), safetyScore = Math.round(totals.safety), qualityScore = Math.round(totals.quality), cashConversion = activeSummary.cashConversion || pct(totals.cash, Math.max(totals.revenue,1));
-      const allProjects = enrichedProjects();
-      const confirmedTotal = allProjects.filter(p => String(p.status).toLowerCase() === 'confirmed').reduce((s,p) => s + p.totalIncome, 0);
-      const forecastTotal = allProjects.filter(p => String(p.status).toLowerCase() === 'forecast').reduce((s,p) => s + p.totalIncome, 0);
-      const totalOrderBook = confirmedTotal + forecastTotal;
-      const ytd = periodSummaries['Yearly'].actual;
-      const btye = Math.max(0, confirmedTotal - ytd);
-      const mtd = periodSummaries['Monthly'].actual;
-      const dailyRows = periodSummaries['Daily'].rows;
-      const dailyActualTotal = periodSummaries['Daily'].actual;
-      const dailyTargetTotal = periodSummaries['Daily'].target;
-
-      byId('headlineKpis').innerHTML = [
-        { title:'Total Confirmed', value:money(confirmedTotal), sub:'All confirmed from Projects' },
-        { title:'Total Forecast', value:money(forecastTotal), sub:'All forecast from Projects' },
-        { title:'Total Order Book', value:money(totalOrderBook), sub:'Confirmed + forecast' },
-        { title:'MTD Actual', value:money(mtd), sub:'This month actual revenue' },
-        { title:'Group YTD', value:money(ytd), sub:'Year-to-date revenue' },
-        { title:'Group BTYE', value:money(btye), sub:'Total Confirmed - Group YTD' }
-      ].map(kpi => `<div class="kpi"><div class="kpi-title">${kpi.title}</div><div class="kpi-value">${kpi.value}</div><div class="kpi-sub">${kpi.sub}</div></div>`).join('');
-
-      const performanceKpis = [
-        { title:'Revenue', value:money(totals.revenue), sub:`${state.period} reported revenue`, tone:kpiTone(revenueAchievement,80,50), filterKey:'revenue' },
-        { title:'Profitability', value:`${profitability}%`, sub:`${state.period} margin`, tone:kpiTone(profitability,18,12), filterKey:'profitability' },
-        { title:'Deadlines', value:`${deadlineScore}%`, sub:`${state.period} on-time performance`, tone:kpiTone(deadlineScore,80,50), filterKey:'deadlines' },
-        { title:'Safety', value:`${safetyScore}%`, sub:`${state.period} safety score`, tone:safetyScore===100?'green':'amber', filterKey:'safety' },
-        { title:'Quality', value:`${qualityScore}%`, sub:`${state.period} quality score`, tone:kpiTone(qualityScore,80,50), filterKey:'quality' }
-      ];
-      const cashKpis = [
-        { title:'Cash Collected', value:money(totals.cash), sub:`${state.period} collections`, tone:kpiTone(cashConversion,80,50), filterKey:'cash' },
-        { title:'Cash Conversion', value:`${cashConversion}%`, sub:`${state.period} revenue to cash`, tone:kpiTone(cashConversion,80,50), filterKey:'cash' },
-        { title:'Open Actions', value:String(filtered.filter(p=>p.actionStatus!=='Closed').length), sub:'live action count', tone:filtered.some(p=>p.actionStatus==='Escalated')?'red':'amber', filterKey:'actions' }
-      ];
-      byId('performanceKpis').innerHTML = performanceKpis.map(kpi => `<div class="kpi ${state.activeKpi===kpi.filterKey?'active':''}" data-kpi="${kpi.filterKey}"><div class="kpi-title">${kpi.title}</div><div class="kpi-value">${kpi.value}</div><div class="kpi-sub">${kpi.sub}</div></div>`).join('');
-      byId('cashKpis').innerHTML = cashKpis.map(kpi => `<div class="kpi ${state.activeKpi===kpi.filterKey?'active':''}" data-kpi="${kpi.filterKey}"><div class="kpi-title">${kpi.title}</div><div class="kpi-value">${kpi.value}</div><div class="kpi-sub">${kpi.sub}</div></div>`).join('');
-      byId('activeKpiBadge').textContent = state.activeKpi==='all' ? 'All records' : state.activeKpi;
-      byId('clearFilterBtn').style.display = state.activeKpi==='all' ? 'none' : 'inline-block';
-
-      byId('summaryGrid').innerHTML = PERIODS.map(label => {
-        const summary = periodSummaries[label];
-        const revenueValue = summary.actual;
-        const targetValue = summary.target;
-        const achievementValue = summary.achievement;
-        return `<div class="summary-box"><div class="muted" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">${label}</div><div class="big">${money(revenueValue)}</div><div class="muted" style="margin-top:6px;">Target ${money(targetValue)}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;"><span class="muted">Achievement</span>${badge(achievementValue+'%', statusTone(achievementValue))}</div></div>`;
-      }).join('');
-
-      const budgetVsActualRisk = ['Daily','Weekly','Monthly','Quarterly','Yearly'].map(label => {
-        const summary = periodSummaries[label];
-        const budget = summary.target;
-        const actual = summary.actual;
-        const achievement = summary.achievement;
-        return { label, budget, actual, gap: budget - actual, achievement, riskTone:achievement>=85?'b-green':achievement>=65?'b-amber':'b-red', risk:achievement>=85?'Low':achievement>=65?'Medium':'High' };
-      });
-      buildTable(byId('budgetRiskTable'), [{label:'Period'},{label:'Budget',class:'right'},{label:'Actual',class:'right'},{label:'Gap',class:'right'},{label:'Ach %',class:'right'},{label:'Risk',class:'right'}], budgetVsActualRisk.map(item => [cell(item.label),cell(money(item.budget),'right'),cell(money(item.actual),'right'),cell(`<span style="color:${item.gap>0?'#b91c1c':'#15803d'}">${money(item.gap)}</span>`,'right'),cell(item.achievement+'%','right'),cell(badge(item.risk,item.riskTone),'right')]));
-
-      const divisionAtGlance = divisionRollup.map(row => ({ name:row.name, actual:row[activeBucket], target:row['target'+state.period], score:pct(row[activeBucket],row['target'+state.period]) })).sort((a,b)=>b.actual-a.actual);
-      buildTable(byId('divisionTable'), [{label:'Division'},{label:'Actual',class:'right'},{label:'Target',class:'right'},{label:'Score',class:'right'}], divisionAtGlance.map(item => [cell(item.name),cell(money(item.actual),'right'),cell(money(item.target),'right'),cell(badge(item.score+'%',statusTone(item.score)),'right')]));
-
-      const pmBalancedScorecard = pmRollup.map(row => {
-        const pmProjects = filtered.filter(p=>p.pm===row.name), dailyScore=pct(row.daily,row.targetDaily), weeklyScore=pct(row.weekly,row.targetWeekly), monthlyScore=pct(row.monthly,row.targetMonthly), quarterlyScore=pct(row.quarterly,row.targetQuarterly), yearlyScore=pct(row.yearly,row.targetYearly), profitability=Math.round(pmProjects.reduce((s,p)=>s+p.gpPercent,0)/Math.max(pmProjects.length,1)), deadlines=Math.round(pmProjects.reduce((s,p)=>s+p.deadlineScore,0)/Math.max(pmProjects.length,1)), safety=Math.round(pmProjects.reduce((s,p)=>s+p.safetyScore,0)/Math.max(pmProjects.length,1)), quality=Math.round(pmProjects.reduce((s,p)=>s+p.qualityScore,0)/Math.max(pmProjects.length,1)), overallScore=Math.round(dailyScore*.15+weeklyScore*.15+monthlyScore*.2+quarterlyScore*.1+yearlyScore*.1+profitability*.1+deadlines*.05+safety*.05+quality*.1);
-        return { name:row.name, dailyActual:row.daily, dailyTarget:row.targetDaily, dailyScore, weeklyActual:row.weekly, weeklyTarget:row.targetWeekly, weeklyScore, monthlyActual:row.monthly, monthlyTarget:row.targetMonthly, monthlyScore, quarterlyActual:row.quarterly, quarterlyTarget:row.targetQuarterly, quarterlyScore, yearlyActual:row.yearly, yearlyTarget:row.targetYearly, yearlyScore, profitability, deadlines, safety, quality, cash:pmProjects.reduce((s,p)=>s+p.cashCollected,0), actionCount:pmProjects.filter(p=>p.actionStatus!=='Closed').length, overallScore };
-      }).sort((a,b)=>b.overallScore-a.overallScore).map((row,index)=>({ ...row, rank:index+1 }));
-
-      const currentActualKey = state.period === 'Daily' ? 'dailyActual' : state.period === 'Weekly' ? 'weeklyActual' : state.period === 'Monthly' ? 'monthlyActual' : state.period === 'Quarterly' ? 'quarterlyActual' : 'yearlyActual';
-      const currentTargetKey = state.period === 'Daily' ? 'dailyTarget' : state.period === 'Weekly' ? 'weeklyTarget' : state.period === 'Monthly' ? 'monthlyTarget' : state.period === 'Quarterly' ? 'quarterlyTarget' : 'yearlyTarget';
-      const currentScoreKey = state.period === 'Daily' ? 'dailyScore' : state.period === 'Weekly' ? 'weeklyScore' : state.period === 'Monthly' ? 'monthlyScore' : state.period === 'Quarterly' ? 'quarterlyScore' : 'yearlyScore';
-      buildTable(byId('pmTable'), [{label:'Rank',class:'right'},{label:'PM'},{label:'Actual',class:'right'},{label:'Target',class:'right'},{label:'Score',class:'right'}], pmBalancedScorecard.slice(0,8).map(item => [cell('#'+item.rank,'right'),cell(item.name),cell(money(item[currentActualKey]),'right'),cell(money(item[currentTargetKey]),'right'),cell(badge(item[currentScoreKey]+'%',statusTone(item[currentScoreKey])),'right')]));
-      buildTable(byId('scorecardTable'), [{label:'Rank',class:'right'},{label:'PM'},{label:'Daily A',class:'right'},{label:'Daily T',class:'right'},{label:'Daily %',class:'right'},{label:'Weekly A',class:'right'},{label:'Weekly T',class:'right'},{label:'Weekly %',class:'right'},{label:'Monthly A',class:'right'},{label:'Monthly T',class:'right'},{label:'Monthly %',class:'right'},{label:'Quarter A',class:'right'},{label:'Quarter T',class:'right'},{label:'Quarter %',class:'right'},{label:'Year A',class:'right'},{label:'Year T',class:'right'},{label:'Year %',class:'right'},{label:'GP%',class:'right'},{label:'DDL',class:'right'},{label:'SFT',class:'right'},{label:'QLT',class:'right'},{label:'Cash',class:'right'},{label:'Acts',class:'right'},{label:'Overall',class:'right'}], pmBalancedScorecard.map(row => [cell('#'+row.rank,'right'),cell(row.name),cell(money(row.dailyActual),'right'),cell(money(row.dailyTarget),'right'),cell(badge(row.dailyScore+'%',statusTone(row.dailyScore)),'right'),cell(money(row.weeklyActual),'right'),cell(money(row.weeklyTarget),'right'),cell(badge(row.weeklyScore+'%',statusTone(row.weeklyScore)),'right'),cell(money(row.monthlyActual),'right'),cell(money(row.monthlyTarget),'right'),cell(badge(row.monthlyScore+'%',statusTone(row.monthlyScore)),'right'),cell(money(row.quarterlyActual),'right'),cell(money(row.quarterlyTarget),'right'),cell(badge(row.quarterlyScore+'%',statusTone(row.quarterlyScore)),'right'),cell(money(row.yearlyActual),'right'),cell(money(row.yearlyTarget),'right'),cell(badge(row.yearlyScore+'%',statusTone(row.yearlyScore)),'right'),cell(row.profitability+'%','right'),cell(row.deadlines+'%','right'),cell(row.safety+'%','right'),cell(row.quality+'%','right'),cell(money(row.cash),'right'),cell(String(row.actionCount),'right'),cell(badge(row.overallScore+'%',statusTone(row.overallScore)),'right')]));
-
-      const actionLayer = filtered.map(project => ({ ...project, periodRevenue:project['revenue'+state.period], periodTarget:project['target'+state.period], score:pct(project['revenue'+state.period],project['target'+state.period]) })).sort((a,b)=>a.score-b.score);
-      buildTable(byId('projectPerfTable'), [{label:'Project'},{label:'Revenue',class:'right'},{label:'Target',class:'right'},{label:'Profit',class:'right'},{label:'Deadline',class:'right'},{label:'Quality',class:'right'}], actionLayer.map(item => [cell(`<div><div style="font-weight:600;">${item.project}</div><div class="muted" style="font-size:12px;">${item.division} • ${item.pm}</div></div>`),cell(money(item.periodRevenue),'right'),cell(money(item.periodTarget),'right'),cell(badge(item.gpPercent+'%',statusTone(item.gpPercent*4)),'right'),cell(badge(item.deadlineScore+'%',statusTone(item.deadlineScore)),'right'),cell(badge(item.qualityScore+'%',statusTone(item.qualityScore)),'right')]));
-      buildTable(byId('actionTable'), [{label:'Project'},{label:'Owner'},{label:'Due'},{label:'Status',class:'right'},{label:'Recovery'}], actionLayer.map(item => [cell(`<div><div style="font-weight:600;">${item.project}</div><div class="muted" style="font-size:12px;">${item.pm} • ${item.client}</div></div>`),cell(item.actionOwner),cell(item.actionDue),cell(badge(item.actionStatus,actionTone(item.actionStatus)),'right'),cell(item.recovery)]));
-      byId('actionSummary').innerHTML = actionLayer.slice(0,4).map(item => `<div class="action-mini"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;"><div><div style="font-weight:600;">${item.project}</div><div class="muted" style="font-size:12px;margin-top:4px;">Owner: ${item.actionOwner}</div></div>${badge(item.actionStatus,actionTone(item.actionStatus))}</div><div style="margin-top:10px;color:var(--muted);font-size:14px;">Due: ${item.actionDue}</div><div style="margin-top:10px;">${item.recovery}</div></div>`).join('');
-
-      const divisionMix = Array.from(filtered.reduce((map,p)=>{ map.set(p.division,(map.get(p.division)||0)+p['revenue'+state.period]); return map; }, new Map()).entries()).map(([name,value],index)=>({ name,value,color:DIVISION_COLORS[index % DIVISION_COLORS.length] })).sort((a,b)=>b.value-a.value);
-      byId('divisionMixLegend').innerHTML = divisionMix.map(item => `<div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;margin-top:10px;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:12px;height:12px;display:inline-block;border-radius:50%;background:${item.color};"></span>${item.name}</div><strong>${money(item.value)}</strong></div>`).join('');
-      const divisionVarianceRows = divisionRollup.map(row => {
-        const metrics = {
-          Daily: pct(row.daily, row.targetDaily),
-          Weekly: pct(row.weekly, row.targetWeekly),
-          Monthly: pct(row.monthly, row.targetMonthly),
-          Quarterly: pct(row.quarterly, row.targetQuarterly)
-        };
-        const lowest = Math.min(metrics.Daily, metrics.Weekly, metrics.Monthly, metrics.Quarterly);
-        return { name: row.name, metrics, lowest };
-      }).sort((a,b) => a.lowest - b.lowest);
-
-      buildTable(
-        byId('divisionVarianceTable'),
-        [{label:'Division'},{label:'Daily %'},{label:'Weekly %'},{label:'Monthly %'},{label:'Quarterly %'},{label:'Lowest', class:'right'}],
-        divisionVarianceRows.map(item => [
-          cell(item.name),
-          cell(progressBar(item.metrics.Daily)),
-          cell(progressBar(item.metrics.Weekly)),
-          cell(progressBar(item.metrics.Monthly)),
-          cell(progressBar(item.metrics.Quarterly)),
-          cell(badge(item.lowest + '%', statusTone(item.lowest)), 'right')
-        ])
-      );
-
-      populateAnalysisFilters();
-      renderConnectionProgressBars();
-      renderFocusedProgressBars();
-      renderDailyRevenueSummary();
-      renderCharts(divisionRollup.map(row => ({ name:row.name, target:row['target'+state.period], actual:row[activeBucket] })), divisionMix);
-      renderRevenueLog();
-      renderInvoiceLog();
-      bindDynamicEvents();
-    }
-
-    function renderRevenueLog(){ buildTable(byId('revenueLogTable'), [{label:'Date'},{label:'Cost Center'},{label:'Manager'},{label:'Project'},{label:'Amount',class:'right'},{label:'Budget',class:'right'},{label:'Ach %',class:'right'}], revenueData.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(item => [cell(item.date),cell(item.costCenter || '-'),cell(item.manager),cell(item.projectName),cell(money(item.amount),'right'),cell(money(item.budget || 0),'right'),cell(badge(pct(item.amount,item.budget || 0)+'%',statusTone(pct(item.amount,item.budget || 0))),'right')])); }
-    function renderInvoiceLog(){ buildTable(byId('invoiceLogTable'), [{label:'Date'},{label:'Manager'},{label:'Project'},{label:'Amount',class:'right'},{label:'Paid',class:'right'},{label:'Payment Date'}], invoiceData.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(item => [cell(item.date),cell(item.manager),cell(item.projectName),cell(money(item.amount),'right'),cell(badge(item.paymentReceived?'Yes':'No',item.paymentReceived?'b-green':'b-amber'),'right'),cell(item.paymentDate || '-')])); }
-
-    function renderCharts(performanceTrend, divisionMix){
-      Object.values(charts).forEach(chart => chart?.destroy?.()); charts = {};
-      charts.bar = new Chart(byId('barChart'), { type:'bar', data:{ labels:performanceTrend.map(d=>d.name), datasets:[{ label:'Target', data:performanceTrend.map(d=>d.target), backgroundColor:'#cbd5e1', borderRadius:10 },{ label:'Actual', data:performanceTrend.map(d=>d.actual), backgroundColor:'#0f172a', borderRadius:10 }] }, options:{ responsive:true, maintainAspectRatio:false } });
-      charts.pie = new Chart(byId('pieChart'), { type:'doughnut', data:{ labels:divisionMix.map(d=>d.name), datasets:[{ data:divisionMix.map(d=>d.value), backgroundColor:divisionMix.map(d=>d.color), borderWidth:0 }] }, options:{ responsive:true, maintainAspectRatio:false, cutout:'60%' } });
-      charts.area = new Chart(byId('areaChart'), { type:'line', data:{ labels:performanceTrend.map(d=>d.name), datasets:[{ label:'Target', data:performanceTrend.map(d=>d.target), fill:true, tension:.35, borderColor:'#94a3b8', backgroundColor:'rgba(203,213,225,.35)' },{ label:'Actual', data:performanceTrend.map(d=>d.actual), fill:true, tension:.35, borderColor:'#0f172a', backgroundColor:'rgba(15,23,42,.12)' }] }, options:{ responsive:true, maintainAspectRatio:false } });
-    }
-
-    function bindDynamicEvents(){ document.querySelectorAll('[data-kpi]').forEach(el => { el.onclick = () => { const key = el.getAttribute('data-kpi'); state.activeKpi = state.activeKpi === key ? 'all' : key; render(); }; }); }
-
-    function populateInputs(preserved = null){
-      const current = preserved || captureDashboardInputs();
-      byId('period').innerHTML = PERIODS.map(p => `<option value="${p}">${p}</option>`).join('');
-      byId('period').value = state.period;
-      const divisions = ['All', ...new Set([...COST_CENTERS, ...projectsData.map(p => p.division).filter(Boolean)])];
-      byId('division').innerHTML = divisions.map(v => `<option value="${v}">${v === 'All' ? 'All divisions' : v}</option>`).join('');
-      byId('division').value = divisions.includes(state.division) ? state.division : 'All';
-      const managers = ['All', ...new Set([...PROJECT_MANAGERS, ...projectsData.map(p => p.pm).filter(Boolean)])];
-      byId('managerFilter').innerHTML = managers.map(v => `<option value="${v}">${v === 'All' ? 'All managers' : v}</option>`).join('');
-      byId('managerFilter').value = managers.includes(state.manager) ? state.manager : 'All';
-
-      const liveProjects = [...new Set([...PROJECT_OPTIONS, ...projectsData.map(p => p.project).filter(Boolean)])].sort((a,b)=>a.localeCompare(b));
-      const liveCostCenters = [...new Set([...COST_CENTERS, ...projectsData.map(p => p.division).filter(Boolean), ...revenueData.map(r => r.costCenter).filter(Boolean)])].map(normalizeCostCenterName).filter(Boolean).sort((a,b)=>a.localeCompare(b));
-      byId('revCostCenter').innerHTML = liveCostCenters.map(v => `<option value="${v}">${v}</option>`).join('');
-      byId('newProjDivision').innerHTML = liveCostCenters.map(v => `<option value="${v}">${v}</option>`).join('');
-      byId('revProjectName').innerHTML = liveProjects.map(v => `<option value="${v}">${v}</option>`).join('');
-      byId('invProjectName').innerHTML = liveProjects.map(v => `<option value="${v}">${v}</option>`).join('');
-
-      const liveManagers = [...new Set([...PROJECT_MANAGERS, ...projectsData.map(p => p.pm).filter(Boolean), ...revenueData.map(r => r.manager).filter(Boolean)])].filter(Boolean).sort((a,b)=>a.localeCompare(b));
-      byId('revManager').innerHTML = liveManagers.map(v => `<option value="${v}">${v}</option>`).join('');
-      byId('invManager').innerHTML = liveManagers.map(v => `<option value="${v}">${v}</option>`).join('');
-      byId('newProjManager').innerHTML = liveManagers.filter(v => v !== 'All').map(v => `<option value="${v}">${v}</option>`).join('');
-
-      if (!current?.values?.revDate) byId('revDate').value = todayISO();
-      if (!current?.values?.invDate) byId('invDate').value = todayISO();
-      if (!current?.values?.newProjCreatedAt) byId('newProjCreatedAt').value = todayISO();
-      byId('scriptUrlInput').value = localStorage.getItem(STORAGE_KEYS.scriptUrl) || DEFAULT_SCRIPT_URL;
-      byId('fallbackMode').value = localStorage.getItem(STORAGE_KEYS.fallbackMode) || 'auto';
-      populateAnalysisFilters();
-      restoreDashboardInputs(current);
-      bindRevenueDefaults();
-      applyRememberedBudget(false);
-      if (!byId('quickNewProjectStartDate').value) byId('quickNewProjectStartDate').value = byId('revDate').value || todayISO();
-      if (!byId('quickNewProjectEndDate').value) byId('quickNewProjectEndDate').value = byId('revDate').value || todayISO();
-    }
-
-    function updateAchievement(){ byId('revAchievement').value = pct(num(byId('revAmount').value), num(byId('revBudget').value)) + '%'; }
-    function toggleQuickProjectPanel(show){
-      const panel = byId('quickProjectPanel');
-      if (!panel) return;
-      panel.classList.toggle('hidden', !show);
-      if (show){
-        byId('quickNewProjectName').focus();
-      }
-    }
-    function syncQuickProjectDefaults(){
-      const startValue = byId('revDate').value || todayISO();
-      byId('quickNewProjectStartDate').value = byId('quickNewProjectStartDate').value || startValue;
-      byId('quickNewProjectEndDate').value = byId('quickNewProjectEndDate').value || startValue;
-    }
-    function resetQuickProjectInputs(){
-      byId('quickNewProjectName').value = '';
-      byId('quickNewProjectIncome').value = '';
-      byId('quickNewProjectMargin').value = '';
-      byId('quickNewProjectStartDate').value = byId('revDate').value || todayISO();
-      byId('quickNewProjectEndDate').value = byId('revDate').value || todayISO();
-    }
-    async function saveQuickProject(){
-      const projectName = byId('quickNewProjectName').value.trim();
-      const division = byId('revCostCenter').value;
-      const manager = byId('revManager').value;
-      const totalIncome = num(byId('quickNewProjectIncome').value);
-      const margin = num(byId('quickNewProjectMargin').value);
-      const startDate = byId('quickNewProjectStartDate').value || byId('revDate').value || todayISO();
-      const endDate = byId('quickNewProjectEndDate').value || startDate;
-      if (!projectName) return alert('Enter the new project name.');
-      if (!division) return alert('Select the cost center first.');
-      if (!manager) return alert('Select the project manager first.');
-      if (totalIncome <= 0) return alert('Enter total income greater than zero.');
-      const duplicate = [...new Set([...PROJECT_OPTIONS, ...projectsData.map(p => p.project).filter(Boolean)])].some(name => String(name).toLowerCase() === projectName.toLowerCase());
-      if (duplicate) {
-        byId('revProjectName').value = [...new Set([...PROJECT_OPTIONS, ...projectsData.map(p => p.project).filter(Boolean)])].find(name => String(name).toLowerCase() === projectName.toLowerCase()) || projectName;
-        toggleQuickProjectPanel(false);
-        return alert('That project name already exists in the list. It has been selected for you.');
-      }
-      showLoading('Saving new project name...');
-      try {
-        await postJsonToScript({
-          action:'addProject',
-          data:{
-            createdAt: byId('revDate').value || todayISO(),
-            division,
-            manager,
-            projectName,
-            location: '',
-            status: 'Forecast',
-            totalIncome,
-            margin,
-            startDate,
-            endDate,
-            remarks: 'Added from Daily Revenue section'
-          }
-        });
-        await loadLiveData();
-        byId('revCostCenter').value = division;
-        byId('revManager').value = manager;
-        byId('revProjectName').value = projectName;
-        resetQuickProjectInputs();
-        toggleQuickProjectPanel(false);
-      } catch (error) {
-        logDiagnostic('Quick project save failed.', error.message);
-        alert(`Could not save new project name.
-
-${error.message}`);
-      } finally {
-        hideLoading();
-      }
-    }
-    async function postJsonToScript(payload){
-      const scriptUrl = byId('scriptUrlInput').value.trim() || DEFAULT_SCRIPT_URL;
-      return safeFetchJson(scriptUrl, getFetchOptions('POST', payload));
-    }
-    async function saveRevenue(){ const payload = { action:'addRevenue', data:{ date:byId('revDate').value, manager:byId('revManager').value, costCenter:normalizeCostCenterName(byId('revCostCenter').value), projectName:byId('revProjectName').value, amount:num(byId('revAmount').value), budget:num(byId('revBudget').value), quality:num(byId('revQuality').value), safety:num(byId('revSafety').value) } }; if (!payload.data.date || !payload.data.projectName || payload.data.amount <= 0) return alert('Please complete the daily revenue fields.'); showLoading('Saving daily revenue...'); try { rememberBudgetValue(payload.data.projectName, payload.data.manager, payload.data.costCenter, payload.data.budget); await postJsonToScript(payload); byId('revAmount').value = ''; byId('revAchievement').value = ''; await loadLiveData(false); applyRememberedBudget(true); } finally { hideLoading(); } }
-    async function saveInvoice(){ const payload = { action:'addInvoice', data:{ date:byId('invDate').value, manager:byId('invManager').value, projectName:byId('invProjectName').value, amount:num(byId('invAmount').value), paymentReceived:byId('paymentReceived').value === 'true', paymentDate:byId('paymentDate').value } }; if (!payload.data.date || !payload.data.projectName || payload.data.amount <= 0) return alert('Please complete the invoice fields.'); showLoading('Saving invoice...'); try { await postJsonToScript(payload); await loadLiveData(false); } finally { hideLoading(); } }
-
-    async function saveProject(){
-      const payload = {
-        action:'addProject',
-        data:{
-          createdAt: byId('newProjCreatedAt').value,
-          division: normalizeCostCenterName(byId('newProjDivision').value),
-          manager: byId('newProjManager').value,
-          projectName: byId('newProjName').value.trim(),
-          location: byId('newProjLocation').value.trim(),
-          status: byId('newProjStatus').value,
-          totalIncome: num(byId('newProjTotalIncome').value),
-          margin: num(byId('newProjMargin').value),
-          startDate: byId('newProjStartDate').value,
-          endDate: byId('newProjEndDate').value,
-          remarks: byId('newProjRemarks').value.trim()
-        }
-      };
-      if (!payload.data.projectName) return alert('Enter the new project name.');
-      if (!payload.data.division) return alert('Select division.');
-      if (!payload.data.manager) return alert('Select manager.');
-      if (payload.data.totalIncome <= 0) return alert('Enter total income greater than zero.');
-      showLoading('Saving new project...');
-      try {
-        await postJsonToScript(payload);
-        byId('newProjName').value = '';
-        byId('newProjLocation').value = '';
-        byId('newProjTotalIncome').value = '';
-        byId('newProjMargin').value = '';
-        byId('newProjStartDate').value = '';
-        byId('newProjEndDate').value = '';
-        byId('newProjRemarks').value = '';
-        await loadLiveData();
-      } catch (error) {
-        logDiagnostic('Project save failed.', error.message);
-        alert(`Could not save project.\n\n${error.message}`);
-      } finally {
-        hideLoading();
-      }
-    }
-
-    function exportCsv(){ const rows = filteredProjects().map(row => ({ Division:row.division, PM:row.pm, Client:row.client, Project:row.project, Revenue:row['revenue'+state.period], Target:row['target'+state.period], Profitability:`${row.gpPercent}%`, Deadlines:`${row.deadlineScore}%`, Safety:`${row.safetyScore}%`, Quality:`${row.qualityScore}%`, ActionOwner:row.actionOwner, ActionDue:row.actionDue, ActionStatus:row.actionStatus })); if (!rows.length) return; const headers = Object.keys(rows[0]).join(','), body = rows.map(r => Object.values(r).map(v => `"${String(v).replaceAll('"','""')}"`).join(',')).join('\n'); const blob = new Blob([headers+'\n'+body], { type:'text/csv;charset=utf-8;' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = `revenue-report-${state.period.toLowerCase()}.csv`; a.click(); URL.revokeObjectURL(url); }
-
-    function initTabs(){ document.querySelectorAll('.tab').forEach(btn => { btn.onclick = () => { document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active')); btn.classList.add('active'); byId(btn.dataset.tab).classList.add('active'); }; }); }
-    function startAutoRefresh(){
-      if (autoRefreshHandle) clearInterval(autoRefreshHandle);
-      autoRefreshHandle = setInterval(() => {
-        const activeTag = document.activeElement?.tagName || '';
-        const isEditing = ['INPUT','SELECT','TEXTAREA'].includes(activeTag);
-        loadLiveData(!isEditing ? false : false);
-      }, 60000);
-    }
-
-    function init(){
-      initTabs();
-      populateInputs();
-      byId('period').onchange = e => { state.period = e.target.value; render(); };
-      byId('division').onchange = e => { state.division = e.target.value; render(); };
-      byId('managerFilter').onchange = e => { state.manager = e.target.value; render(); };
-      byId('query').oninput = e => { state.query = e.target.value; render(); };
-      byId('analysisMode').onchange = e => { state.analysisMode = e.target.value; state.analysisValue = 'All'; populateAnalysisFilters(); render(); };
-      byId('analysisValue').onchange = e => { state.analysisValue = e.target.value; render(); };
-      byId('analysisPeriod').onchange = e => { state.analysisPeriod = e.target.value; render(); };
-      byId('clearFilterBtn').onclick = () => { state.activeKpi = 'all'; render(); };
-      byId('exportBtn').onclick = exportCsv;
-      byId('refreshBtn').onclick = loadLiveData;
-      byId('testConnectionBtn').onclick = runConnectionTest;
-      byId('saveRevenueBtn').onclick = saveRevenue;
-      byId('showQuickProjectBtn').onclick = () => { syncQuickProjectDefaults(); toggleQuickProjectPanel(true); };
-      byId('quickSaveProjectBtn').onclick = saveQuickProject;
-      byId('cancelQuickProjectBtn').onclick = () => { resetQuickProjectInputs(); toggleQuickProjectPanel(false); };
-      byId('saveInvoiceBtn').onclick = saveInvoice;
-      byId('saveProjectBtn').onclick = saveProject;
-      byId('saveSettingsBtn').onclick = () => { writeSettings(); loadLiveData(); };
-      byId('revAmount').oninput = updateAchievement;
-      byId('revBudget').oninput = updateAchievement;
-      byId('revDate').onchange = () => { syncQuickProjectDefaults(); updateAchievement(); };
-      bindRevenueDefaults();
-      startAutoRefresh();
-      loadLiveData();
-    }
-    init();
-  </script>
+  qs('manualDate').value = new Date().toISOString().slice(0,10);
+  renderAll();
+})();
+</script>
 </body>
 </html>
