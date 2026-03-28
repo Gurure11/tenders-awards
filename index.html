@@ -266,7 +266,7 @@
 
   <script>
     const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxXqomp1iTMG6Pi2pmGdNb2FmHtcO2--U0D697YroV4FTRlRNP6CWHo7X65lIn5ofDa/exec';
-    const STORAGE_KEYS = { scriptUrl:'onpoint.scriptUrl', fallbackMode:'onpoint.fallbackMode' };
+    const STORAGE_KEYS = { scriptUrl:'onpoint.scriptUrl', fallbackMode:'onpoint.fallbackMode', revenueBudgetMemory:'onpoint.revenueBudgetMemory', formDraft:'onpoint.formDraft' };
     const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
     const DIVISION_COLORS = ['#0f172a','#334155','#475569','#64748b','#94a3b8','#1e293b','#475569'];
     const COST_CENTERS = ['Onpoint Ontime','Aqua Telecoms','Nkanyezi','Distinct Hire'];
@@ -274,7 +274,7 @@
     const PROJECT_MANAGERS = ['Moses','Andrew','Govern','Phillip','Timothy','Stanley','Brian','Johan','Siyanda','Dave','James','Rayman','Tony','Graham','Ronald','Petros','Elroy','Mesh','Vusi','Tinotenda','Sydney','Moeti'];
 
     const state = { period:'Daily', division:'All', manager:'All', query:'', activeKpi:'all', analysisMode:'costCenter', analysisValue:'All', analysisPeriod:'Daily' };
-    let charts = {}, projectsData = [], revenueData = [], invoiceData = [], lastDiagnostics = [];
+    let charts = {}, projectsData = [], revenueData = [], invoiceData = [], lastDiagnostics = [], autoRefreshHandle = null, isLoadingData = false;
 
     const byId = id => document.getElementById(id);
     const showLoading = msg => { byId('loadingOverlay').style.display='flex'; byId('loadingMessage').textContent = msg || 'Loading...'; };
@@ -290,6 +290,16 @@
       const fillClass = pctValue < 50 ? 'fill-red' : pctValue < 80 ? 'fill-amber' : 'fill-green';
       return `<div class="progress-cell"><div class="progress-track"><div class="progress-fill ${fillClass}" style="width:${pctValue}%"></div></div><div class="progress-label"><span>${pctValue}%</span><span>${pctValue < 50 ? 'Below target' : pctValue < 80 ? 'Watch' : 'On track'}</span></div></div>`;
     };
+    const variancePercent = (actual, target) => target ? Math.round(((actual - target) / target) * 100) : 0;
+    const varianceFillClass = value => value >= 0 ? 'fill-green' : value >= -10 ? 'fill-amber' : 'fill-red';
+    const varianceProgressBar = value => {
+      const signedValue = Math.round(value || 0);
+      const width = Math.max(0, Math.min(100, Math.abs(signedValue)));
+      const fillClass = varianceFillClass(signedValue);
+      const status = signedValue >= 0 ? 'Above budget' : signedValue >= -10 ? 'Slightly below' : 'Below budget';
+      const sign = signedValue > 0 ? '+' : '';
+      return `<div class="progress-cell"><div class="progress-track"><div class="progress-fill ${fillClass}" style="width:${width}%"></div></div><div class="progress-label"><span>${sign}${signedValue}%</span><span>${status}</span></div></div>`;
+    };
     const statusTone = score => score >= 80 ? 'b-green' : score >= 50 ? 'b-amber' : 'b-red';
     const actionTone = status => status === 'Closed' ? 'b-green' : status === 'In Progress' ? 'b-amber' : status === 'Escalated' ? 'b-red' : 'b-slate';
     const kpiTone = (score, green, amber) => score >= green ? 'green' : score >= amber ? 'amber' : 'red';
@@ -303,24 +313,187 @@
     };
     const safeDate = value => { const d = new Date(value); return isNaN(d.getTime()) ? null : d; };
     const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-    function isDateInPeriod(dateValue, periodLabel){
-      const d = safeDate(dateValue);
-      if (!d) return false;
-      const now = new Date();
-      if (periodLabel === 'Daily') return normaliseDate(d.toISOString()) === todayISO();
+    function getBudgetMemory(){
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.revenueBudgetMemory) || '{}') || {}; } catch { return {}; }
+    }
+    function setBudgetMemory(memory){
+      localStorage.setItem(STORAGE_KEYS.revenueBudgetMemory, JSON.stringify(memory || {}));
+    }
+    function revenueBudgetKey(projectName, manager='', costCenter=''){
+      return [String(projectName || '').trim().toLowerCase(), String(manager || '').trim().toLowerCase(), normalizeCostCenterName(costCenter)].join('|');
+    }
+    function rememberBudgetValue(projectName, manager, costCenter, budget){
+      const numericBudget = num(budget);
+      if (!projectName || numericBudget <= 0) return;
+      const memory = getBudgetMemory();
+      const key = revenueBudgetKey(projectName, manager, costCenter);
+      memory[key] = numericBudget;
+      setBudgetMemory(memory);
+    }
+    function latestBudgetForSelection(projectName, manager='', costCenter=''){
+      if (!projectName) return 0;
+      const matchingRows = revenueData
+        .filter(row => String(row.projectName || '').trim() === String(projectName || '').trim())
+        .filter(row => !manager || String(row.manager || '').trim() === String(manager || '').trim())
+        .filter(row => !costCenter || normalizeCostCenterName(row.costCenter) === normalizeCostCenterName(costCenter))
+        .filter(row => num(row.budget) > 0)
+        .sort((a,b) => String(b.date || '').localeCompare(String(a.date || '')));
+      if (matchingRows.length) return num(matchingRows[0].budget);
+      const memory = getBudgetMemory();
+      const exactKey = revenueBudgetKey(projectName, manager, costCenter);
+      if (memory[exactKey] != null) return num(memory[exactKey]);
+      const managerAgnosticKey = revenueBudgetKey(projectName, '', costCenter);
+      if (memory[managerAgnosticKey] != null) return num(memory[managerAgnosticKey]);
+      const projectOnlyKey = revenueBudgetKey(projectName, '', '');
+      if (memory[projectOnlyKey] != null) return num(memory[projectOnlyKey]);
+      return 0;
+    }
+    function captureDashboardInputs(){
+      const ids = ['revDate','revCostCenter','revManager','revProjectName','revAmount','revBudget','revQuality','revSafety','revAchievement','invDate','invManager','invProjectName','invAmount','paymentReceived','paymentDate','newProjCreatedAt','newProjDivision','newProjManager','newProjName','newProjLocation','newProjStatus','newProjTotalIncome','newProjMargin','newProjStartDate','newProjEndDate','newProjRemarks','quickNewProjectName','quickNewProjectIncome','quickNewProjectMargin','quickNewProjectStartDate','quickNewProjectEndDate','query'];
+      const values = {};
+      ids.forEach(id => {
+        const el = byId(id);
+        if (el) values[id] = el.value;
+      });
+      return {
+        values,
+        quickProjectOpen: byId('quickProjectPanel') ? !byId('quickProjectPanel').classList.contains('hidden') : false,
+        activeTab: document.querySelector('.tab.active')?.dataset?.tab || 'executive',
+        focusedId: document.activeElement?.id || ''
+      };
+    }
+    function restoreDashboardInputs(snapshot){
+      if (!snapshot) return;
+      Object.entries(snapshot.values || {}).forEach(([id, value]) => {
+        const el = byId(id);
+        if (!el) return;
+        if (el.tagName === 'SELECT') {
+          const hasOption = Array.from(el.options).some(option => option.value === value);
+          if (hasOption) el.value = value;
+        } else {
+          el.value = value ?? '';
+        }
+      });
+      if (byId('quickProjectPanel')) {
+        byId('quickProjectPanel').classList.toggle('hidden', !snapshot.quickProjectOpen);
+      }
+      if (snapshot.activeTab) {
+        document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === snapshot.activeTab));
+        document.querySelectorAll('.tab-content').forEach(panel => panel.classList.toggle('active', panel.id === snapshot.activeTab));
+      }
+      updateAchievement();
+      const focused = snapshot.focusedId ? byId(snapshot.focusedId) : null;
+      if (focused && typeof focused.focus === 'function') {
+        try { focused.focus({ preventScroll:true }); } catch { focused.focus(); }
+      }
+    }
+    function applyRememberedBudget(force=false){
+      const projectName = byId('revProjectName')?.value;
+      const manager = byId('revManager')?.value;
+      const costCenter = byId('revCostCenter')?.value;
+      const budgetEl = byId('revBudget');
+      if (!budgetEl || !projectName) return;
+      const currentBudget = num(budgetEl.value);
+      if (!force && currentBudget > 0) return;
+      const remembered = latestBudgetForSelection(projectName, manager, costCenter);
+      if (remembered > 0) {
+        budgetEl.value = remembered;
+        updateAchievement();
+      }
+    }
+    function bindRevenueDefaults(){
+      ['revProjectName','revManager','revCostCenter'].forEach(id => {
+        const el = byId(id);
+        if (!el) return;
+        el.onchange = () => {
+          if (id !== 'revProjectName' && byId('revBudget') && !num(byId('revBudget').value)) applyRememberedBudget(true);
+          if (id === 'revProjectName') applyRememberedBudget(true);
+          updateAchievement();
+        };
+      });
+      const budgetEl = byId('revBudget');
+      if (budgetEl) {
+        budgetEl.onblur = () => {
+          rememberBudgetValue(byId('revProjectName').value, byId('revManager').value, byId('revCostCenter').value, budgetEl.value);
+          updateAchievement();
+        };
+      }
+    }
+    function normalizeTextKey(value){
+      return String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    }
+    function normalizeCostCenterName(value){
+      const raw = String(value ?? '').trim();
+      if (!raw) return '';
+      const key = normalizeTextKey(raw);
+      const aliases = {
+        onpointgroup: 'Onpoint Ontime',
+        onpointontime: 'Onpoint Ontime',
+        onpoint: 'Onpoint Ontime',
+        aquatelecoms: 'Aqua Telecoms',
+        nkanyezi: 'Nkanyezi',
+        distincthire: 'Distinct Hire'
+      };
+      return aliases[key] || raw;
+    }
+    function getLocalDateString(value){
+      if (value == null || value === '') return '';
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+        const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (slashMatch) {
+          const day = String(Number(slashMatch[1])).padStart(2, '0');
+          const month = String(Number(slashMatch[2])).padStart(2, '0');
+          return `${slashMatch[3]}-${month}-${day}`;
+        }
+      }
+      const d = safeDate(value);
+      if (!d) return '';
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    function getPeriodRange(periodLabel, referenceDate = new Date()){
+      const ref = safeDate(referenceDate) || new Date();
+      const start = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
+      const end = new Date(start);
+      if (periodLabel === 'Daily') {
+        end.setDate(end.getDate() + 1);
+        return { start, end };
+      }
       if (periodLabel === 'Weekly') {
-        const start = new Date(now);
-        start.setHours(0,0,0,0);
         const day = start.getDay();
         start.setDate(start.getDate() - day);
-        return d >= start && d.getFullYear() === now.getFullYear();
+        end.setTime(start.getTime());
+        end.setDate(end.getDate() + 7);
+        return { start, end };
       }
-      if (periodLabel === 'Monthly') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-      if (periodLabel === 'Quarterly') return Math.floor(d.getMonth()/3) === Math.floor(now.getMonth()/3) && d.getFullYear() === now.getFullYear();
-      return d.getFullYear() === now.getFullYear();
+      if (periodLabel === 'Monthly') {
+        start.setDate(1);
+        end.setFullYear(start.getFullYear(), start.getMonth() + 1, 1);
+        return { start, end };
+      }
+      if (periodLabel === 'Quarterly') {
+        const quarterStartMonth = Math.floor(start.getMonth() / 3) * 3;
+        start.setMonth(quarterStartMonth, 1);
+        end.setFullYear(start.getFullYear(), quarterStartMonth + 3, 1);
+        return { start, end };
+      }
+      start.setMonth(0, 1);
+      end.setFullYear(start.getFullYear() + 1, 0, 1);
+      return { start, end };
+    }
+    function isDateInPeriod(dateValue, periodLabel){
+      const localDate = getLocalDateString(dateValue);
+      if (!localDate) return false;
+      if (periodLabel === 'Daily') return localDate === todayISO();
+      const d = safeDate(`${localDate}T00:00:00`);
+      if (!d) return false;
+      const range = getPeriodRange(periodLabel);
+      return d >= range.start && d < range.end;
     }
     function getProjectRecord(projectName, manager='', costCenter=''){
-      const direct = projectsData.find(p => p.project === projectName && (!manager || !p.pm || p.pm === manager) && (!costCenter || !p.division || p.division === costCenter));
+      const direct = projectsData.find(p => p.project === projectName && (!manager || !p.pm || p.pm === manager) && (!costCenter || !p.division || normalizeCostCenterName(p.division) === normalizeCostCenterName(costCenter)));
       return direct || projectsData.find(p => p.project === projectName) || null;
     }
     function marginForRevenueRow(row){
@@ -336,9 +509,9 @@
     function periodRevenueRows(periodLabel, filters = {}){
       return revenueData.filter(row => {
         if (!isDateInPeriod(row.date, periodLabel)) return false;
-        if (filters.costCenter && filters.costCenter !== 'All' && row.costCenter !== filters.costCenter) return false;
-        if (filters.manager && filters.manager !== 'All' && row.manager !== filters.manager) return false;
-        if (filters.project && filters.project !== 'All' && row.projectName !== filters.project) return false;
+        if (filters.costCenter && filters.costCenter !== 'All' && normalizeCostCenterName(row.costCenter) !== normalizeCostCenterName(filters.costCenter)) return false;
+        if (filters.manager && filters.manager !== 'All' && String(row.manager || '').trim() !== String(filters.manager || '').trim()) return false;
+        if (filters.project && filters.project !== 'All' && String(row.projectName || '').trim() !== String(filters.project || '').trim()) return false;
         return true;
       });
     }
@@ -393,7 +566,7 @@
       return annual ? annual / 12 : 0;
     }
     function projectMatchesFilters(project, filters = {}){
-      if (filters.costCenter && filters.costCenter !== 'All' && project.division !== filters.costCenter) return false;
+      if (filters.costCenter && filters.costCenter !== 'All' && normalizeCostCenterName(project.division) !== normalizeCostCenterName(filters.costCenter)) return false;
       if (filters.manager && filters.manager !== 'All' && project.pm !== filters.manager) return false;
       if (filters.project && filters.project !== 'All' && project.project !== filters.project) return false;
       return true;
@@ -428,6 +601,80 @@
         .reduce((sum, project) => sum + projectTargetForPeriod(project, periodLabel, dateLike), 0);
     }
 
+    function actualRevenueForPeriod(periodLabel, filters = {}){
+      return periodRevenueRows(periodLabel, filters).reduce((sum, row) => sum + num(row.amount), 0);
+    }
+    function actualBudgetForPeriod(periodLabel, filters = {}){
+      return periodRevenueRows(periodLabel, filters).reduce((sum, row) => sum + num(row.budget), 0);
+    }
+    function projectMatchesQuery(project, queryText = ''){
+      const query = String(queryText || '').trim().toLowerCase();
+      if (!query) return true;
+      return `${project.project} ${project.pm} ${project.division} ${project.client}`.toLowerCase().includes(query);
+    }
+    function rowMatchesQuery(row, queryText = ''){
+      const query = String(queryText || '').trim().toLowerCase();
+      if (!query) return true;
+      return `${row.projectName} ${row.manager} ${row.costCenter}`.toLowerCase().includes(query);
+    }
+    function sumProjectTargetsForPeriodWithQuery(periodLabel, filters = {}, queryText = ''){
+      return projectsData
+        .filter(project => projectMatchesFilters(project, filters) && projectMatchesQuery(project, queryText))
+        .reduce((sum, project) => sum + projectTargetForPeriod(project, periodLabel), 0);
+    }
+    function invoiceTotalForPeriod(periodLabel, filters = {}){
+      return invoiceData.filter(row => {
+        if (!isDateInPeriod(row.date, periodLabel)) return false;
+        if (filters.manager && filters.manager !== 'All' && String(row.manager || '').trim() !== String(filters.manager || '').trim()) return false;
+        if (filters.project && filters.project !== 'All' && String(row.projectName || '').trim() !== String(filters.project || '').trim()) return false;
+        if (filters.costCenter && filters.costCenter !== 'All') {
+          const project = getProjectRecord(row.projectName, row.manager, filters.costCenter);
+          if (!project || normalizeCostCenterName(project.division) !== normalizeCostCenterName(filters.costCenter)) return false;
+        }
+        return true;
+      }).reduce((sum, row) => sum + num(row.amount), 0);
+    }
+    function aggregateDimensionFromSheets(dimension, filters = {}){
+      const names = new Set();
+      if (dimension === 'division') {
+        COST_CENTERS.forEach(v => names.add(normalizeCostCenterName(v)));
+        projectsData.forEach(p => p.division && names.add(normalizeCostCenterName(p.division)));
+        revenueData.forEach(r => r.costCenter && names.add(normalizeCostCenterName(r.costCenter)));
+      } else if (dimension === 'pm') {
+        PROJECT_MANAGERS.forEach(v => names.add(v));
+        projectsData.forEach(p => p.pm && names.add(p.pm));
+        revenueData.forEach(r => r.manager && names.add(r.manager));
+      } else if (dimension === 'project') {
+        PROJECT_OPTIONS.forEach(v => names.add(v));
+        projectsData.forEach(p => p.project && names.add(p.project));
+        revenueData.forEach(r => r.projectName && names.add(r.projectName));
+      }
+      const rows = [];
+      names.forEach(name => {
+        if (!name) return;
+        const dimFilters = { ...filters };
+        if (dimension === 'division') dimFilters.costCenter = name;
+        if (dimension === 'pm') dimFilters.manager = name;
+        if (dimension === 'project') dimFilters.project = name;
+        const row = {
+          name,
+          daily: actualRevenueForPeriod('Daily', dimFilters),
+          weekly: actualRevenueForPeriod('Weekly', dimFilters),
+          monthly: actualRevenueForPeriod('Monthly', dimFilters),
+          quarterly: actualRevenueForPeriod('Quarterly', dimFilters),
+          yearly: actualRevenueForPeriod('Yearly', dimFilters),
+          targetDaily: sumProjectTargets('Daily', dimFilters),
+          targetWeekly: sumProjectTargets('Weekly', dimFilters),
+          targetMonthly: sumProjectTargets('Monthly', dimFilters),
+          targetQuarterly: sumProjectTargets('Quarterly', dimFilters),
+          targetYearly: sumProjectTargets('Yearly', dimFilters)
+        };
+        const hasData = row.daily || row.weekly || row.monthly || row.quarterly || row.yearly || row.targetDaily || row.targetWeekly || row.targetMonthly || row.targetQuarterly || row.targetYearly;
+        if (hasData) rows.push(row);
+      });
+      return rows.sort((a,b) => (b.yearly || 0) - (a.yearly || 0));
+    }
+
     function writeSettings(){
       localStorage.setItem(STORAGE_KEYS.scriptUrl, byId('scriptUrlInput').value.trim() || DEFAULT_SCRIPT_URL);
       localStorage.setItem(STORAGE_KEYS.fallbackMode, byId('fallbackMode').value);
@@ -453,7 +700,7 @@
         const genericMonthlyTarget = firstNumericFromLookup(rowLookup, ['MonthlyTarget','Monthly Target','monthlyTarget','monthly_target','MonthlyBudget','Monthly Budget','monthlyBudget','Budget Per Month','BudgetPerMonth']);
         return {
           id: row.id || `P${index+1}`,
-          division: row.Division || row.division || row.costCentre || row.CostCenter || 'Onpoint Ontime',
+          division: normalizeCostCenterName(row.Division || row.division || row.costCentre || row.CostCenter || 'Onpoint Ontime'),
           pm: row.Manager || row.pm || row.manager || 'Unassigned',
           client: row.Client || row.client || '',
           project: row.ProjectName || row.project || row.projectName || 'Unknown Project',
@@ -472,7 +719,7 @@
       return raw.map(row => ({
         date: normaliseDate(row.Date || row.date),
         manager: row.Manager || row.manager || '',
-        costCenter: row.CostCenter || row.Division || row.costCenter || '',
+        costCenter: normalizeCostCenterName(row.CostCenter || row.Division || row.costCenter || ''),
         projectName: row.ProjectName || row.projectName || '',
         amount: num(row.Amount || row.amount),
         budget: num(row.Budget || row.budget),
@@ -533,46 +780,47 @@
       } finally { hideLoading(); }
     }
 
-    async function loadLiveData(){
+    async function loadLiveData(showOverlay = true){
+      if (isLoadingData) return;
       const scriptUrl = byId('scriptUrlInput').value.trim() || DEFAULT_SCRIPT_URL;
-      showLoading('Loading live data from Google Sheets...');
+      const snapshot = captureDashboardInputs();
+      isLoadingData = true;
+      if (showOverlay) showLoading('Loading live data from Google Sheets...');
       setConnection('Connecting', 'b-amber');
-      const [projectsResult, revenueResult, invoicesResult] = await Promise.all([
-        loadEndpoint(scriptUrl, 'getProjects'),
-        loadEndpoint(scriptUrl, 'getRevenue'),
-        loadEndpoint(scriptUrl, 'getInvoices')
-      ]);
-      projectsData = projectsResult.ok ? normaliseProjects(projectsResult.rows) : [];
-      revenueData = revenueResult.ok ? normaliseRevenue(revenueResult.rows) : [];
-      invoiceData = invoicesResult.ok ? normaliseInvoices(invoicesResult.rows) : [];
-      const warnings = [];
-      if (!projectsResult.ok) warnings.push('Projects failed.');
-      if (!revenueResult.ok) warnings.push('Revenue failed.');
-      if (!invoicesResult.ok) warnings.push('Invoices failed.');
-      setConnection(warnings.length ? 'Partially Connected' : 'Live Connected', warnings.length ? 'b-amber' : 'b-green');
-      setStatusSummary(`Loaded live data.<br><br>Projects: ${projectsData.length}<br>Revenue rows: ${revenueData.length}<br>Invoice rows: ${invoiceData.length}`);
-      populateInputs();
-      render();
-      hideLoading();
+      try {
+        const [projectsResult, revenueResult, invoicesResult] = await Promise.all([
+          loadEndpoint(scriptUrl, 'getProjects'),
+          loadEndpoint(scriptUrl, 'getRevenue'),
+          loadEndpoint(scriptUrl, 'getInvoices')
+        ]);
+        projectsData = projectsResult.ok ? normaliseProjects(projectsResult.rows) : [];
+        revenueData = revenueResult.ok ? normaliseRevenue(revenueResult.rows) : [];
+        invoiceData = invoicesResult.ok ? normaliseInvoices(invoicesResult.rows) : [];
+        const warnings = [];
+        if (!projectsResult.ok) warnings.push('Projects failed.');
+        if (!revenueResult.ok) warnings.push('Revenue failed.');
+        if (!invoicesResult.ok) warnings.push('Invoices failed.');
+        setConnection(warnings.length ? 'Partially Connected' : 'Live Connected', warnings.length ? 'b-amber' : 'b-green');
+        setStatusSummary(`Loaded live data.<br><br>Projects: ${projectsData.length}<br>Revenue rows: ${revenueData.length}<br>Invoice rows: ${invoiceData.length}<br>Last sync: ${new Date().toLocaleTimeString()}`);
+        populateInputs(snapshot);
+        render();
+      } finally {
+        isLoadingData = false;
+        hideLoading();
+      }
     }
 
     function projectRevenueForPeriod(project, period){
-      const rows = revenueData.filter(r => r.projectName === project.project && (!project.pm || !r.manager || r.manager === project.pm));
-      const now = new Date();
-      if (period === 'Daily') return rows.filter(r => r.date === todayISO()).reduce((s,r)=>s+r.amount,0);
-      if (period === 'Weekly') { const weekStart = new Date(); weekStart.setHours(0,0,0,0); weekStart.setDate(weekStart.getDate()-weekStart.getDay()); return rows.filter(r => safeDate(r.date) && safeDate(r.date) >= weekStart).reduce((s,r)=>s+r.amount,0); }
-      if (period === 'Monthly') return rows.filter(r => { const d=safeDate(r.date); return d && d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear(); }).reduce((s,r)=>s+r.amount,0);
-      if (period === 'Quarterly') return rows.filter(r => { const d=safeDate(r.date); return d && Math.floor(d.getMonth()/3)===Math.floor(now.getMonth()/3) && d.getFullYear()===now.getFullYear(); }).reduce((s,r)=>s+r.amount,0);
-      return rows.filter(r => { const d=safeDate(r.date); return d && d.getFullYear()===now.getFullYear(); }).reduce((s,r)=>s+r.amount,0);
+      return revenueData
+        .filter(r => r.projectName === project.project && (!project.pm || !r.manager || r.manager === project.pm) && (!project.division || !r.costCenter || normalizeCostCenterName(r.costCenter) === normalizeCostCenterName(project.division)))
+        .filter(r => isDateInPeriod(r.date, period))
+        .reduce((s,r)=>s+r.amount,0);
     }
     function projectCashForPeriod(project, period){
-      const rows = invoiceData.filter(r => r.projectName === project.project && r.paymentReceived);
-      const now = new Date();
-      if (period === 'Daily') return rows.filter(r=>r.date===todayISO()).reduce((s,r)=>s+r.amount,0);
-      if (period === 'Weekly') { const weekStart = new Date(); weekStart.setHours(0,0,0,0); weekStart.setDate(weekStart.getDate()-weekStart.getDay()); return rows.filter(r=>safeDate(r.date)&&safeDate(r.date)>=weekStart).reduce((s,r)=>s+r.amount,0); }
-      if (period === 'Monthly') return rows.filter(r=>{ const d=safeDate(r.date); return d&&d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear(); }).reduce((s,r)=>s+r.amount,0);
-      if (period === 'Quarterly') return rows.filter(r=>{ const d=safeDate(r.date); return d&&Math.floor(d.getMonth()/3)===Math.floor(now.getMonth()/3)&&d.getFullYear()===now.getFullYear(); }).reduce((s,r)=>s+r.amount,0);
-      return rows.filter(r=>{ const d=safeDate(r.date); return d&&d.getFullYear()===now.getFullYear(); }).reduce((s,r)=>s+r.amount,0);
+      return invoiceData
+        .filter(r => r.projectName === project.project && r.paymentReceived)
+        .filter(r => isDateInPeriod(r.date, period))
+        .reduce((s,r)=>s+r.amount,0);
     }
     const projectQuality = project => { const rows = revenueData.filter(r => r.projectName === project.project); return rows.length ? Math.round(rows.reduce((s,r)=>s+(r.quality||80),0)/rows.length) : 80; };
     const projectSafety = project => { const rows = revenueData.filter(r => r.projectName === project.project); return Math.max(0,100 - rows.reduce((s,r)=>s+(r.safety||0),0)*10); };
@@ -658,7 +906,7 @@
 
     function renderConnectionProgressBars(){
       const container = byId('connectionProgressBars');
-      const activePeriod = state.analysisPeriod || state.period || 'Daily';
+      const activePeriod = state.period || 'Daily';
       const costCenters = getAnalysisOptions('costCenter');
       if (!costCenters.length){
         container.innerHTML = '<div class="muted">No cost center data loaded yet.</div>';
@@ -668,9 +916,11 @@
         const rows = periodRevenueRows(activePeriod, { costCenter:name });
         const actual = rows.reduce((sum, row) => sum + num(row.amount), 0);
         const target = sumProjectTargets(activePeriod, { costCenter:name });
+        const achievementPct = pct(actual, target);
         const variance = actual - target;
-        const score = pct(actual, target);
-        return `<div class="progress-item"><div class="progress-head"><strong>${escapeHtml(name)}</strong>${badge(score + '%', statusTone(score))}</div>${progressBar(score)}<div class="progress-label"><span>Actual ${money(actual)}</span><span>Target ${money(target)} · Variance ${money(variance)}</span></div></div>`;
+        const tone = statusTone(achievementPct);
+        const progressStatus = achievementPct >= 100 ? 'Target achieved' : achievementPct >= 80 ? 'Near target' : 'Below target';
+        return `<div class="progress-item"><div class="progress-head"><strong>${escapeHtml(name)}</strong>${badge(achievementPct + '%', tone)}</div>${progressBar(achievementPct)}<div class="progress-label"><span>${activePeriod} actual ${money(actual)}</span><span>${activePeriod} target ${money(target)} · ${progressStatus}</span></div><div class="progress-label"><span>Variance ${money(variance)}</span><span>Progress towards target</span></div></div>`;
       }).join('');
     }
 
@@ -741,33 +991,42 @@
     function render(){
       const filtered = filteredProjects();
       const activeBucket = state.period.toLowerCase();
+      const baseFilters = { costCenter: state.division, manager: state.manager, project: 'All' };
+      const periodSummaries = Object.fromEntries(PERIODS.map(label => {
+        const rows = periodRevenueRows(label, baseFilters).filter(row => rowMatchesQuery(row, state.query));
+        const actual = rows.reduce((sum, row) => sum + num(row.amount), 0);
+        const target = sumProjectTargetsForPeriodWithQuery(label, baseFilters, state.query);
+        const cash = invoiceTotalForPeriod(label, baseFilters);
+        const profitability = profitabilityForRows(rows);
+        return [label, { rows, actual, target, cash, profitability, achievement: pct(actual, target), cashConversion: pct(cash, actual) }];
+      }));
+      const activeSummary = periodSummaries[state.period];
       const groupRollup = aggregateGroup(filtered);
-      const divisionRollup = aggregateByDimension(filtered,'division');
-      const pmRollup = aggregateByDimension(filtered,'pm');
-      const filteredRevenueRows = periodRevenueRows(state.period, {
-        costCenter: state.division,
-        manager: state.manager
-      }).filter(row => !state.query || `${row.costCenter} ${row.manager} ${row.projectName}`.toLowerCase().includes(state.query.toLowerCase()));
+      const divisionRollup = aggregateDimensionFromSheets('division', { costCenter: state.division, manager: state.manager, project: 'All' });
+      const pmRollup = aggregateDimensionFromSheets('pm', { costCenter: state.division, manager: 'All', project: 'All' });
+      const filteredRevenueRows = activeSummary.rows;
+      const filteredActualRevenue = activeSummary.actual;
+      const filteredTargetRevenue = activeSummary.target;
       const totals = {
-        revenue: groupRollup.revenue[activeBucket],
-        target: groupRollup.target[activeBucket],
-        cash: groupRollup.cash[activeBucket],
-        margin: Math.round((groupRollup.profitability[activeBucket] / 100) * groupRollup.revenue[activeBucket]),
+        revenue: filteredActualRevenue,
+        target: filteredTargetRevenue,
+        cash: activeSummary.cash,
+        margin: Math.round((activeSummary.profitability / 100) * filteredActualRevenue),
         deadline: groupRollup.deadlines[activeBucket],
         safety: groupRollup.safety[activeBucket],
         quality: groupRollup.quality[activeBucket]
       };
-      const revenueAchievement = pct(totals.revenue, totals.target), profitability = profitabilityForRows(filteredRevenueRows) || groupRollup.profitability[activeBucket] || Math.round((totals.margin/Math.max(totals.revenue,1))*100), deadlineScore = Math.round(totals.deadline), safetyScore = Math.round(totals.safety), qualityScore = Math.round(totals.quality), cashConversion = pct(totals.cash, Math.max(totals.revenue,1));
+      const revenueAchievement = pct(totals.revenue, totals.target), profitability = activeSummary.profitability || groupRollup.profitability[activeBucket] || Math.round((totals.margin/Math.max(totals.revenue,1))*100), deadlineScore = Math.round(totals.deadline), safetyScore = Math.round(totals.safety), qualityScore = Math.round(totals.quality), cashConversion = activeSummary.cashConversion || pct(totals.cash, Math.max(totals.revenue,1));
       const allProjects = enrichedProjects();
       const confirmedTotal = allProjects.filter(p => String(p.status).toLowerCase() === 'confirmed').reduce((s,p) => s + p.totalIncome, 0);
       const forecastTotal = allProjects.filter(p => String(p.status).toLowerCase() === 'forecast').reduce((s,p) => s + p.totalIncome, 0);
       const totalOrderBook = confirmedTotal + forecastTotal;
-      const ytd = periodRevenueRows('Yearly').reduce((s,r) => s + num(r.amount), 0);
+      const ytd = periodSummaries['Yearly'].actual;
       const btye = Math.max(0, confirmedTotal - ytd);
-      const mtd = periodRevenueRows('Monthly').reduce((s,r) => s + num(r.amount), 0);
-      const dailyRows = periodRevenueRows('Daily');
-      const dailyActualTotal = dailyRows.reduce((s,r) => s + num(r.amount), 0);
-      const dailyTargetTotal = sumProjectTargets('Daily');
+      const mtd = periodSummaries['Monthly'].actual;
+      const dailyRows = periodSummaries['Daily'].rows;
+      const dailyActualTotal = periodSummaries['Daily'].actual;
+      const dailyTargetTotal = periodSummaries['Daily'].target;
 
       byId('headlineKpis').innerHTML = [
         { title:'Total Confirmed', value:money(confirmedTotal), sub:'All confirmed from Projects' },
@@ -796,18 +1055,18 @@
       byId('clearFilterBtn').style.display = state.activeKpi==='all' ? 'none' : 'inline-block';
 
       byId('summaryGrid').innerHTML = PERIODS.map(label => {
-        const key = label.toLowerCase();
-        const revenueValue = label === 'Daily' ? dailyActualTotal : groupRollup.revenue[key];
-        const targetValue = label === 'Daily' ? dailyTargetTotal : groupRollup.target[key];
-        const achievementValue = pct(revenueValue, targetValue);
+        const summary = periodSummaries[label];
+        const revenueValue = summary.actual;
+        const targetValue = summary.target;
+        const achievementValue = summary.achievement;
         return `<div class="summary-box"><div class="muted" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">${label}</div><div class="big">${money(revenueValue)}</div><div class="muted" style="margin-top:6px;">Target ${money(targetValue)}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;"><span class="muted">Achievement</span>${badge(achievementValue+'%', statusTone(achievementValue))}</div></div>`;
       }).join('');
 
-      const budgetVsActualRisk = ['Daily','Weekly','Monthly','Yearly'].map(label => {
-        const key = label.toLowerCase();
-        const budget = label === 'Daily' ? dailyTargetTotal : groupRollup.target[key];
-        const actual = label === 'Daily' ? dailyActualTotal : groupRollup.revenue[key];
-        const achievement = pct(actual, budget);
+      const budgetVsActualRisk = ['Daily','Weekly','Monthly','Quarterly','Yearly'].map(label => {
+        const summary = periodSummaries[label];
+        const budget = summary.target;
+        const actual = summary.actual;
+        const achievement = summary.achievement;
         return { label, budget, actual, gap: budget - actual, achievement, riskTone:achievement>=85?'b-green':achievement>=65?'b-amber':'b-red', risk:achievement>=85?'Low':achievement>=65?'Medium':'High' };
       });
       buildTable(byId('budgetRiskTable'), [{label:'Period'},{label:'Budget',class:'right'},{label:'Actual',class:'right'},{label:'Gap',class:'right'},{label:'Ach %',class:'right'},{label:'Risk',class:'right'}], budgetVsActualRisk.map(item => [cell(item.label),cell(money(item.budget),'right'),cell(money(item.actual),'right'),cell(`<span style="color:${item.gap>0?'#b91c1c':'#15803d'}">${money(item.gap)}</span>`,'right'),cell(item.achievement+'%','right'),cell(badge(item.risk,item.riskTone),'right')]));
@@ -879,7 +1138,8 @@
 
     function bindDynamicEvents(){ document.querySelectorAll('[data-kpi]').forEach(el => { el.onclick = () => { const key = el.getAttribute('data-kpi'); state.activeKpi = state.activeKpi === key ? 'all' : key; render(); }; }); }
 
-    function populateInputs(){
+    function populateInputs(preserved = null){
+      const current = preserved || captureDashboardInputs();
       byId('period').innerHTML = PERIODS.map(p => `<option value="${p}">${p}</option>`).join('');
       byId('period').value = state.period;
       const divisions = ['All', ...new Set([...COST_CENTERS, ...projectsData.map(p => p.division).filter(Boolean)])];
@@ -890,23 +1150,28 @@
       byId('managerFilter').value = managers.includes(state.manager) ? state.manager : 'All';
 
       const liveProjects = [...new Set([...PROJECT_OPTIONS, ...projectsData.map(p => p.project).filter(Boolean)])].sort((a,b)=>a.localeCompare(b));
-      byId('revCostCenter').innerHTML = COST_CENTERS.map(v => `<option value="${v}">${v}</option>`).join('');
-      byId('newProjDivision').innerHTML = COST_CENTERS.map(v => `<option value="${v}">${v}</option>`).join('');
+      const liveCostCenters = [...new Set([...COST_CENTERS, ...projectsData.map(p => p.division).filter(Boolean), ...revenueData.map(r => r.costCenter).filter(Boolean)])].map(normalizeCostCenterName).filter(Boolean).sort((a,b)=>a.localeCompare(b));
+      byId('revCostCenter').innerHTML = liveCostCenters.map(v => `<option value="${v}">${v}</option>`).join('');
+      byId('newProjDivision').innerHTML = liveCostCenters.map(v => `<option value="${v}">${v}</option>`).join('');
       byId('revProjectName').innerHTML = liveProjects.map(v => `<option value="${v}">${v}</option>`).join('');
       byId('invProjectName').innerHTML = liveProjects.map(v => `<option value="${v}">${v}</option>`).join('');
 
-      const liveManagers = [...new Set([...PROJECT_MANAGERS, ...projectsData.map(p => p.pm).filter(Boolean)])].sort((a,b)=>a.localeCompare(b));
+      const liveManagers = [...new Set([...PROJECT_MANAGERS, ...projectsData.map(p => p.pm).filter(Boolean), ...revenueData.map(r => r.manager).filter(Boolean)])].filter(Boolean).sort((a,b)=>a.localeCompare(b));
       byId('revManager').innerHTML = liveManagers.map(v => `<option value="${v}">${v}</option>`).join('');
       byId('invManager').innerHTML = liveManagers.map(v => `<option value="${v}">${v}</option>`).join('');
       byId('newProjManager').innerHTML = liveManagers.filter(v => v !== 'All').map(v => `<option value="${v}">${v}</option>`).join('');
 
-      byId('revDate').value = todayISO();
-      byId('invDate').value = todayISO();
-      byId('newProjCreatedAt').value = todayISO();
-      resetQuickProjectInputs();
+      if (!current?.values?.revDate) byId('revDate').value = todayISO();
+      if (!current?.values?.invDate) byId('invDate').value = todayISO();
+      if (!current?.values?.newProjCreatedAt) byId('newProjCreatedAt').value = todayISO();
       byId('scriptUrlInput').value = localStorage.getItem(STORAGE_KEYS.scriptUrl) || DEFAULT_SCRIPT_URL;
       byId('fallbackMode').value = localStorage.getItem(STORAGE_KEYS.fallbackMode) || 'auto';
       populateAnalysisFilters();
+      restoreDashboardInputs(current);
+      bindRevenueDefaults();
+      applyRememberedBudget(false);
+      if (!byId('quickNewProjectStartDate').value) byId('quickNewProjectStartDate').value = byId('revDate').value || todayISO();
+      if (!byId('quickNewProjectEndDate').value) byId('quickNewProjectEndDate').value = byId('revDate').value || todayISO();
     }
 
     function updateAchievement(){ byId('revAchievement').value = pct(num(byId('revAmount').value), num(byId('revBudget').value)) + '%'; }
@@ -985,15 +1250,15 @@ ${error.message}`);
       const scriptUrl = byId('scriptUrlInput').value.trim() || DEFAULT_SCRIPT_URL;
       return safeFetchJson(scriptUrl, getFetchOptions('POST', payload));
     }
-    async function saveRevenue(){ const payload = { action:'addRevenue', data:{ date:byId('revDate').value, manager:byId('revManager').value, costCenter:byId('revCostCenter').value, projectName:byId('revProjectName').value, amount:num(byId('revAmount').value), budget:num(byId('revBudget').value), quality:num(byId('revQuality').value), safety:num(byId('revSafety').value) } }; if (!payload.data.date || !payload.data.projectName || payload.data.amount <= 0) return alert('Please complete the daily revenue fields.'); await postJsonToScript(payload); await loadLiveData(); }
-    async function saveInvoice(){ const payload = { action:'addInvoice', data:{ date:byId('invDate').value, manager:byId('invManager').value, projectName:byId('invProjectName').value, amount:num(byId('invAmount').value), paymentReceived:byId('paymentReceived').value === 'true', paymentDate:byId('paymentDate').value } }; if (!payload.data.date || !payload.data.projectName || payload.data.amount <= 0) return alert('Please complete the invoice fields.'); await postJsonToScript(payload); await loadLiveData(); }
+    async function saveRevenue(){ const payload = { action:'addRevenue', data:{ date:byId('revDate').value, manager:byId('revManager').value, costCenter:normalizeCostCenterName(byId('revCostCenter').value), projectName:byId('revProjectName').value, amount:num(byId('revAmount').value), budget:num(byId('revBudget').value), quality:num(byId('revQuality').value), safety:num(byId('revSafety').value) } }; if (!payload.data.date || !payload.data.projectName || payload.data.amount <= 0) return alert('Please complete the daily revenue fields.'); showLoading('Saving daily revenue...'); try { rememberBudgetValue(payload.data.projectName, payload.data.manager, payload.data.costCenter, payload.data.budget); await postJsonToScript(payload); byId('revAmount').value = ''; byId('revAchievement').value = ''; await loadLiveData(false); applyRememberedBudget(true); } finally { hideLoading(); } }
+    async function saveInvoice(){ const payload = { action:'addInvoice', data:{ date:byId('invDate').value, manager:byId('invManager').value, projectName:byId('invProjectName').value, amount:num(byId('invAmount').value), paymentReceived:byId('paymentReceived').value === 'true', paymentDate:byId('paymentDate').value } }; if (!payload.data.date || !payload.data.projectName || payload.data.amount <= 0) return alert('Please complete the invoice fields.'); showLoading('Saving invoice...'); try { await postJsonToScript(payload); await loadLiveData(false); } finally { hideLoading(); } }
 
     async function saveProject(){
       const payload = {
         action:'addProject',
         data:{
           createdAt: byId('newProjCreatedAt').value,
-          division: byId('newProjDivision').value,
+          division: normalizeCostCenterName(byId('newProjDivision').value),
           manager: byId('newProjManager').value,
           projectName: byId('newProjName').value.trim(),
           location: byId('newProjLocation').value.trim(),
@@ -1031,6 +1296,14 @@ ${error.message}`);
     function exportCsv(){ const rows = filteredProjects().map(row => ({ Division:row.division, PM:row.pm, Client:row.client, Project:row.project, Revenue:row['revenue'+state.period], Target:row['target'+state.period], Profitability:`${row.gpPercent}%`, Deadlines:`${row.deadlineScore}%`, Safety:`${row.safetyScore}%`, Quality:`${row.qualityScore}%`, ActionOwner:row.actionOwner, ActionDue:row.actionDue, ActionStatus:row.actionStatus })); if (!rows.length) return; const headers = Object.keys(rows[0]).join(','), body = rows.map(r => Object.values(r).map(v => `"${String(v).replaceAll('"','""')}"`).join(',')).join('\n'); const blob = new Blob([headers+'\n'+body], { type:'text/csv;charset=utf-8;' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = `revenue-report-${state.period.toLowerCase()}.csv`; a.click(); URL.revokeObjectURL(url); }
 
     function initTabs(){ document.querySelectorAll('.tab').forEach(btn => { btn.onclick = () => { document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active')); btn.classList.add('active'); byId(btn.dataset.tab).classList.add('active'); }; }); }
+    function startAutoRefresh(){
+      if (autoRefreshHandle) clearInterval(autoRefreshHandle);
+      autoRefreshHandle = setInterval(() => {
+        const activeTag = document.activeElement?.tagName || '';
+        const isEditing = ['INPUT','SELECT','TEXTAREA'].includes(activeTag);
+        loadLiveData(!isEditing ? false : false);
+      }, 60000);
+    }
 
     function init(){
       initTabs();
@@ -1055,7 +1328,9 @@ ${error.message}`);
       byId('saveSettingsBtn').onclick = () => { writeSettings(); loadLiveData(); };
       byId('revAmount').oninput = updateAchievement;
       byId('revBudget').oninput = updateAchievement;
-      byId('revDate').onchange = syncQuickProjectDefaults;
+      byId('revDate').onchange = () => { syncQuickProjectDefaults(); updateAchievement(); };
+      bindRevenueDefaults();
+      startAutoRefresh();
       loadLiveData();
     }
     init();
