@@ -44,7 +44,7 @@
       <i class="fas fa-gas-pump fa-3x" style="color:#0b2b4a;"></i>
       <div>
         <h2 class="fw-bold mb-0" style="color:#0b2b4a;">Onpoint Group · Fuel Reconciliation</h2>
-        <div class="muted">Analyse Zoho approvals, bank swipes, and Fuel Log transactions in one place</div>
+        <div class="muted">Analyse Zoho approvals, bank swipes, and Fuel Log transactions from Google Sheets in one place</div>
       </div>
     </div>
     <div class="d-flex flex-wrap gap-2 align-items-center">
@@ -68,7 +68,7 @@
     <div class="col-lg-8">
       <div class="shell p-4 h-100">
         <div class="section-title">Upload files to analyse</div>
-        <div class="muted mb-3">Choose a Zoho approvals export, a bank/fuel swipe export, or both. Then click <strong>Analyse</strong>. The dashboard uploads them to Google Drive via Apps Script, stores parsed rows in Google Sheets, pulls Fuel Log transactions from the Fuel Log sheet, and produces the reports automatically.</div>
+        <div class="muted mb-3">Choose a Zoho approvals export, a bank/fuel swipe export, or both. Then click <strong>Analyse</strong>. The dashboard uploads only those files to Google Drive via Apps Script, stores parsed rows in Google Sheets, pulls driver transactions directly from the Fuel Log sheet in Google Sheets, and produces the reports automatically. No driver log upload is required.</div>
         <div class="row g-3">
           <div class="col-md-4">
             <div class="dropzone">
@@ -84,14 +84,6 @@
               <div class="mini muted mb-2">Supports date, amount, liters, reg/vehicle, merchant, ER Number if present.</div>
               <input type="file" id="swipeFile" class="form-control" accept=".xlsx,.xls,.csv">
               <div class="mini mt-2" id="swipeMeta">No file selected</div>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="dropzone">
-              <div class="fw-semibold mb-2"><i class="fas fa-road text-warning me-2"></i>Optional driver log export</div>
-              <div class="mini muted mb-2">Optional import. Fuel Log sheet is always loaded directly from Google Sheets as well.</div>
-              <input type="file" id="driverLogFile" class="form-control" accept=".xlsx,.xls,.csv">
-              <div class="mini mt-2" id="driverLogMeta">No file selected</div>
             </div>
           </div>
         </div>
@@ -271,7 +263,7 @@
 <script>
 (() => {
   const CONFIG = {
-    GAS_URL: 'https://script.google.com/macros/s/AKfycbxSdF4ToguxlCihGE4bWlJW-798TCgyBbTgMdIwKYlcU4ypr5JCSF3sI_b78mRS-RMnzA/exec',
+    GAS_URL: 'https://script.google.com/macros/s/AKfycbxfclYCjj2MuszFonJ6hsm1N1oNkFamzUDsuH5kIiQ5ijg4yaHZaj47mvYnKVly3G8e8w/exec',
     RECON_SHEET_ID: '16ijC8ODRMDtC_FtMpZEcukxuuOTCBlA9TLRKAmBrI2w',
     RECON_SHEET_NAME: 'FuelRecon',
     FUEL_LOG_SHEET_ID: '1SnhLTWgzJfkKNmIvtj8uwa-8x7TsnRtqkfX3deEuHIQ',
@@ -281,7 +273,6 @@
   const state = {
     approvals: [],
     swipes: [],
-    driverLogImports: [],
     fuelLog: [],
     uploads: [],
     reconRows: [],
@@ -448,12 +439,6 @@
       out.swipeAmount = num(out.swipeAmount || out.grandTotal || out.fuelTotal || out.approvedAmount);
       out.approvedAmount = 0;
     }
-    if (kind === 'driverLog') {
-      out.swipeAmount = num(out.swipeAmount || out.grandTotal || out.fuelTotal);
-      out.liters = num(out.liters);
-      out.kmTraveled = num(out.kmTraveled || (out.odoFinish && out.odoStart ? out.odoFinish - out.odoStart : 0));
-      out.kmPerLiter = num(out.kmPerLiter || (out.kmTraveled && out.liters ? out.kmTraveled / out.liters : 0));
-    }
     return out;
   }
 
@@ -559,7 +544,7 @@
     const kmplThreshold = num($('thresholdKmpl').value) || 4.5;
     const frequentCount = num($('thresholdFrequentCount').value) || 3;
     const frequentDays = num($('thresholdFrequentDays').value) || 7;
-    const sourceRows = [...state.fuelLog, ...state.driverLogImports].map(r => {
+    const sourceRows = [...state.fuelLog].map(r => {
       const date = toDate(r['Date'] || r.date || r['Timestamp'] || r.timestamp);
       const liters = num(r['Liters'] || r.liters);
       const grandTotal = num(r['Grand Total'] || r.grandTotal || r['Fuel Total'] || r.fuelTotal);
@@ -842,7 +827,6 @@
     if (!result.success) throw new Error(result.error || 'Failed to load dashboard data');
     state.approvals = result.approvals || [];
     state.swipes = result.swipes || [];
-    state.driverLogImports = result.driverLog || [];
     state.fuelLog = result.fuelLog || [];
     state.uploads = result.uploads || [];
     buildReconRows();
@@ -852,7 +836,7 @@
   }
 
   async function testConnection() {
-    if (CONFIG.GAS_URL.includes('https://script.google.com/macros/s/AKfycbxSdF4ToguxlCihGE4bWlJW-798TCgyBbTgMdIwKYlcU4ypr5JCSF3sI_b78mRS-RMnzA/exec')) {
+    if (CONFIG.GAS_URL.includes('https://script.google.com/macros/s/AKfycbxfclYCjj2MuszFonJ6hsm1N1oNkFamzUDsuH5kIiQ5ijg4yaHZaj47mvYnKVly3G8e8w/exec')) {
       setStatus('status-bad', '<i class="fas fa-triangle-exclamation"></i>Paste your deployed Apps Script URL in the HTML file');
       return;
     }
@@ -877,7 +861,7 @@
   }
 
   async function analyse() {
-    if (CONFIG.GAS_URL.includes('https://script.google.com/macros/s/AKfycbxSdF4ToguxlCihGE4bWlJW-798TCgyBbTgMdIwKYlcU4ypr5JCSF3sI_b78mRS-RMnzA/exec')) {
+    if (CONFIG.GAS_URL.includes('https://script.google.com/macros/s/AKfycbxfclYCjj2MuszFonJ6hsm1N1oNkFamzUDsuH5kIiQ5ijg4yaHZaj47mvYnKVly3G8e8w/exec')) {
       alert('Paste your deployed Apps Script URL into CONFIG.GAS_URL inside this HTML file first.');
       return;
     }
@@ -888,7 +872,6 @@
     try {
       await uploadIfSelected('approvalFile', 'approvals');
       await uploadIfSelected('swipeFile', 'swipes');
-      await uploadIfSelected('driverLogFile', 'driverLog');
       await loadDashboardData();
       setStatus('status-ok', '<i class="fas fa-check-circle"></i>Analysis complete');
     } catch (err) {
@@ -924,7 +907,6 @@
 
   wireFileMeta('approvalFile', 'approvalMeta');
   wireFileMeta('swipeFile', 'swipeMeta');
-  wireFileMeta('driverLogFile', 'driverLogMeta');
 
   renderTables();
 })();
