@@ -835,14 +835,9 @@
     renderTables();
   }
 
-  function hasValidGasUrl() {
-    const url = String(CONFIG.GAS_URL || '').trim();
-    return /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec(?:\?.*)?$/.test(url);
-  }
-
   async function testConnection() {
-    if (!hasValidGasUrl()) {
-      setStatus('status-bad', '<i class="fas fa-triangle-exclamation"></i>Apps Script URL is missing or invalid');
+    if (CONFIG.GAS_URL.includes('https://script.google.com/macros/s/AKfycbxfclYCjj2MuszFonJ6hsm1N1oNkFamzUDsuH5kIiQ5ijg4yaHZaj47mvYnKVly3G8e8w/exec')) {
+      setStatus('status-bad', '<i class="fas fa-triangle-exclamation"></i>Paste your deployed Apps Script URL in the HTML file');
       return;
     }
     try {
@@ -866,8 +861,8 @@
   }
 
   async function analyse() {
-    if (!hasValidGasUrl()) {
-      alert('Apps Script URL is missing or invalid in CONFIG.GAS_URL.');
+    if (CONFIG.GAS_URL.includes('https://script.google.com/macros/s/AKfycbxfclYCjj2MuszFonJ6hsm1N1oNkFamzUDsuH5kIiQ5ijg4yaHZaj47mvYnKVly3G8e8w/exec')) {
+      alert('Paste your deployed Apps Script URL into CONFIG.GAS_URL inside this HTML file first.');
       return;
     }
     const btn = $('analyseBtn');
@@ -913,8 +908,8 @@
   wireFileMeta('approvalFile', 'approvalMeta');
   wireFileMeta('swipeFile', 'swipeMeta');
 
-  renderTables();
   testConnection();
+  renderTables();
 })();
 </script>
 </body>
