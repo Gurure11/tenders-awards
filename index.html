@@ -1,108 +1,138 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Onpoint Group · Fuel Recon Analysis</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Onpoint Accounts Fuel Recon System</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-    body { background:#eef4fb; font-family:Segoe UI, system-ui, sans-serif; color:#16324a; }
-    .shell { background:#fff; border-radius:22px; box-shadow:0 12px 34px rgba(10,30,60,.08); border:0; }
-    .kpi { border-radius:18px; background:#fff; padding:1rem; box-shadow:0 8px 20px rgba(10,30,60,.06); height:100%; }
-    .kpi .label { color:#6d7d8f; font-size:.9rem; }
-    .kpi .value { font-size:1.55rem; font-weight:700; color:#0b2b4a; }
-    .btn-onpoint { background:#0b2b4a; color:#fff; border:none; border-radius:999px; padding:.68rem 1.25rem; }
-    .btn-onpoint:hover { background:#18486f; color:#fff; }
-    .pill { border-radius:999px !important; }
-    .section-title { font-weight:700; color:#0b2b4a; margin-bottom:.85rem; }
-    .muted { color:#6b7c90; font-size:.92rem; }
-    .dropzone { border:2px dashed #c9d7e6; border-radius:18px; background:#f8fbff; padding:1rem; height:100%; }
-    .status-badge { display:inline-flex; align-items:center; gap:.45rem; border-radius:999px; padding:.35rem .8rem; font-size:.85rem; }
-    .status-ok { background:#e8f7ea; color:#1f7a35; }
-    .status-warn { background:#fff4db; color:#9f6500; }
-    .status-bad { background:#fde8e8; color:#b33232; }
-    .table thead th { position:sticky; top:0; background:#f7fbff; z-index:1; }
-    .scroll-table { max-height:360px; overflow:auto; }
-    .badge-soft { border-radius:999px; padding:.35rem .7rem; font-weight:600; }
-    .bg-soft-success { background:#dff4e5; color:#216a35; }
-    .bg-soft-warning { background:#fff2d8; color:#9a6604; }
-    .bg-soft-danger { background:#fde4e4; color:#a12f2f; }
-    .bg-soft-info { background:#e6f1ff; color:#195fa6; }
-    .mono { font-variant-numeric: tabular-nums; }
-    .chart-wrap { min-height:330px; position:relative; }
-    .nav-pills .nav-link.active { background:#0b2b4a; }
-    .mini { font-size:.84rem; }
+    :root{
+      --op-primary:#0b2b4a;
+      --op-secondary:#18486f;
+      --op-bg:#eef4fb;
+      --op-card:#ffffff;
+      --op-text:#16324a;
+      --op-muted:#6d7d8f;
+    }
+    body{background:var(--op-bg);font-family:Segoe UI,system-ui,sans-serif;color:var(--op-text);}
+    .page-shell{max-width:1700px;margin:auto;}
+    .brand-card,.card-shell,.kpi-card{
+      background:var(--op-card);border:0;border-radius:20px;
+      box-shadow:0 12px 34px rgba(10,30,60,.08);
+    }
+    .brand-card{padding:1.35rem 1.5rem;}
+    .card-shell{padding:1.25rem;}
+    .kpi-card{padding:1rem;height:100%;}
+    .kpi-label{font-size:.88rem;color:var(--op-muted);}
+    .kpi-value{font-size:1.55rem;font-weight:700;color:var(--op-primary);}
+    .section-title{font-weight:700;color:var(--op-primary);margin-bottom:.85rem;}
+    .muted{color:var(--op-muted);}
+    .btn-onpoint{background:var(--op-primary);color:#fff;border:none;border-radius:999px;padding:.7rem 1.15rem;}
+    .btn-onpoint:hover{background:var(--op-secondary);color:#fff;}
+    .btn-light-pill{border-radius:999px;}
+    .status-pill{display:inline-flex;align-items:center;gap:.45rem;border-radius:999px;padding:.35rem .8rem;font-size:.85rem;}
+    .status-ok{background:#e8f7ea;color:#1f7a35;}
+    .status-warn{background:#fff4db;color:#9f6500;}
+    .status-bad{background:#fde8e8;color:#b33232;}
+    .dropzone{border:2px dashed #c9d7e6;border-radius:18px;background:#f8fbff;padding:1rem;height:100%;}
+    .chart-wrap{min-height:340px;position:relative;}
+    .scroll-table{max-height:420px;overflow:auto;}
+    .table thead th{position:sticky;top:0;background:#f7fbff;z-index:1;}
+    .mono{font-variant-numeric:tabular-nums;}
+    .badge-soft{border-radius:999px;padding:.35rem .7rem;font-weight:600;}
+    .bg-soft-success{background:#dff4e5;color:#216a35;}
+    .bg-soft-warning{background:#fff2d8;color:#9a6604;}
+    .bg-soft-danger{background:#fde4e4;color:#a12f2f;}
+    .bg-soft-info{background:#e6f1ff;color:#195fa6;}
+    .nav-pills .nav-link.active{background:var(--op-primary);}
+    .small-note{font-size:.84rem;}
   </style>
 </head>
 <body>
-<div class="container-fluid py-4 px-3 px-lg-4">
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-    <div class="d-flex align-items-center gap-3">
-      <i class="fas fa-gas-pump fa-3x" style="color:#0b2b4a;"></i>
-      <div>
-        <h2 class="fw-bold mb-0" style="color:#0b2b4a;">Onpoint Group · Fuel Reconciliation</h2>
-        <div class="muted">Analyse Zoho approvals, bank swipes, and Fuel Log transactions from Google Sheets in one place</div>
+<div class="container-fluid py-4 px-3 px-lg-4 page-shell">
+  <div class="brand-card mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <div class="d-flex align-items-center gap-3">
+        <i class="fas fa-gas-pump fa-3x" style="color:var(--op-primary);"></i>
+        <div>
+          <h2 class="fw-bold mb-0" style="color:var(--op-primary);">Onpoint Accounts Fuel Recon System</h2>
+          <div class="muted">Compare Zoho approved ERs, bank swipes, and driver fuel filling logs from Google Sheets for any selected period.</div>
+        </div>
+      </div>
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <span id="connectionStatus" class="status-pill status-warn"><i class="fas fa-circle-notch fa-spin"></i>Connection not tested</span>
+        <button id="testConnectionBtn" class="btn btn-outline-secondary btn-light-pill"><i class="fas fa-plug me-2"></i>Test Connection</button>
+        <button id="refreshBtn" class="btn btn-outline-secondary btn-light-pill"><i class="fas fa-rotate me-2"></i>Refresh</button>
+        <button id="analyseBtn" class="btn btn-onpoint"><i class="fas fa-chart-column me-2"></i>Analyse</button>
       </div>
     </div>
-    <div class="d-flex flex-wrap gap-2 align-items-center">
-      <span id="connectionStatus" class="status-badge status-warn"><i class="fas fa-circle-notch fa-spin"></i>Apps Script not tested</span>
-      <button class="btn btn-outline-secondary pill" id="testConnectionBtn"><i class="fas fa-plug me-2"></i>Test Connection</button>
-      <button class="btn btn-outline-secondary pill" id="refreshBtn"><i class="fas fa-rotate me-2"></i>Refresh Data</button>
-      <button class="btn btn-onpoint" id="analyseBtn"><i class="fas fa-chart-column me-2"></i>Analyse</button>
-    </div>
   </div>
 
   <div class="row g-3 mb-4">
-    <div class="col-md-2"><div class="kpi"><div class="label">Authorised Swipes</div><div id="kpiAuthorisedCount" class="value mono">0</div></div></div>
-    <div class="col-md-2"><div class="kpi"><div class="label">Unauthorised Swipes</div><div id="kpiUnauthorisedCount" class="value mono">0</div></div></div>
-    <div class="col-md-2"><div class="kpi"><div class="label">Authorised Value</div><div id="kpiAuthorisedValue" class="value mono">R0.00</div></div></div>
-    <div class="col-md-2"><div class="kpi"><div class="label">Unauthorised Value</div><div id="kpiUnauthorisedValue" class="value mono">R0.00</div></div></div>
-    <div class="col-md-2"><div class="kpi"><div class="label">Variance Total</div><div id="kpiVarianceTotal" class="value mono">R0.00</div></div></div>
-    <div class="col-md-2"><div class="kpi"><div class="label">Alarm Rows</div><div id="kpiAlarmCount" class="value mono">0</div></div></div>
+    <div class="col-md-2"><div class="kpi-card"><div class="kpi-label">Zoho Approved</div><div id="kpiApproved" class="kpi-value mono">R0.00</div></div></div>
+    <div class="col-md-2"><div class="kpi-card"><div class="kpi-label">Bank Swiped</div><div id="kpiBank" class="kpi-value mono">R0.00</div></div></div>
+    <div class="col-md-2"><div class="kpi-card"><div class="kpi-label">Fuel Log Total</div><div id="kpiFuelLog" class="kpi-value mono">R0.00</div></div></div>
+    <div class="col-md-2"><div class="kpi-card"><div class="kpi-label">Bank Without Zoho</div><div id="kpiUnauthorised" class="kpi-value mono">R0.00</div></div></div>
+    <div class="col-md-2"><div class="kpi-card"><div class="kpi-label">Bank vs Zoho Variance</div><div id="kpiBankVariance" class="kpi-value mono">R0.00</div></div></div>
+    <div class="col-md-2"><div class="kpi-card"><div class="kpi-label">Fuel Log vs Zoho Variance</div><div id="kpiFuelVariance" class="kpi-value mono">R0.00</div></div></div>
   </div>
 
   <div class="row g-3 mb-4">
-    <div class="col-lg-8">
-      <div class="shell p-4 h-100">
-        <div class="section-title">Upload files to analyse</div>
-        <div class="muted mb-3">Choose a Zoho approvals export, a bank/fuel swipe export, or both. Then click <strong>Analyse</strong>. The dashboard uploads only those files to Google Drive via Apps Script, stores parsed rows in Google Sheets, pulls driver transactions directly from the Fuel Log sheet in Google Sheets, and produces the reports automatically. No driver log upload is required.</div>
+    <div class="col-lg-7">
+      <div class="card-shell h-100">
+        <div class="section-title">Upload monthly or weekly source files</div>
+        <div class="muted mb-3">Upload the Zoho approvals export and the bank statement or fuel swipe export for the period you want to analyse. Driver fuel filling logs are fetched automatically from the Google Sheet named <strong>Fuel Log</strong>.</div>
         <div class="row g-3">
-          <div class="col-md-4">
+          <div class="col-md-6">
             <div class="dropzone">
-              <div class="fw-semibold mb-2"><i class="fas fa-file-excel text-success me-2"></i>Zoho approvals</div>
-              <div class="mini muted mb-2">Supports ER Number, approved amount, reg/vehicle, driver, cost center, department.</div>
+              <div class="fw-semibold mb-2"><i class="fas fa-file-excel text-success me-2"></i>Zoho approvals file</div>
+              <div class="small-note muted mb-2">Accepted: XLSX, XLS, CSV. Expected fields include ER No, BCY Total or Approved Amount, Vehicle, Driver, Department, Cost Center, Date.</div>
               <input type="file" id="approvalFile" class="form-control" accept=".xlsx,.xls,.csv">
-              <div class="mini mt-2" id="approvalMeta">No file selected</div>
+              <div id="approvalMeta" class="small-note mt-2">No file selected</div>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-6">
             <div class="dropzone">
-              <div class="fw-semibold mb-2"><i class="fas fa-building-columns text-primary me-2"></i>Bank or swipe export</div>
-              <div class="mini muted mb-2">Supports date, amount, liters, reg/vehicle, merchant, ER Number if present.</div>
-              <input type="file" id="swipeFile" class="form-control" accept=".xlsx,.xls,.csv">
-              <div class="mini mt-2" id="swipeMeta">No file selected</div>
+              <div class="fw-semibold mb-2"><i class="fas fa-building-columns text-primary me-2"></i>Bank statement / swipe file</div>
+              <div class="small-note muted mb-2">Accepted: XLSX, XLS, CSV. Expected fields include Amount, Vehicle, Driver, ER No if present, Department, Cost Center, Date.</div>
+              <input type="file" id="bankFile" class="form-control" accept=".xlsx,.xls,.csv">
+              <div id="bankMeta" class="small-note mt-2">No file selected</div>
             </div>
           </div>
         </div>
-        <div class="row g-3 mt-3">
-          <div class="col-md-3"><input id="thresholdKmpl" type="number" class="form-control pill" step="0.1" value="4.5" placeholder="Low KM/L below"></div>
-          <div class="col-md-3"><input id="thresholdFrequentCount" type="number" class="form-control pill" value="3" min="2" placeholder="Frequent fills count"></div>
-          <div class="col-md-3"><input id="thresholdFrequentDays" type="number" class="form-control pill" value="7" min="1" placeholder="Within days"></div>
-          <div class="col-md-3"><input id="thresholdVariance" type="number" class="form-control pill" value="5" step="0.01" placeholder="Variance tolerance"></div>
+        <div class="mt-3 small-note muted">
+          Matching priority is <strong>ER No</strong>, then <strong>vehicle registration</strong>, then <strong>driver name</strong> within the selected period.
         </div>
-        <div class="mt-3 mini muted">FuelRecon sheet ID and Fuel Log sheet ID are embedded inside this HTML and used through Apps Script only.</div>
       </div>
     </div>
-    <div class="col-lg-4">
-      <div class="shell p-4 h-100">
-        <div class="section-title">Report controls</div>
+    <div class="col-lg-5">
+      <div class="card-shell h-100">
+        <div class="section-title">Analysis controls</div>
         <div class="row g-3">
-          <div class="col-6">
-            <label class="form-label">Period</label>
-            <select id="periodMode" class="form-select pill">
+          <div class="col-md-6">
+            <label class="form-label">From date</label>
+            <input id="startDate" type="date" class="form-control">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">To date</label>
+            <input id="endDate" type="date" class="form-control">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Summarise by</label>
+            <select id="groupMode" class="form-select">
+              <option value="costCenter" selected>Cost Center</option>
+              <option value="department">Department</option>
+              <option value="driver">Driver</option>
+              <option value="vehicle">Vehicle</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">View period</label>
+            <select id="periodMode" class="form-select">
               <option value="day">Daily</option>
               <option value="week">Weekly</option>
               <option value="month" selected>Monthly</option>
@@ -110,141 +140,168 @@
               <option value="year">Yearly</option>
             </select>
           </div>
-          <div class="col-6">
-            <label class="form-label">Group by</label>
-            <select id="groupMode" class="form-select pill">
-              <option value="department">Department</option>
-              <option value="driver">Driver</option>
-              <option value="costCenter" selected>Cost Center</option>
-            </select>
+          <div class="col-md-6">
+            <label class="form-label">Vehicle reg</label>
+            <select id="filterVehicle" class="form-select"><option value="all">All</option></select>
           </div>
-          <div class="col-6">
-            <label class="form-label">Department</label>
-            <select id="filterDepartment" class="form-select pill"><option value="all">All</option></select>
-          </div>
-          <div class="col-6">
-            <label class="form-label">Cost Center</label>
-            <select id="filterCostCenter" class="form-select pill"><option value="all">All</option></select>
-          </div>
-          <div class="col-6">
+          <div class="col-md-6">
             <label class="form-label">Driver</label>
-            <select id="filterDriver" class="form-select pill"><option value="all">All</option></select>
+            <select id="filterDriver" class="form-select"><option value="all">All</option></select>
           </div>
-          <div class="col-6 d-flex align-items-end">
-            <div class="form-check ms-1">
-              <input class="form-check-input" type="checkbox" id="showUnauthorisedOnly">
-              <label class="form-check-label" for="showUnauthorisedOnly">Unauthorised only</label>
+          <div class="col-md-6">
+            <label class="form-label">Department</label>
+            <select id="filterDepartment" class="form-select"><option value="all">All</option></select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Cost center</label>
+            <select id="filterCostCenter" class="form-select"><option value="all">All</option></select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Search</label>
+            <input id="searchText" type="text" class="form-control" placeholder="Search ER no, vehicle, driver, department, cost center...">
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              <input id="showUnauthorisedOnly" class="form-check-input" type="checkbox">
+              <label class="form-check-label" for="showUnauthorisedOnly">Show bank swipes without Zoho approval only</label>
             </div>
           </div>
-        </div>
-        <div class="mt-3">
-          <label class="form-label">Search</label>
-          <input id="searchText" class="form-control pill" placeholder="Search driver, ER, vehicle, merchant...">
         </div>
       </div>
     </div>
   </div>
 
   <div class="row g-3 mb-4">
-    <div class="col-lg-8">
-      <div class="shell p-4 h-100">
-        <div class="section-title">Authorised vs unauthorised by selected period</div>
+    <div class="col-lg-7">
+      <div class="card-shell h-100">
+        <div class="section-title">Approved vs Bank vs Fuel Log by period</div>
         <div class="chart-wrap"><canvas id="periodChart"></canvas></div>
       </div>
     </div>
-    <div class="col-lg-4">
-      <div class="shell p-4 h-100">
-        <div class="section-title">Totals by selected group</div>
+    <div class="col-lg-5">
+      <div class="card-shell h-100">
+        <div class="section-title">Summary by selected grouping</div>
         <div class="chart-wrap"><canvas id="groupChart"></canvas></div>
       </div>
     </div>
   </div>
 
-  <div class="row g-3 mb-4">
-    <div class="col-lg-6">
-      <div class="shell p-4 h-100">
-        <div class="section-title">Grouped totals</div>
-        <div class="scroll-table">
-          <table class="table table-sm align-middle">
-            <thead><tr><th>Group</th><th class="text-end">Approved</th><th class="text-end">Swiped</th><th class="text-end">Unauthorised</th><th class="text-end">Variance</th></tr></thead>
-            <tbody id="groupTotalsBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-    <div class="col-lg-6">
-      <div class="shell p-4 h-100">
-        <div class="section-title">Period totals</div>
-        <div class="scroll-table">
-          <table class="table table-sm align-middle">
-            <thead><tr><th>Period</th><th class="text-end">Authorised</th><th class="text-end">Unauthorised</th><th class="text-end">Approved Value</th><th class="text-end">Swiped Value</th><th class="text-end">Variance</th></tr></thead>
-            <tbody id="periodTotalsBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="shell p-4 mb-4">
+  <div class="card-shell mb-4">
     <ul class="nav nav-pills mb-3" role="tablist">
-      <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tabSwipes" type="button">Swipe Analysis</button></li>
-      <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabComparison" type="button">ER vs Fuel / Bank</button></li>
-      <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabFuelLog" type="button">Fuel Log Transactions</button></li>
-      <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabAlarms" type="button">Alarms</button></li>
+      <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tabSummary" type="button">Summary</button></li>
+      <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabComparison" type="button">Detailed Comparison</button></li>
+      <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabUnauthorised" type="button">Unauthorised Swipes</button></li>
+      <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabFuelLog" type="button">Fuel Log</button></li>
       <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabUploads" type="button">Uploads</button></li>
     </ul>
+
     <div class="tab-content">
-      <div class="tab-pane fade show active" id="tabSwipes">
+      <div class="tab-pane fade show active" id="tabSummary">
         <div class="row g-3">
-          <div class="col-lg-8">
-            <div class="section-title">Detailed reconciled swipes</div>
+          <div class="col-lg-6">
+            <div class="section-title">Totals by selected group</div>
             <div class="scroll-table">
               <table class="table table-sm align-middle">
-                <thead><tr><th>Date</th><th>Driver</th><th>Vehicle</th><th>ER Number</th><th>Department</th><th>Cost Center</th><th class="text-end">Approved</th><th class="text-end">Swiped</th><th class="text-end">Liters</th><th class="text-end">Variance</th><th>Status</th></tr></thead>
-                <tbody id="reconBody"></tbody>
+                <thead>
+                  <tr>
+                    <th>Group</th>
+                    <th class="text-end">Zoho Approved</th>
+                    <th class="text-end">Bank Swiped</th>
+                    <th class="text-end">Fuel Log</th>
+                    <th class="text-end">Bank Variance</th>
+                    <th class="text-end">Fuel Variance</th>
+                  </tr>
+                </thead>
+                <tbody id="groupSummaryBody"></tbody>
               </table>
             </div>
           </div>
-          <div class="col-lg-4">
-            <div class="section-title">Unauthorised / mismatch exceptions</div>
+          <div class="col-lg-6">
+            <div class="section-title">Totals by period</div>
             <div class="scroll-table">
               <table class="table table-sm align-middle">
-                <thead><tr><th>Date</th><th>Driver</th><th>Vehicle</th><th>Issue</th></tr></thead>
-                <tbody id="exceptionsBody"></tbody>
+                <thead>
+                  <tr>
+                    <th>Period</th>
+                    <th class="text-end">Zoho</th>
+                    <th class="text-end">Bank</th>
+                    <th class="text-end">Fuel Log</th>
+                    <th class="text-end">Bank Variance</th>
+                    <th class="text-end">Fuel Variance</th>
+                  </tr>
+                </thead>
+                <tbody id="periodSummaryBody"></tbody>
               </table>
             </div>
           </div>
         </div>
       </div>
+
       <div class="tab-pane fade" id="tabComparison">
-        <div class="row g-3">
-          <div class="col-lg-8">
-            <div class="section-title">ER approval vs Fuel Log and bank/swipe comparison</div>
-            <div class="scroll-table">
-              <table class="table table-sm align-middle">
-                <thead><tr><th>Period</th><th>Date</th><th>Driver</th><th>Vehicle</th><th>ER Number</th><th>Department</th><th>Cost Center</th><th class="text-end">ER Amount</th><th class="text-end">Fuel Log</th><th class="text-end">Bank/Swipe</th><th class="text-end">Fuel Var</th><th class="text-end">Bank Var</th><th>Matched By</th></tr></thead>
-                <tbody id="comparisonBody"></tbody>
-              </table>
-            </div>
-          </div>
-          <div class="col-lg-4">
-            <div class="section-title">Comparison summary by selected group</div>
-            <div class="scroll-table">
-              <table class="table table-sm align-middle">
-                <thead><tr><th>Group</th><th class="text-end">ER Amount</th><th class="text-end">Fuel Log</th><th class="text-end">Bank/Swipe</th><th class="text-end">Fuel Var</th><th class="text-end">Bank Var</th></tr></thead>
-                <tbody id="comparisonSummaryBody"></tbody>
-              </table>
-            </div>
-          </div>
+        <div class="section-title">ER vs Bank vs Fuel Log comparison</div>
+        <div class="scroll-table">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Driver</th>
+                <th>Vehicle</th>
+                <th>ER No</th>
+                <th>Department</th>
+                <th>Cost Center</th>
+                <th class="text-end">Zoho Approved</th>
+                <th class="text-end">Bank Swiped</th>
+                <th class="text-end">Fuel Log</th>
+                <th class="text-end">Bank Variance</th>
+                <th class="text-end">Fuel Variance</th>
+                <th>Matched By</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="comparisonBody"></tbody>
+          </table>
         </div>
       </div>
+
+      <div class="tab-pane fade" id="tabUnauthorised">
+        <div class="section-title">Bank swipes with no Zoho approval</div>
+        <div class="scroll-table">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Driver</th>
+                <th>Vehicle</th>
+                <th>ER No</th>
+                <th>Department</th>
+                <th>Cost Center</th>
+                <th class="text-end">Amount</th>
+                <th>Reason</th>
+              </tr>
+            </thead>
+            <tbody id="unauthorisedBody"></tbody>
+          </table>
+        </div>
+      </div>
+
       <div class="tab-pane fade" id="tabFuelLog">
         <div class="row g-3">
           <div class="col-lg-7">
-            <div class="section-title">Fuel Log transactions</div>
+            <div class="section-title">Fuel Log transactions for selected filters</div>
             <div class="scroll-table">
               <table class="table table-sm align-middle">
-                <thead><tr><th>Date</th><th>Driver</th><th>Vehicle</th><th>Department</th><th>Cost Center</th><th class="text-end">Grand Total</th><th class="text-end">KM</th><th class="text-end">KM/L</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Driver</th>
+                    <th>Vehicle</th>
+                    <th>Department</th>
+                    <th>Cost Center</th>
+                    <th class="text-end">Grand Total</th>
+                    <th class="text-end">KM</th>
+                    <th class="text-end">KM/L</th>
+                  </tr>
+                </thead>
                 <tbody id="fuelLogBody"></tbody>
               </table>
             </div>
@@ -253,27 +310,34 @@
             <div class="section-title">Fuel Log totals by period</div>
             <div class="scroll-table">
               <table class="table table-sm align-middle">
-                <thead><tr><th>Period</th><th class="text-end">Transactions</th><th class="text-end">Grand Total</th><th class="text-end">KM</th><th class="text-end">Liters</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>Period</th>
+                    <th class="text-end">Transactions</th>
+                    <th class="text-end">Total</th>
+                    <th class="text-end">KM</th>
+                    <th class="text-end">Litres</th>
+                  </tr>
+                </thead>
                 <tbody id="fuelLogTotalsBody"></tbody>
               </table>
             </div>
           </div>
         </div>
       </div>
-      <div class="tab-pane fade" id="tabAlarms">
-        <div class="section-title">Low efficiency and frequent filling alarms</div>
-        <div class="scroll-table">
-          <table class="table table-sm align-middle">
-            <thead><tr><th>Date</th><th>Driver</th><th>Vehicle</th><th>Department</th><th>Cost Center</th><th>Alarm</th><th>Detail</th></tr></thead>
-            <tbody id="alarmsBody"></tbody>
-          </table>
-        </div>
-      </div>
+
       <div class="tab-pane fade" id="tabUploads">
         <div class="section-title">Uploaded source files</div>
         <div class="scroll-table">
           <table class="table table-sm align-middle">
-            <thead><tr><th>Timestamp</th><th>Type</th><th>Original file</th><th class="text-end">Rows</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Type</th>
+                <th>Original File</th>
+                <th class="text-end">Rows</th>
+              </tr>
+            </thead>
             <tbody id="uploadsBody"></tbody>
           </table>
         </div>
@@ -286,7 +350,7 @@
 <script>
 (() => {
   const CONFIG = {
-    GAS_URL: 'https://script.google.com/macros/s/AKfycbxfclYCjj2MuszFonJ6hsm1N1oNkFamzUDsuH5kIiQ5ijg4yaHZaj47mvYnKVly3G8e8w/exec',
+    APP_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyk98BdcXiM8IMJtal40ihicnqSGl87MJdn03OcBVFt1h41MG55zLMOouVAigOGJkAaWg/exec', // optional only when hosting outside Apps Script
     RECON_SHEET_ID: '16ijC8ODRMDtC_FtMpZEcukxuuOTCBlA9TLRKAmBrI2w',
     RECON_SHEET_NAME: 'FuelRecon',
     FUEL_LOG_SHEET_ID: '1SnhLTWgzJfkKNmIvtj8uwa-8x7TsnRtqkfX3deEuHIQ',
@@ -295,91 +359,84 @@
 
   const state = {
     approvals: [],
-    swipes: [],
+    bankSwipes: [],
     fuelLog: [],
     uploads: [],
-    reconRows: [],
     comparisonRows: [],
-    alarms: [],
+    unauthorisedRows: [],
     charts: { period: null, group: null }
   };
 
-  const $ = (id) => document.getElementById(id);
-  const fmt = (n) => 'R' + (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const num = (v) => {
+  const $ = id => document.getElementById(id);
+  const str = v => v == null ? '' : String(v).trim();
+  const norm = v => str(v).toUpperCase();
+  const fmt = n => 'R' + (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const num = v => {
     if (typeof v === 'number') return isFinite(v) ? v : 0;
-    if (v == null) return 0;
-    const cleaned = String(v).replace(/[^0-9.-]/g, '');
+    const cleaned = String(v ?? '').replace(/[^0-9.\-]/g, '');
     const parsed = parseFloat(cleaned);
     return isFinite(parsed) ? parsed : 0;
   };
-  const str = (v) => v == null ? '' : String(v).trim();
-  const toDate = (v) => {
-    if (!v) return null;
-    if (v instanceof Date && !isNaN(v)) return v;
-    const s = String(v).trim();
+  const html = s => String(s ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const status = (klass, message) => {
+    const el = $('connectionStatus');
+    el.className = `status-pill ${klass}`;
+    el.innerHTML = message;
+  };
+  const toDate = value => {
+    if (!value) return null;
+    if (value instanceof Date && !isNaN(value)) return value;
+    const s = str(value);
     if (!s) return null;
     if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
       const d = new Date(s + 'T00:00:00');
       return isNaN(d) ? null : d;
     }
-    const d = new Date(s);
-    if (!isNaN(d)) return d;
-    const parts = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
-    if (parts) {
-      const day = Number(parts[1]);
-      const month = Number(parts[2]) - 1;
-      const year = Number(parts[3].length === 2 ? '20' + parts[3] : parts[3]);
-      const dt = new Date(year, month, day);
-      return isNaN(dt) ? null : dt;
+    const d1 = new Date(s);
+    if (!isNaN(d1)) return d1;
+    const p = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if (p) {
+      const day = Number(p[1]);
+      const month = Number(p[2]) - 1;
+      const year = Number(p[3].length === 2 ? '20' + p[3] : p[3]);
+      const d2 = new Date(year, month, day);
+      return isNaN(d2) ? null : d2;
     }
     return null;
   };
-  const dateKey = (d) => d ? d.toISOString().slice(0,10) : '';
-  const weekKey = (d) => {
+  const dateKey = d => d ? d.toISOString().slice(0, 10) : '';
+  const weekKey = d => {
     const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
     const dayNum = dt.getUTCDay() || 7;
     dt.setUTCDate(dt.getUTCDate() + 4 - dayNum);
     const yearStart = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1));
     const weekNo = Math.ceil((((dt - yearStart) / 86400000) + 1) / 7);
-    return `${dt.getUTCFullYear()}-W${String(weekNo).padStart(2,'0')}`;
+    return `${dt.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
   };
   const periodKey = (date, mode) => {
     if (!date) return 'Unknown';
     if (mode === 'day') return dateKey(date);
     if (mode === 'week') return weekKey(date);
-    if (mode === 'month') return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
-    if (mode === 'quarter') return `${date.getFullYear()}-Q${Math.floor(date.getMonth()/3)+1}`;
+    if (mode === 'month') return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    if (mode === 'quarter') return `${date.getFullYear()}-Q${Math.floor(date.getMonth() / 3) + 1}`;
     return String(date.getFullYear());
   };
 
   const aliasMap = {
-    date: ['date','swipe date','transaction date','recon date'],
+    date: ['date','transaction date','swipe date','fuel date'],
+    erNumber: ['er no','er number','er','ernumber','er no.'],
+    approvedAmount: ['approved amount','authorised amount','authorized amount','amount approved','requested amount','amount requested','bcy total','bcy_total'],
+    swipeAmount: ['swiped amount','amount','debit','grand total','fuel total','transaction amount'],
+    fuelTotal: ['grand total','fuel total','amount'],
+    liters: ['litres','liters','fuel litres','fuel liters'],
+    vehicle: ['vehicle','vehicle reg','reg','reg no','reg number','registration','truck','fleet no'],
     driver: ['driver','driver name','operator'],
-    vehicle: ['vehicle','reg no','reg number','registration','truck','fleet no'],
-    erNumber: ['er number','er no','er','ernumber','request number'],
-    approvedAmount: ['approved amount','authorised amount','authorized amount','requested amount','amount requested','zoho amount'],
-    swipeAmount: ['swiped amount','amount','grand total','fuel total','transaction amount','debit'],
-    liters: ['liters','litres','fuel liters','fuel litres'],
-    merchant: ['merchant','vendor','station','service station'],
-    costCenter: ['cost center','cost centre'],
     department: ['department'],
-    notes: ['notes','comment','remarks'],
-    timestamp: ['timestamp'],
-    odoStart: ['odo start','odometer start'],
-    odoFinish: ['odo finish','odometer finish'],
-    fuelType: ['fuel type'],
-    pricePerL: ['price/l','price per l','price per liter','price per litre'],
-    fuelTotal: ['fuel total'],
-    lubrication: ['lubrication'],
-    lubeCost: ['lube cost'],
-    tolls: ['tolls'],
-    tollTotal: ['toll total'],
-    grandTotal: ['grand total'],
+    costCenter: ['cost center','cost centre','costcenter'],
+    merchant: ['merchant','vendor','station'],
     kmTraveled: ['km traveled','km travelled','km'],
     kmPerLiter: ['km/liter','km/litre','km per liter','km per litre'],
-    submissionId: ['submission id'],
-    status: ['status']
+    timestamp: ['timestamp']
   };
 
   function normalizeHeader(header) {
@@ -387,710 +444,554 @@
   }
 
   function mapHeaders(headers) {
-    const normHeaders = headers.map(normalizeHeader);
+    const normalized = headers.map(normalizeHeader);
     const mapped = {};
     Object.entries(aliasMap).forEach(([target, aliases]) => {
-      const idx = normHeaders.findIndex(h => aliases.includes(h));
+      const idx = normalized.findIndex(h => aliases.includes(h));
       if (idx >= 0) mapped[target] = headers[idx];
     });
     return mapped;
   }
 
-  async function readFileAsArrayBuffer(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsArrayBuffer(file);
-    });
-  }
-
-  async function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result).split(',')[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
-
-  async function parseSpreadsheetFile(file, kind) {
-    const data = await readFileAsArrayBuffer(file);
-    const workbook = XLSX.read(data, { type: 'array' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-    const headers = rows.length ? Object.keys(rows[0]) : [];
+  function normalizeFileRows(rows, kind) {
+    if (!rows.length) return [];
+    const headers = Object.keys(rows[0]);
     const mapped = mapHeaders(headers);
-    return rows.map(r => normalizeRow(r, mapped, kind)).filter(r => Object.values(r).some(v => String(v || '').trim() !== ''));
+    const get = (row, field) => mapped[field] ? row[mapped[field]] : '';
+    return rows.map(row => ({
+      date: get(row, 'date'),
+      erNumber: str(get(row, 'erNumber')),
+      approvedAmount: num(get(row, 'approvedAmount')),
+      swipeAmount: num(get(row, 'swipeAmount')),
+      fuelTotal: num(get(row, 'fuelTotal')),
+      liters: num(get(row, 'liters')),
+      vehicle: str(get(row, 'vehicle')),
+      driver: str(get(row, 'driver')),
+      department: str(get(row, 'department')),
+      costCenter: str(get(row, 'costCenter')),
+      merchant: str(get(row, 'merchant')),
+      kmTraveled: num(get(row, 'kmTraveled')),
+      kmPerLiter: num(get(row, 'kmPerLiter')),
+      timestamp: str(get(row, 'timestamp')),
+      sourceKind: kind
+    })).filter(r => Object.values(r).some(v => String(v ?? '').trim() !== ''));
   }
 
-  function normalizeRow(row, mapped, kind) {
-    const getVal = (field) => mapped[field] ? row[mapped[field]] : '';
-    const out = {
-      date: getVal('date'),
-      driver: getVal('driver'),
-      vehicle: getVal('vehicle'),
-      erNumber: getVal('erNumber'),
-      approvedAmount: num(getVal('approvedAmount')),
-      swipeAmount: num(getVal('swipeAmount')),
-      liters: num(getVal('liters')),
-      merchant: getVal('merchant'),
-      costCenter: getVal('costCenter'),
-      department: getVal('department'),
-      notes: getVal('notes'),
-      timestamp: getVal('timestamp'),
-      odoStart: num(getVal('odoStart')),
-      odoFinish: num(getVal('odoFinish')),
-      fuelType: getVal('fuelType'),
-      pricePerL: num(getVal('pricePerL')),
-      fuelTotal: num(getVal('fuelTotal')),
-      lubrication: getVal('lubrication'),
-      lubeCost: num(getVal('lubeCost')),
-      tolls: getVal('tolls'),
-      tollTotal: num(getVal('tollTotal')),
-      grandTotal: num(getVal('grandTotal')),
-      kmTraveled: num(getVal('kmTraveled')),
-      kmPerLiter: num(getVal('kmPerLiter')),
-      submissionId: getVal('submissionId'),
-      status: getVal('status')
-    };
-
-    if (kind === 'approvals') {
-      out.approvedAmount = num(out.approvedAmount || out.swipeAmount || out.grandTotal || out.fuelTotal);
-      out.swipeAmount = 0;
-    }
-    if (kind === 'swipes') {
-      out.swipeAmount = num(out.swipeAmount || out.grandTotal || out.fuelTotal || out.approvedAmount);
-      out.approvedAmount = 0;
-    }
-    return out;
+  async function readSpreadsheet(file) {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: 'array' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    return XLSX.utils.sheet_to_json(sheet, { defval: '' });
   }
 
-  async function apiGet(action) {
-    const url = `${CONFIG.GAS_URL}?action=${encodeURIComponent(action)}`;
-    const res = await fetch(url);
-    return res.json();
+  async function getRowsFromFileInput(inputId, kind) {
+    const file = $(inputId).files[0];
+    if (!file) return [];
+    const rows = await readSpreadsheet(file);
+    return normalizeFileRows(rows, kind);
   }
 
-  async function apiPost(payload) {
-    const res = await fetch(CONFIG.GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
-    });
-    return res.json();
-  }
-
-  function setStatus(kind, text) {
-    const el = $('connectionStatus');
-    el.className = `status-badge ${kind}`;
-    el.innerHTML = text;
-  }
-
-  function populateSelect(id, values) {
-    const el = $(id);
-    const current = el.value || 'all';
-    const unique = ['all', ...Array.from(new Set(values.map(v => str(v)).filter(Boolean))).sort((a,b) => a.localeCompare(b))];
-    el.innerHTML = unique.map(v => `<option value="${v}">${v === 'all' ? 'All' : v}</option>`).join('');
-    if (unique.includes(current)) el.value = current;
-  }
-
-
-  function valueByAliases(row, aliases) {
-    for (const key of aliases) {
-      if (row && Object.prototype.hasOwnProperty.call(row, key) && row[key] !== '' && row[key] != null) return row[key];
-    }
-    return '';
-  }
-
-  function normalizePartyRow(row, kind = '') {
-    const date = toDate(valueByAliases(row, ['Date','date','Timestamp','timestamp']));
-    const vehicle = str(valueByAliases(row, ['Vehicle','vehicle','Reg No','Reg Number','Registration','registration'])).toUpperCase();
-    const driver = str(valueByAliases(row, ['Driver','driver','Driver Name','driverName','Operator']));
-    const erNumber = str(valueByAliases(row, ['ER Number','erNumber','ER No','er no','Request Number']));
-    const department = str(valueByAliases(row, ['Department','department']));
-    const costCenter = str(valueByAliases(row, ['Cost Center','costCenter','Cost Centre']));
-    const liters = num(valueByAliases(row, ['Liters','liters','Litres','litres']));
-    const km = num(valueByAliases(row, ['KM Traveled','kmTraveled','KM Travelled','km']));
-    const grandTotal = num(valueByAliases(row, ['Grand Total','grandTotal','Fuel Total','fuelTotal','Amount','amount','Swiped Amount','swipeAmount','Approved Amount','approvedAmount','BCY Total','bcy total','Bcy Total']));
-    const approvedAmount = kind === 'approval' ? grandTotal : num(valueByAliases(row, ['Approved Amount','approvedAmount','BCY Total','bcy total','Bcy Total']));
-    const swipeAmount = kind === 'swipe' ? grandTotal : num(valueByAliases(row, ['Swiped Amount','swipeAmount','Grand Total','grandTotal','Fuel Total','fuelTotal','Amount','amount']));
-    return { raw: row, date, dateText: date ? dateKey(date) : str(valueByAliases(row, ['Date','date','Timestamp','timestamp'])), vehicle, driver, erNumber, department, costCenter, liters, km, grandTotal, approvedAmount, swipeAmount };
-  }
-
-  function buildPeriodAwareIndex(rows, amountField) {
-    const index = new Map();
-    rows.forEach((r, idx) => {
-      const add = (k) => {
-        if (!k) return;
-        if (!index.has(k)) index.set(k, []);
-        index.get(k).push({ idx, row: r, amount: num(r[amountField] || r.grandTotal || 0) });
-      };
-      const d = r.date ? dateKey(r.date) : '';
-      add(r.erNumber ? `ER:${r.erNumber}` : '');
-      add(r.vehicle && d ? `VD:${r.vehicle}|${d}` : '');
-      add(r.driver && d ? `DD:${r.driver.toUpperCase()}|${d}` : '');
-      add(r.vehicle ? `V:${r.vehicle}` : '');
-      add(r.driver ? `D:${r.driver.toUpperCase()}` : '');
-    });
-    return index;
-  }
-
-  function matchFromIndex(index, approval) {
-    const d = approval.date ? dateKey(approval.date) : '';
-    const keys = [
-      approval.erNumber ? `ER:${approval.erNumber}` : '',
-      approval.vehicle && d ? `VD:${approval.vehicle}|${d}` : '',
-      approval.driver && d ? `DD:${approval.driver.toUpperCase()}|${d}` : '',
-      approval.vehicle ? `V:${approval.vehicle}` : '',
-      approval.driver ? `D:${approval.driver.toUpperCase()}` : ''
-    ].filter(Boolean);
-    for (const key of keys) {
-      const list = index.get(key) || [];
-      if (list.length) {
-        const hit = list.shift();
-        return { hit: hit.row, matchedBy: key.split(':')[0] };
-      }
-    }
-    return { hit: null, matchedBy: '' };
-  }
-
-  function buildComparisonRows() {
-    const approvals = state.approvals.map(r => normalizePartyRow(r, 'approval'));
-    const fuelRows = state.fuelLog.map(r => normalizePartyRow(r, 'fuel'));
-    const swipeRows = state.swipes.map(r => normalizePartyRow(r, 'swipe'));
-
-    const fuelIndex = buildPeriodAwareIndex(fuelRows, 'grandTotal');
-    const swipeIndex = buildPeriodAwareIndex(swipeRows, 'grandTotal');
-    const rows = approvals.map((a, idx) => {
-      const fuelMatch = matchFromIndex(fuelIndex, a);
-      const swipeMatch = matchFromIndex(swipeIndex, a);
-      const fuelAmount = fuelMatch.hit ? num(fuelMatch.hit.grandTotal || fuelMatch.hit.swipeAmount) : 0;
-      const swipeAmount = swipeMatch.hit ? num(swipeMatch.hit.grandTotal || swipeMatch.hit.swipeAmount) : 0;
-      const approvedAmount = num(a.approvedAmount || a.grandTotal);
-      return {
-        id: idx + 1,
-        date: a.date,
-        dateText: a.dateText,
-        periodDay: periodKey(a.date, 'day'),
-        driver: a.driver || (fuelMatch.hit ? fuelMatch.hit.driver : '') || (swipeMatch.hit ? swipeMatch.hit.driver : ''),
-        vehicle: a.vehicle || (fuelMatch.hit ? fuelMatch.hit.vehicle : '') || (swipeMatch.hit ? swipeMatch.hit.vehicle : ''),
-        erNumber: a.erNumber || (fuelMatch.hit ? fuelMatch.hit.erNumber : '') || (swipeMatch.hit ? swipeMatch.hit.erNumber : ''),
-        department: a.department || (fuelMatch.hit ? fuelMatch.hit.department : '') || (swipeMatch.hit ? swipeMatch.hit.department : ''),
-        costCenter: a.costCenter || (fuelMatch.hit ? fuelMatch.hit.costCenter : '') || (swipeMatch.hit ? swipeMatch.hit.costCenter : ''),
-        erAmount: approvedAmount,
-        fuelLogAmount: fuelAmount,
-        swipeAmount: swipeAmount,
-        fuelVariance: fuelAmount - approvedAmount,
-        swipeVariance: swipeAmount - approvedAmount,
-        matchedBy: [fuelMatch.matchedBy ? `Fuel:${fuelMatch.matchedBy}` : '', swipeMatch.matchedBy ? `Bank:${swipeMatch.matchedBy}` : ''].filter(Boolean).join(' | ') || 'Unmatched'
-      };
-    });
-    state.comparisonRows = rows;
-  }
-
-
-  function approvalMap() {
-    const map = new Map();
-    state.approvals.forEach(r => {
-      const er = str(r['ER Number'] || r.erNumber);
-      const veh = str(r['Vehicle'] || r.vehicle).toUpperCase();
-      const date = toDate(r['Date'] || r.date);
-      const cc = str(r['Cost Center'] || r.costCenter);
-      const dep = str(r['Department'] || r.department);
-      const drv = str(r['Driver'] || r.driver);
-      const approved = num(r['Approved Amount'] || r.approvedAmount);
-      const baseKeys = [];
-      if (er && er !== '0') baseKeys.push(`ER:${er}`);
-      if (veh && date) baseKeys.push(`VD:${veh}|${dateKey(date)}`);
-      if (veh) baseKeys.push(`V:${veh}`);
-      if (drv && date) baseKeys.push(`DD:${drv.toUpperCase()}|${dateKey(date)}`);
-      baseKeys.forEach(k => {
-        if (!map.has(k)) map.set(k, []);
-        map.get(k).push({ er, veh, date, cc, dep, drv, approved });
-      });
-    });
-    return map;
-  }
-
-  function buildReconRows() {
-    const map = approvalMap();
-    const tolerance = num($('thresholdVariance').value) || 5;
-    const rows = state.swipes.map((r, idx) => {
-      const date = toDate(r['Date'] || r.date);
-      const er = str(r['ER Number'] || r.erNumber);
-      const vehicle = str(r['Vehicle'] || r.vehicle).toUpperCase();
-      const driver = str(r['Driver'] || r.driver);
-      const swipeAmount = num(r['Swiped Amount'] || r.swipeAmount || r['Grand Total'] || r.grandTotal || r['Fuel Total'] || r.fuelTotal);
-      const liters = num(r['Liters'] || r.liters);
-      const merchant = str(r['Merchant'] || r.merchant);
-      const cc = str(r['Cost Center'] || r.costCenter);
-      const dep = str(r['Department'] || r.department);
-      let candidates = [];
-      if (er && map.has(`ER:${er}`)) candidates = map.get(`ER:${er}`);
-      else if (vehicle && date && map.has(`VD:${vehicle}|${dateKey(date)}`)) candidates = map.get(`VD:${vehicle}|${dateKey(date)}`);
-      else if (vehicle && map.has(`V:${vehicle}`)) candidates = map.get(`V:${vehicle}`);
-      else if (driver && date && map.has(`DD:${driver.toUpperCase()}|${dateKey(date)}`)) candidates = map.get(`DD:${driver.toUpperCase()}|${dateKey(date)}`);
-      const match = candidates.length ? candidates[0] : null;
-      const approvedAmount = match ? num(match.approved) : 0;
-      const variance = swipeAmount - approvedAmount;
-      const authorised = !!match || !!(er && er !== '0');
-      const issue = !authorised ? 'Unauthorised swipe' : Math.abs(variance) > tolerance ? 'Variance exceeds tolerance' : '';
-      return {
-        id: idx + 1,
-        date,
-        dateText: date ? dateKey(date) : str(r['Date'] || r.date),
-        driver: driver || (match ? match.drv : ''),
-        vehicle: vehicle || (match ? match.veh : ''),
-        erNumber: er || (match ? match.er : '0'),
-        department: dep || (match ? match.dep : ''),
-        costCenter: cc || (match ? match.cc : ''),
-        approvedAmount,
-        swipeAmount,
-        litres: liters,
-        merchant,
-        authorised,
-        variance,
-        issue,
-        source: 'Swipe Upload'
-      };
-    });
-    state.reconRows = rows;
-  }
-
-  function buildAlarms() {
-    const alarms = [];
-    const kmplThreshold = num($('thresholdKmpl').value) || 4.5;
-    const frequentCount = num($('thresholdFrequentCount').value) || 3;
-    const frequentDays = num($('thresholdFrequentDays').value) || 7;
-    const sourceRows = [...state.fuelLog].map(r => {
-      const date = toDate(r['Date'] || r.date || r['Timestamp'] || r.timestamp);
-      const liters = num(r['Liters'] || r.liters);
-      const grandTotal = num(r['Grand Total'] || r.grandTotal || r['Fuel Total'] || r.fuelTotal);
-      const km = num(r['KM Traveled'] || r.kmTraveled);
-      const kmpl = num(r['KM/Liter'] || r.kmPerLiter || (km && liters ? km / liters : 0));
-      return {
-        date,
-        dateText: date ? dateKey(date) : '',
-        driver: str(r['Driver'] || r.driver),
-        vehicle: str(r['Vehicle'] || r.vehicle).toUpperCase(),
-        department: str(r['Department'] || r.department),
-        costCenter: str(r['Cost Center'] || r.costCenter),
-        liters,
-        grandTotal,
-        km,
-        kmpl
-      };
-    }).filter(r => r.date || r.driver || r.vehicle);
-
-    sourceRows.forEach(r => {
-      if (r.kmpl && r.kmpl < kmplThreshold) {
-        alarms.push({ ...r, alarm: 'Low fuel efficiency', detail: `KM/L ${r.kmpl.toFixed(2)} below threshold ${kmplThreshold}` });
-      }
-    });
-
-    const byDriverVehicle = new Map();
-    sourceRows.forEach(r => {
-      const key = `${r.driver}|${r.vehicle}`;
-      if (!byDriverVehicle.has(key)) byDriverVehicle.set(key, []);
-      byDriverVehicle.get(key).push(r);
-    });
-
-    byDriverVehicle.forEach(list => {
-      list.sort((a,b) => (a.date || 0) - (b.date || 0));
-      for (let i = 0; i < list.length; i++) {
-        const pivot = list[i];
-        if (!pivot.date) continue;
-        const cutoff = new Date(pivot.date);
-        cutoff.setDate(cutoff.getDate() + frequentDays);
-        const windowRows = list.filter(x => x.date && x.date >= pivot.date && x.date <= cutoff);
-        if (windowRows.length >= frequentCount) {
-          alarms.push({ ...pivot, alarm: 'Frequent filling', detail: `${windowRows.length} fills within ${frequentDays} days` });
-          break;
-        }
-      }
-    });
-
-    state.alarms = alarms;
-  }
-
-  function passesFilters(row) {
-    const dep = $('filterDepartment').value;
-    const cc = $('filterCostCenter').value;
-    const drv = $('filterDriver').value;
-    const unauthOnly = $('showUnauthorisedOnly').checked;
-    const search = $('searchText').value.trim().toLowerCase();
-    if (dep !== 'all' && str(row.department) !== dep) return false;
-    if (cc !== 'all' && str(row.costCenter) !== cc) return false;
-    if (drv !== 'all' && str(row.driver) !== drv) return false;
-    if (unauthOnly && row.authorised) return false;
-    if (search) {
-      const hay = [row.dateText, row.driver, row.vehicle, row.erNumber, row.department, row.costCenter, row.merchant, row.issue].join(' ').toLowerCase();
-      if (!hay.includes(search)) return false;
-    }
+  function inSelectedRange(date) {
+    const start = $('startDate').value ? new Date($('startDate').value + 'T00:00:00') : null;
+    const end = $('endDate').value ? new Date($('endDate').value + 'T23:59:59') : null;
+    if (!date) return true;
+    if (start && date < start) return false;
+    if (end && date > end) return false;
     return true;
   }
 
-  function filteredRecon() {
-    return state.reconRows.filter(passesFilters);
+  function normaliseServerRows(rows, kind) {
+    return (rows || []).map(r => ({
+      date: r.date || r.Date || r['Transaction Date'] || '',
+      erNumber: str(r.erNumber || r['ER Number'] || r['ER No'] || ''),
+      approvedAmount: num(r.approvedAmount || r['Approved Amount'] || r['BCY Total'] || 0),
+      swipeAmount: num(r.swipeAmount || r['Swiped Amount'] || r['Amount'] || r['Grand Total'] || 0),
+      fuelTotal: num(r.fuelTotal || r['Fuel Total'] || r['Grand Total'] || r['Amount'] || 0),
+      liters: num(r.liters || r['Liters'] || r['Litres'] || 0),
+      vehicle: str(r.vehicle || r['Vehicle'] || r['Vehicle Reg'] || r['Reg No'] || ''),
+      driver: str(r.driver || r['Driver'] || r['Driver Name'] || ''),
+      department: str(r.department || r['Department'] || ''),
+      costCenter: str(r.costCenter || r['Cost Center'] || r['Cost Centre'] || ''),
+      merchant: str(r.merchant || r['Merchant'] || ''),
+      kmTraveled: num(r.kmTraveled || r['KM Traveled'] || r['KM Travelled'] || r['KM'] || 0),
+      kmPerLiter: num(r.kmPerLiter || r['KM/Liter'] || r['KM/Litre'] || 0),
+      timestamp: str(r.timestamp || r['Timestamp'] || ''),
+      sourceKind: kind
+    }));
   }
 
-  function filteredFuelLog() {
-    const dep = $('filterDepartment').value;
-    const cc = $('filterCostCenter').value;
-    const drv = $('filterDriver').value;
-    const search = $('searchText').value.trim().toLowerCase();
-    return state.fuelLog.filter(r => {
-      const row = normalizePartyRow(r, 'fuel');
-      if (dep !== 'all' && row.department !== dep) return false;
-      if (cc !== 'all' && row.costCenter !== cc) return false;
-      if (drv !== 'all' && row.driver !== drv) return false;
-      if (search && ![row.department,row.costCenter,row.driver,row.dateText,row.vehicle,row.erNumber].join(' ').toLowerCase().includes(search)) return false;
-      return true;
+  function isAppsScriptHost() {
+    return typeof google !== 'undefined' && google.script && google.script.run;
+  }
+
+  function runServer(method, payload = {}) {
+    return new Promise((resolve, reject) => {
+      if (isAppsScriptHost()) {
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(err => reject(new Error(err && err.message ? err.message : String(err))))
+          [method](payload);
+        return;
+      }
+      if (!CONFIG.APP_SCRIPT_URL) {
+        reject(new Error('Set CONFIG.APP_SCRIPT_URL or host this file inside Google Apps Script.'));
+        return;
+      }
+      const action = payload.action || method;
+      const options = action === 'getDashboardData' || action === 'test'
+        ? { method: 'GET' }
+        : { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action, ...payload }) };
+      const url = action === 'getDashboardData'
+        ? `${CONFIG.APP_SCRIPT_URL}?action=getDashboardData&startDate=${encodeURIComponent(payload.startDate || '')}&endDate=${encodeURIComponent(payload.endDate || '')}`
+        : action === 'test'
+          ? `${CONFIG.APP_SCRIPT_URL}?action=test`
+          : CONFIG.APP_SCRIPT_URL;
+      fetch(url, options)
+        .then(r => r.json())
+        .then(resolve)
+        .catch(reject);
     });
-  }
-
-  function filteredComparisonRows() {
-    const dep = $('filterDepartment').value;
-    const cc = $('filterCostCenter').value;
-    const drv = $('filterDriver').value;
-    const search = $('searchText').value.trim().toLowerCase();
-    return state.comparisonRows.filter(r => {
-      if (dep !== 'all' && str(r.department) !== dep) return false;
-      if (cc !== 'all' && str(r.costCenter) !== cc) return false;
-      if (drv !== 'all' && str(r.driver) !== drv) return false;
-      const hay = [r.dateText, r.driver, r.vehicle, r.erNumber, r.department, r.costCenter, r.matchedBy].join(' ').toLowerCase();
-      if (search && !hay.includes(search)) return false;
-      return true;
-    });
-  }
-
-  function aggregateReconByPeriod(rows, mode) {
-    const agg = new Map();
-    rows.forEach(r => {
-      const key = periodKey(r.date, mode);
-      if (!agg.has(key)) agg.set(key, { period: key, authorisedCount:0, unauthorisedCount:0, approved:0, swiped:0, variance:0 });
-      const o = agg.get(key);
-      if (r.authorised) o.authorisedCount += 1; else o.unauthorisedCount += 1;
-      o.approved += r.approvedAmount;
-      o.swiped += r.swipeAmount;
-      o.variance += r.variance;
-    });
-    return Array.from(agg.values()).sort((a,b) => a.period.localeCompare(b.period));
-  }
-
-  function aggregateReconByGroup(rows, groupField) {
-    const agg = new Map();
-    rows.forEach(r => {
-      const key = str(r[groupField]) || 'Unassigned';
-      if (!agg.has(key)) agg.set(key, { group:key, approved:0, swiped:0, unauthorised:0, variance:0 });
-      const o = agg.get(key);
-      o.approved += r.approvedAmount;
-      o.swiped += r.swipeAmount;
-      if (!r.authorised) o.unauthorised += r.swipeAmount;
-      o.variance += r.variance;
-    });
-    return Array.from(agg.values()).sort((a,b) => b.swiped - a.swiped);
-  }
-
-  function aggregateFuelLog(rows, mode) {
-    const agg = new Map();
-    rows.forEach(r => {
-      const x = normalizePartyRow(r, 'fuel');
-      const key = periodKey(x.date, mode);
-      if (!agg.has(key)) agg.set(key, { period:key, transactions:0, grandTotal:0, km:0, liters:0 });
-      const o = agg.get(key);
-      o.transactions += 1;
-      o.grandTotal += num(x.grandTotal);
-      o.km += num(x.km);
-      o.liters += num(x.liters);
-    });
-    return Array.from(agg.values()).sort((a,b) => a.period.localeCompare(b.period));
-  }
-
-  function aggregateComparisonByGroup(rows, groupField) {
-    const agg = new Map();
-    rows.forEach(r => {
-      const key = str(r[groupField]) || 'Unassigned';
-      if (!agg.has(key)) agg.set(key, { group:key, erAmount:0, fuelLogAmount:0, swipeAmount:0, fuelVariance:0, swipeVariance:0 });
-      const o = agg.get(key);
-      o.erAmount += num(r.erAmount);
-      o.fuelLogAmount += num(r.fuelLogAmount);
-      o.swipeAmount += num(r.swipeAmount);
-      o.fuelVariance += num(r.fuelVariance);
-      o.swipeVariance += num(r.swipeVariance);
-    });
-    return Array.from(agg.values()).sort((a,b) => (b.erAmount + b.fuelLogAmount + b.swipeAmount) - (a.erAmount + a.fuelLogAmount + a.swipeAmount));
-  }
-
-  function updateKpis(rows) {
-    const authorisedRows = rows.filter(r => r.authorised);
-    const unauthorisedRows = rows.filter(r => !r.authorised);
-    $('kpiAuthorisedCount').textContent = authorisedRows.length.toLocaleString();
-    $('kpiUnauthorisedCount').textContent = unauthorisedRows.length.toLocaleString();
-    $('kpiAuthorisedValue').textContent = fmt(authorisedRows.reduce((s,r) => s + r.swipeAmount, 0));
-    $('kpiUnauthorisedValue').textContent = fmt(unauthorisedRows.reduce((s,r) => s + r.swipeAmount, 0));
-    $('kpiVarianceTotal').textContent = fmt(rows.reduce((s,r) => s + r.variance, 0));
-    $('kpiAlarmCount').textContent = state.alarms.length.toLocaleString();
-  }
-
-  function renderCharts(periodData, groupData) {
-    if (state.charts.period) state.charts.period.destroy();
-    if (state.charts.group) state.charts.group.destroy();
-    state.charts.period = new Chart($('periodChart'), {
-      type: 'bar',
-      data: {
-        labels: periodData.map(x => x.period),
-        datasets: [
-          { label: 'Authorised', data: periodData.map(x => x.authorisedCount) },
-          { label: 'Unauthorised', data: periodData.map(x => x.unauthorisedCount) }
-        ]
-      },
-      options: { responsive:true, maintainAspectRatio:false }
-    });
-    state.charts.group = new Chart($('groupChart'), {
-      type: 'bar',
-      data: {
-        labels: groupData.slice(0,10).map(x => x.group),
-        datasets: [
-          { label: 'Swiped Value', data: groupData.slice(0,10).map(x => x.swiped) }
-        ]
-      },
-      options: { indexAxis:'y', responsive:true, maintainAspectRatio:false }
-    });
-  }
-
-  function renderTables() {
-    const recon = filteredRecon();
-    const comparisonRows = filteredComparisonRows();
-    const periodMode = $('periodMode').value;
-    const groupField = $('groupMode').value;
-    const periodData = aggregateReconByPeriod(recon, periodMode);
-    const groupData = aggregateReconByGroup(recon, groupField);
-    const fuelLogRows = filteredFuelLog();
-    const fuelLogAgg = aggregateFuelLog(fuelLogRows, periodMode);
-    const comparisonSummary = aggregateComparisonByGroup(comparisonRows, groupField);
-
-    updateKpis(recon);
-    renderCharts(periodData, groupData);
-
-    $('groupTotalsBody').innerHTML = groupData.length ? groupData.map(r => `
-      <tr>
-        <td>${r.group}</td>
-        <td class="text-end mono">${fmt(r.approved)}</td>
-        <td class="text-end mono">${fmt(r.swiped)}</td>
-        <td class="text-end mono">${fmt(r.unauthorised)}</td>
-        <td class="text-end mono ${r.variance >= 0 ? 'text-success' : 'text-danger'}">${fmt(r.variance)}</td>
-      </tr>`).join('') : '<tr><td colspan="5" class="text-center">No grouped rows</td></tr>';
-
-    $('periodTotalsBody').innerHTML = periodData.length ? periodData.map(r => `
-      <tr>
-        <td>${r.period}</td>
-        <td class="text-end mono">${r.authorisedCount}</td>
-        <td class="text-end mono">${r.unauthorisedCount}</td>
-        <td class="text-end mono">${fmt(r.approved)}</td>
-        <td class="text-end mono">${fmt(r.swiped)}</td>
-        <td class="text-end mono ${r.variance >= 0 ? 'text-success' : 'text-danger'}">${fmt(r.variance)}</td>
-      </tr>`).join('') : '<tr><td colspan="6" class="text-center">No period rows</td></tr>';
-
-    $('reconBody').innerHTML = recon.length ? recon.map(r => `
-      <tr>
-        <td>${r.dateText}</td>
-        <td>${r.driver || ''}</td>
-        <td>${r.vehicle || ''}</td>
-        <td>${r.erNumber || '0'}</td>
-        <td>${r.department || ''}</td>
-        <td>${r.costCenter || ''}</td>
-        <td class="text-end mono">${fmt(r.approvedAmount)}</td>
-        <td class="text-end mono">${fmt(r.swipeAmount)}</td>
-        <td class="text-end mono">${r.litres.toFixed(2)}</td>
-        <td class="text-end mono ${r.variance >= 0 ? 'text-success' : 'text-danger'}">${fmt(r.variance)}</td>
-        <td>${r.authorised ? '<span class="badge-soft bg-soft-success">Authorised</span>' : '<span class="badge-soft bg-soft-warning">Unauthorised</span>'}</td>
-      </tr>`).join('') : '<tr><td colspan="11" class="text-center">No reconciled swipes found</td></tr>';
-
-    const exceptions = recon.filter(r => !r.authorised || r.issue);
-    $('exceptionsBody').innerHTML = exceptions.length ? exceptions.map(r => `
-      <tr>
-        <td>${r.dateText}</td>
-        <td>${r.driver || ''}</td>
-        <td>${r.vehicle || ''}</td>
-        <td>${!r.authorised ? '<span class="badge-soft bg-soft-warning">Unauthorised</span>' : '<span class="badge-soft bg-soft-danger">' + r.issue + '</span>'}</td>
-      </tr>`).join('') : '<tr><td colspan="4" class="text-center">No exceptions</td></tr>';
-
-    $('comparisonBody').innerHTML = comparisonRows.length ? comparisonRows.map(r => `
-      <tr>
-        <td>${periodKey(r.date, periodMode)}</td>
-        <td>${r.dateText || ''}</td>
-        <td>${r.driver || ''}</td>
-        <td>${r.vehicle || ''}</td>
-        <td>${r.erNumber || ''}</td>
-        <td>${r.department || ''}</td>
-        <td>${r.costCenter || ''}</td>
-        <td class="text-end mono">${fmt(r.erAmount)}</td>
-        <td class="text-end mono">${fmt(r.fuelLogAmount)}</td>
-        <td class="text-end mono">${fmt(r.swipeAmount)}</td>
-        <td class="text-end mono ${r.fuelVariance >= 0 ? 'text-success' : 'text-danger'}">${fmt(r.fuelVariance)}</td>
-        <td class="text-end mono ${r.swipeVariance >= 0 ? 'text-success' : 'text-danger'}">${fmt(r.swipeVariance)}</td>
-        <td>${r.matchedBy}</td>
-      </tr>`).join('') : '<tr><td colspan="13" class="text-center">No comparison rows</td></tr>';
-
-    $('comparisonSummaryBody').innerHTML = comparisonSummary.length ? comparisonSummary.map(r => `
-      <tr>
-        <td>${r.group}</td>
-        <td class="text-end mono">${fmt(r.erAmount)}</td>
-        <td class="text-end mono">${fmt(r.fuelLogAmount)}</td>
-        <td class="text-end mono">${fmt(r.swipeAmount)}</td>
-        <td class="text-end mono ${r.fuelVariance >= 0 ? 'text-success' : 'text-danger'}">${fmt(r.fuelVariance)}</td>
-        <td class="text-end mono ${r.swipeVariance >= 0 ? 'text-success' : 'text-danger'}">${fmt(r.swipeVariance)}</td>
-      </tr>`).join('') : '<tr><td colspan="6" class="text-center">No comparison summary</td></tr>';
-
-    $('fuelLogBody').innerHTML = fuelLogRows.length ? fuelLogRows.map(r => {
-      const x = normalizePartyRow(r, 'fuel');
-      return `
-      <tr>
-        <td>${x.dateText}</td>
-        <td>${x.driver}</td>
-        <td>${x.vehicle}</td>
-        <td>${x.department}</td>
-        <td>${x.costCenter}</td>
-        <td class="text-end mono">${fmt(x.grandTotal)}</td>
-        <td class="text-end mono">${num(x.km).toFixed(2)}</td>
-        <td class="text-end mono">${(x.liters ? num((x.km || 0) / x.liters) : num(valueByAliases(r, ['KM/Liter','kmPerLiter']))).toFixed(2)}</td>
-      </tr>`;
-    }).join('') : '<tr><td colspan="8" class="text-center">No Fuel Log transactions</td></tr>';
-
-    $('fuelLogTotalsBody').innerHTML = fuelLogAgg.length ? fuelLogAgg.map(r => `
-      <tr>
-        <td>${r.period}</td>
-        <td class="text-end mono">${r.transactions}</td>
-        <td class="text-end mono">${fmt(r.grandTotal)}</td>
-        <td class="text-end mono">${r.km.toFixed(2)}</td>
-        <td class="text-end mono">${r.liters.toFixed(2)}</td>
-      </tr>`).join('') : '<tr><td colspan="5" class="text-center">No Fuel Log totals</td></tr>';
-
-    $('alarmsBody').innerHTML = state.alarms.length ? state.alarms.map(r => `
-      <tr>
-        <td>${r.dateText || ''}</td>
-        <td>${r.driver || ''}</td>
-        <td>${r.vehicle || ''}</td>
-        <td>${r.department || ''}</td>
-        <td>${r.costCenter || ''}</td>
-        <td><span class="badge-soft ${r.alarm === 'Low fuel efficiency' ? 'bg-soft-danger' : 'bg-soft-info'}">${r.alarm}</span></td>
-        <td>${r.detail}</td>
-      </tr>`).join('') : '<tr><td colspan="7" class="text-center">No alarms</td></tr>';
-
-    $('uploadsBody').innerHTML = state.uploads.length ? state.uploads.map(r => `
-      <tr>
-        <td>${str(r['Timestamp'])}</td>
-        <td>${str(r['Kind'])}</td>
-        <td>${str(r['Original File Name'])}</td>
-        <td class="text-end mono">${num(r['Row Count']).toLocaleString()}</td>
-      </tr>`).join('') : '<tr><td colspan="4" class="text-center">No uploads logged yet</td></tr>';
-  }
-
-  function refreshFilters() {
-    const reconAndFuel = [
-      ...state.reconRows.map(r => ({ department:r.department, costCenter:r.costCenter, driver:r.driver })),
-      ...state.fuelLog.map(r => {
-        const x = normalizePartyRow(r, 'fuel');
-        return { department:x.department, costCenter:x.costCenter, driver:x.driver };
-      }),
-      ...state.comparisonRows.map(r => ({ department:r.department, costCenter:r.costCenter, driver:r.driver }))
-    ];
-    populateSelect('filterDepartment', reconAndFuel.map(r => r.department));
-    populateSelect('filterCostCenter', reconAndFuel.map(r => r.costCenter));
-    populateSelect('filterDriver', reconAndFuel.map(r => r.driver));
-  }
-
-  async function loadDashboardData() {
-    const result = await apiGet('getDashboardData');
-    if (!result.success) throw new Error(result.error || 'Failed to load dashboard data');
-    state.approvals = result.approvals || [];
-    state.swipes = result.swipes || [];
-    state.fuelLog = result.fuelLog || [];
-    state.uploads = result.uploads || [];
-    buildReconRows();
-    buildComparisonRows();
-    buildAlarms();
-    refreshFilters();
-    renderTables();
   }
 
   async function testConnection() {
-    if (!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec/.test(CONFIG.GAS_URL)) {
-      setStatus('status-bad', '<i class="fas fa-triangle-exclamation"></i>Paste your deployed Apps Script URL in the HTML file');
-      return;
-    }
     try {
-      const result = await apiGet('test');
+      const result = await runServer('apiGet', { action: 'test' });
       if (!result.success) throw new Error(result.error || 'Connection failed');
-      setStatus('status-ok', '<i class="fas fa-check-circle"></i>Apps Script connected');
+      status('status-ok', '<i class="fas fa-check-circle"></i>Connected to FuelRecon and Fuel Log sheets');
     } catch (err) {
-      setStatus('status-bad', `<i class="fas fa-triangle-exclamation"></i>${err.message}`);
+      status('status-bad', `<i class="fas fa-triangle-exclamation"></i>${html(err.message)}`);
     }
   }
 
-  async function uploadIfSelected(fileInputId, kind) {
-    const input = $(fileInputId);
-    const file = input.files[0];
-    if (!file) return 0;
-    const rows = await parseSpreadsheetFile(file, kind);
-    const base64 = await fileToBase64(file);
-    const result = await apiPost({ action:'uploadSourceFile', kind, fileName:file.name, mimeType:file.type || 'application/octet-stream', base64, rows });
-    if (!result.success) throw new Error(result.error || `Upload failed for ${kind}`);
-    return rows.length;
+  function keyByER(er) { return er ? `ER:${norm(er)}` : ''; }
+  function keyByVehicle(vehicle) { return vehicle ? `VEH:${norm(vehicle)}` : ''; }
+  function keyByDriver(driver) { return driver ? `DRV:${norm(driver)}` : ''; }
+
+  function buildSumIndexes(rows, amountField) {
+    const byER = new Map();
+    const byVehicle = new Map();
+    const byDriver = new Map();
+
+    rows.forEach(row => {
+      const amount = num(row[amountField]);
+      const date = toDate(row.date);
+      if (!inSelectedRange(date)) return;
+      const erKey = keyByER(row.erNumber);
+      const vehKey = keyByVehicle(row.vehicle);
+      const drvKey = keyByDriver(row.driver);
+
+      if (erKey) byER.set(erKey, (byER.get(erKey) || 0) + amount);
+      if (vehKey) byVehicle.set(vehKey, (byVehicle.get(vehKey) || 0) + amount);
+      if (drvKey) byDriver.set(drvKey, (byDriver.get(drvKey) || 0) + amount);
+    });
+
+    return { byER, byVehicle, byDriver };
   }
 
-  async function analyse() {
-    if (!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec/.test(CONFIG.GAS_URL)) {
-      alert('Paste your deployed Apps Script URL into CONFIG.GAS_URL inside this HTML file first.');
-      return;
-    }
-    const btn = $('analyseBtn');
-    const original = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Analysing...';
-    try {
-      await uploadIfSelected('approvalFile', 'approvals');
-      await uploadIfSelected('swipeFile', 'swipes');
-      await loadDashboardData();
-      setStatus('status-ok', '<i class="fas fa-check-circle"></i>Analysis complete');
-    } catch (err) {
-      console.error(err);
-      setStatus('status-bad', `<i class="fas fa-triangle-exclamation"></i>${err.message}`);
-      alert(err.message);
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = original;
-    }
+  function resolveAmount(indexes, row) {
+    const erKey = keyByER(row.erNumber);
+    const vehKey = keyByVehicle(row.vehicle);
+    const drvKey = keyByDriver(row.driver);
+
+    if (erKey && indexes.byER.has(erKey)) return { amount: indexes.byER.get(erKey), matchedBy: 'ER No' };
+    if (vehKey && indexes.byVehicle.has(vehKey)) return { amount: indexes.byVehicle.get(vehKey), matchedBy: 'Vehicle' };
+    if (drvKey && indexes.byDriver.has(drvKey)) return { amount: indexes.byDriver.get(drvKey), matchedBy: 'Driver' };
+    return { amount: 0, matchedBy: 'No match' };
   }
 
-  function wireFileMeta(inputId, metaId) {
-    $(inputId).addEventListener('change', () => {
-      const file = $(inputId).files[0];
-      $(metaId).textContent = file ? `${file.name} · ${(file.size/1024).toFixed(1)} KB` : 'No file selected';
+  function buildComparisonRows() {
+    const bankIndexes = buildSumIndexes(state.bankSwipes, 'swipeAmount');
+    const fuelIndexes = buildSumIndexes(state.fuelLog, 'fuelTotal');
+
+    const approvalRows = state.approvals
+      .filter(r => inSelectedRange(toDate(r.date)))
+      .map((approval, idx) => {
+        const bankResolved = resolveAmount(bankIndexes, approval);
+        const fuelResolved = resolveAmount(fuelIndexes, approval);
+        const bankVariance = bankResolved.amount - num(approval.approvedAmount);
+        const fuelVariance = fuelResolved.amount - num(approval.approvedAmount);
+
+        return {
+          id: idx + 1,
+          date: toDate(approval.date),
+          dateText: dateKey(toDate(approval.date)) || str(approval.date),
+          driver: approval.driver,
+          vehicle: approval.vehicle,
+          erNumber: approval.erNumber,
+          department: approval.department,
+          costCenter: approval.costCenter,
+          approvedAmount: num(approval.approvedAmount),
+          bankAmount: bankResolved.amount,
+          fuelLogAmount: fuelResolved.amount,
+          bankVariance,
+          fuelVariance,
+          matchedBy: bankResolved.matchedBy === 'ER No' || fuelResolved.matchedBy === 'ER No'
+            ? 'ER No'
+            : bankResolved.matchedBy === 'Vehicle' || fuelResolved.matchedBy === 'Vehicle'
+              ? 'Vehicle'
+              : bankResolved.matchedBy === 'Driver' || fuelResolved.matchedBy === 'Driver'
+                ? 'Driver'
+                : 'No match',
+          hasBankMatch: bankResolved.amount > 0,
+          hasFuelMatch: fuelResolved.amount > 0
+        };
+      });
+
+    const approvalIndexER = new Set(approvalRows.map(r => keyByER(r.erNumber)).filter(Boolean));
+    const approvalIndexVehicle = new Set(approvalRows.map(r => keyByVehicle(r.vehicle)).filter(Boolean));
+    const approvalIndexDriver = new Set(approvalRows.map(r => keyByDriver(r.driver)).filter(Boolean));
+
+    const unauthorisedRows = state.bankSwipes
+      .filter(r => inSelectedRange(toDate(r.date)))
+      .map((row, idx) => {
+        const erKey = keyByER(row.erNumber);
+        const vehKey = keyByVehicle(row.vehicle);
+        const drvKey = keyByDriver(row.driver);
+        const matched = (erKey && approvalIndexER.has(erKey)) || (vehKey && approvalIndexVehicle.has(vehKey)) || (drvKey && approvalIndexDriver.has(drvKey));
+        return {
+          id: idx + 1,
+          dateText: dateKey(toDate(row.date)) || str(row.date),
+          driver: row.driver,
+          vehicle: row.vehicle,
+          erNumber: row.erNumber,
+          department: row.department,
+          costCenter: row.costCenter,
+          amount: num(row.swipeAmount),
+          matched,
+          reason: erKey ? 'ER not found in Zoho approvals' : vehKey ? 'Vehicle not found in approvals for period' : 'Driver not found in approvals for period'
+        };
+      })
+      .filter(r => !r.matched);
+
+    state.comparisonRows = approvalRows;
+    state.unauthorisedRows = unauthorisedRows;
+  }
+
+  function passesCommonFilters(row) {
+    const vehicle = $('filterVehicle').value;
+    const driver = $('filterDriver').value;
+    const department = $('filterDepartment').value;
+    const costCenter = $('filterCostCenter').value;
+    const onlyUnauthorised = $('showUnauthorisedOnly').checked;
+    const search = str($('searchText').value).toLowerCase();
+    const hay = [row.dateText, row.vehicle, row.driver, row.department, row.costCenter, row.erNumber].join(' ').toLowerCase();
+
+    if (vehicle !== 'all' && str(row.vehicle) !== vehicle) return false;
+    if (driver !== 'all' && str(row.driver) !== driver) return false;
+    if (department !== 'all' && str(row.department) !== department) return false;
+    if (costCenter !== 'all' && str(row.costCenter) !== costCenter) return false;
+    if (onlyUnauthorised && row.hasBankMatch !== false && row.matched !== false) return false;
+    if (search && !hay.includes(search)) return false;
+    return true;
+  }
+
+  function filteredComparison() {
+    return state.comparisonRows.filter(passesCommonFilters);
+  }
+
+  function filteredFuelLog() {
+    return state.fuelLog.filter(r => {
+      const row = {
+        dateText: dateKey(toDate(r.date)) || str(r.date),
+        vehicle: r.vehicle,
+        driver: r.driver,
+        department: r.department,
+        costCenter: r.costCenter,
+        erNumber: r.erNumber
+      };
+      if (!inSelectedRange(toDate(r.date))) return false;
+      return passesCommonFilters({ ...row, matched: false, hasBankMatch: false });
     });
   }
 
-  $('testConnectionBtn').addEventListener('click', testConnection);
-  $('refreshBtn').addEventListener('click', async () => {
+  function fillSelect(id, values) {
+    const select = $(id);
+    const current = select.value || 'all';
+    const options = ['all', ...Array.from(new Set(values.filter(Boolean).map(str))).sort((a, b) => a.localeCompare(b))];
+    select.innerHTML = options.map(v => `<option value="${html(v)}">${v === 'all' ? 'All' : html(v)}</option>`).join('');
+    if (options.includes(current)) select.value = current;
+  }
+
+  function refreshFilterOptions() {
+    const allRows = [
+      ...state.approvals,
+      ...state.bankSwipes,
+      ...state.fuelLog
+    ].filter(r => inSelectedRange(toDate(r.date)));
+    fillSelect('filterVehicle', allRows.map(r => r.vehicle));
+    fillSelect('filterDriver', allRows.map(r => r.driver));
+    fillSelect('filterDepartment', allRows.map(r => r.department));
+    fillSelect('filterCostCenter', allRows.map(r => r.costCenter));
+  }
+
+  function aggregateComparisonByPeriod(rows, mode) {
+    const map = new Map();
+    rows.forEach(r => {
+      const key = periodKey(r.date, mode);
+      if (!map.has(key)) map.set(key, { period: key, approved: 0, bank: 0, fuel: 0, bankVariance: 0, fuelVariance: 0 });
+      const o = map.get(key);
+      o.approved += r.approvedAmount;
+      o.bank += r.bankAmount;
+      o.fuel += r.fuelLogAmount;
+      o.bankVariance += r.bankVariance;
+      o.fuelVariance += r.fuelVariance;
+    });
+    return Array.from(map.values()).sort((a, b) => a.period.localeCompare(b.period));
+  }
+
+  function aggregateComparisonByGroup(rows, field) {
+    const map = new Map();
+    rows.forEach(r => {
+      const key = str(r[field]) || 'Unassigned';
+      if (!map.has(key)) map.set(key, { group: key, approved: 0, bank: 0, fuel: 0, bankVariance: 0, fuelVariance: 0 });
+      const o = map.get(key);
+      o.approved += r.approvedAmount;
+      o.bank += r.bankAmount;
+      o.fuel += r.fuelLogAmount;
+      o.bankVariance += r.bankVariance;
+      o.fuelVariance += r.fuelVariance;
+    });
+    return Array.from(map.values()).sort((a, b) => b.approved - a.approved);
+  }
+
+  function aggregateFuelLog(rows, mode) {
+    const map = new Map();
+    rows.forEach(r => {
+      const key = periodKey(toDate(r.date), mode);
+      if (!map.has(key)) map.set(key, { period: key, transactions: 0, total: 0, km: 0, liters: 0 });
+      const o = map.get(key);
+      o.transactions += 1;
+      o.total += num(r.fuelTotal);
+      o.km += num(r.kmTraveled);
+      o.liters += num(r.liters);
+    });
+    return Array.from(map.values()).sort((a, b) => a.period.localeCompare(b.period));
+  }
+
+  function renderCharts(periodRows, groupRows) {
+    if (state.charts.period) state.charts.period.destroy();
+    if (state.charts.group) state.charts.group.destroy();
+
+    state.charts.period = new Chart($('periodChart'), {
+      type: 'bar',
+      data: {
+        labels: periodRows.map(r => r.period),
+        datasets: [
+          { label: 'Zoho Approved', data: periodRows.map(r => r.approved) },
+          { label: 'Bank Swiped', data: periodRows.map(r => r.bank) },
+          { label: 'Fuel Log', data: periodRows.map(r => r.fuel) }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    state.charts.group = new Chart($('groupChart'), {
+      type: 'bar',
+      data: {
+        labels: groupRows.slice(0, 10).map(r => r.group),
+        datasets: [
+          { label: 'Zoho Approved', data: groupRows.slice(0, 10).map(r => r.approved) },
+          { label: 'Bank Swiped', data: groupRows.slice(0, 10).map(r => r.bank) },
+          { label: 'Fuel Log', data: groupRows.slice(0, 10).map(r => r.fuel) }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' }
+    });
+  }
+
+  function renderDashboard() {
+    buildComparisonRows();
+    refreshFilterOptions();
+
+    const comparison = filteredComparison();
+    const fuelLogRows = filteredFuelLog();
+    const periodMode = $('periodMode').value;
+    const groupMode = $('groupMode').value;
+
+    const periodRows = aggregateComparisonByPeriod(comparison, periodMode);
+    const groupRows = aggregateComparisonByGroup(comparison, groupMode);
+    const fuelAgg = aggregateFuelLog(fuelLogRows, periodMode);
+
+    const approvedTotal = comparison.reduce((s, r) => s + r.approvedAmount, 0);
+    const bankTotal = comparison.reduce((s, r) => s + r.bankAmount, 0);
+    const fuelTotal = comparison.reduce((s, r) => s + r.fuelLogAmount, 0);
+    const unauthorisedTotal = state.unauthorisedRows.filter(passesCommonFilters).reduce((s, r) => s + r.amount, 0);
+    const bankVarTotal = comparison.reduce((s, r) => s + r.bankVariance, 0);
+    const fuelVarTotal = comparison.reduce((s, r) => s + r.fuelVariance, 0);
+
+    $('kpiApproved').textContent = fmt(approvedTotal);
+    $('kpiBank').textContent = fmt(bankTotal);
+    $('kpiFuelLog').textContent = fmt(fuelTotal);
+    $('kpiUnauthorised').textContent = fmt(unauthorisedTotal);
+    $('kpiBankVariance').textContent = fmt(bankVarTotal);
+    $('kpiFuelVariance').textContent = fmt(fuelVarTotal);
+
+    renderCharts(periodRows, groupRows);
+
+    $('groupSummaryBody').innerHTML = groupRows.length ? groupRows.map(r => `
+      <tr>
+        <td>${html(r.group)}</td>
+        <td class="text-end mono">${fmt(r.approved)}</td>
+        <td class="text-end mono">${fmt(r.bank)}</td>
+        <td class="text-end mono">${fmt(r.fuel)}</td>
+        <td class="text-end mono ${r.bankVariance >= 0 ? 'text-success' : 'text-danger'}">${fmt(r.bankVariance)}</td>
+        <td class="text-end mono ${r.fuelVariance >= 0 ? 'text-success' : 'text-danger'}">${fmt(r.fuelVariance)}</td>
+      </tr>
+    `).join('') : '<tr><td colspan="6" class="text-center">No grouped data</td></tr>';
+
+    $('periodSummaryBody').innerHTML = periodRows.length ? periodRows.map(r => `
+      <tr>
+        <td>${html(r.period)}</td>
+        <td class="text-end mono">${fmt(r.approved)}</td>
+        <td class="text-end mono">${fmt(r.bank)}</td>
+        <td class="text-end mono">${fmt(r.fuel)}</td>
+        <td class="text-end mono ${r.bankVariance >= 0 ? 'text-success' : 'text-danger'}">${fmt(r.bankVariance)}</td>
+        <td class="text-end mono ${r.fuelVariance >= 0 ? 'text-success' : 'text-danger'}">${fmt(r.fuelVariance)}</td>
+      </tr>
+    `).join('') : '<tr><td colspan="6" class="text-center">No period data</td></tr>';
+
+    $('comparisonBody').innerHTML = comparison.length ? comparison.map(r => `
+      <tr>
+        <td>${html(r.dateText)}</td>
+        <td>${html(r.driver)}</td>
+        <td>${html(r.vehicle)}</td>
+        <td>${html(r.erNumber || '')}</td>
+        <td>${html(r.department)}</td>
+        <td>${html(r.costCenter)}</td>
+        <td class="text-end mono">${fmt(r.approvedAmount)}</td>
+        <td class="text-end mono">${fmt(r.bankAmount)}</td>
+        <td class="text-end mono">${fmt(r.fuelLogAmount)}</td>
+        <td class="text-end mono ${r.bankVariance >= 0 ? 'text-success' : 'text-danger'}">${fmt(r.bankVariance)}</td>
+        <td class="text-end mono ${r.fuelVariance >= 0 ? 'text-success' : 'text-danger'}">${fmt(r.fuelVariance)}</td>
+        <td>${html(r.matchedBy)}</td>
+        <td>${r.hasBankMatch ? '<span class="badge-soft bg-soft-success">Bank matched</span>' : '<span class="badge-soft bg-soft-warning">No bank match</span>'}</td>
+      </tr>
+    `).join('') : '<tr><td colspan="13" class="text-center">No comparison rows</td></tr>';
+
+    const unauthorised = state.unauthorisedRows.filter(passesCommonFilters);
+    $('unauthorisedBody').innerHTML = unauthorised.length ? unauthorised.map(r => `
+      <tr>
+        <td>${html(r.dateText)}</td>
+        <td>${html(r.driver)}</td>
+        <td>${html(r.vehicle)}</td>
+        <td>${html(r.erNumber)}</td>
+        <td>${html(r.department)}</td>
+        <td>${html(r.costCenter)}</td>
+        <td class="text-end mono">${fmt(r.amount)}</td>
+        <td><span class="badge-soft bg-soft-warning">${html(r.reason)}</span></td>
+      </tr>
+    `).join('') : '<tr><td colspan="8" class="text-center">No unauthorised swipes</td></tr>';
+
+    $('fuelLogBody').innerHTML = fuelLogRows.length ? fuelLogRows.map(r => `
+      <tr>
+        <td>${html(dateKey(toDate(r.date)) || str(r.date))}</td>
+        <td>${html(r.driver)}</td>
+        <td>${html(r.vehicle)}</td>
+        <td>${html(r.department)}</td>
+        <td>${html(r.costCenter)}</td>
+        <td class="text-end mono">${fmt(r.fuelTotal)}</td>
+        <td class="text-end mono">${num(r.kmTraveled).toFixed(2)}</td>
+        <td class="text-end mono">${num(r.kmPerLiter).toFixed(2)}</td>
+      </tr>
+    `).join('') : '<tr><td colspan="8" class="text-center">No fuel log transactions</td></tr>';
+
+    $('fuelLogTotalsBody').innerHTML = fuelAgg.length ? fuelAgg.map(r => `
+      <tr>
+        <td>${html(r.period)}</td>
+        <td class="text-end mono">${r.transactions}</td>
+        <td class="text-end mono">${fmt(r.total)}</td>
+        <td class="text-end mono">${r.km.toFixed(2)}</td>
+        <td class="text-end mono">${r.liters.toFixed(2)}</td>
+      </tr>
+    `).join('') : '<tr><td colspan="5" class="text-center">No fuel log totals</td></tr>';
+
+    $('uploadsBody').innerHTML = state.uploads.length ? state.uploads.map(r => `
+      <tr>
+        <td>${html(str(r.timestamp || r.Timestamp))}</td>
+        <td>${html(str(r.kind || r.Kind))}</td>
+        <td>${html(str(r.fileName || r['Original File Name']))}</td>
+        <td class="text-end mono">${num(r.rowCount || r['Row Count']).toLocaleString()}</td>
+      </tr>
+    `).join('') : '<tr><td colspan="4" class="text-center">No uploads yet</td></tr>';
+  }
+
+  async function uploadRowsToServer(kind, rows, fileName) {
+    if (!rows.length) return { success: true };
+    const result = await runServer('apiPost', { action: 'uploadSourceRows', kind, rows, fileName });
+    if (!result.success) throw new Error(result.error || `Failed to upload ${kind}`);
+    return result;
+  }
+
+  async function analyse() {
+    const btn = $('analyseBtn');
+    const oldLabel = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Analysing...';
+
     try {
+      const approvalRows = await getRowsFromFileInput('approvalFile', 'approvals');
+      const bankRows = await getRowsFromFileInput('bankFile', 'bankSwipes');
+
+      if (approvalRows.length) {
+        await uploadRowsToServer('approvals', approvalRows, $('approvalFile').files[0].name);
+      }
+      if (bankRows.length) {
+        await uploadRowsToServer('bankSwipes', bankRows, $('bankFile').files[0].name);
+      }
+
       await loadDashboardData();
-      setStatus('status-ok', '<i class="fas fa-check-circle"></i>Data refreshed');
+      status('status-ok', '<i class="fas fa-check-circle"></i>Analysis complete');
     } catch (err) {
-      setStatus('status-bad', `<i class="fas fa-triangle-exclamation"></i>${err.message}`);
+      status('status-bad', `<i class="fas fa-triangle-exclamation"></i>${html(err.message)}`);
+      alert(err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = oldLabel;
     }
-  });
+  }
+
+  async function loadDashboardData() {
+    const result = await runServer('apiGet', {
+      action: 'getDashboardData',
+      startDate: $('startDate').value,
+      endDate: $('endDate').value
+    });
+    if (!result.success) throw new Error(result.error || 'Failed to load dashboard data');
+
+    state.approvals = normaliseServerRows(result.approvals, 'approvals');
+    state.bankSwipes = normaliseServerRows(result.bankSwipes, 'bankSwipes');
+    state.fuelLog = normaliseServerRows(result.fuelLog, 'fuelLog');
+    state.uploads = result.uploads || [];
+
+    renderDashboard();
+  }
+
+  function wireMeta(inputId, metaId) {
+    $(inputId).addEventListener('change', () => {
+      const file = $(inputId).files[0];
+      $(metaId).textContent = file ? `${file.name} · ${(file.size / 1024).toFixed(1)} KB` : 'No file selected';
+    });
+  }
+
+  function setDefaultDates() {
+    const today = new Date();
+    const start = new Date(today.getFullYear(), today.getMonth(), 1);
+    $('startDate').value = dateKey(start);
+    $('endDate').value = dateKey(today);
+  }
+
+  $('testConnectionBtn').addEventListener('click', testConnection);
+  $('refreshBtn').addEventListener('click', loadDashboardData);
   $('analyseBtn').addEventListener('click', analyse);
-  ['periodMode','groupMode','filterDepartment','filterCostCenter','filterDriver','showUnauthorisedOnly'].forEach(id => $(id).addEventListener('change', renderTables));
-  $('searchText').addEventListener('input', renderTables);
-  ['thresholdKmpl','thresholdFrequentCount','thresholdFrequentDays','thresholdVariance'].forEach(id => $(id).addEventListener('change', () => { buildReconRows(); buildComparisonRows(); buildAlarms(); renderTables(); }));
+  ['startDate','endDate','groupMode','periodMode','filterVehicle','filterDriver','filterDepartment','filterCostCenter','showUnauthorisedOnly'].forEach(id => {
+    $(id).addEventListener('change', renderDashboard);
+  });
+  $('searchText').addEventListener('input', renderDashboard);
 
-  wireFileMeta('approvalFile', 'approvalMeta');
-  wireFileMeta('swipeFile', 'swipeMeta');
-
-  testConnection();
-  renderTables();
+  wireMeta('approvalFile', 'approvalMeta');
+  wireMeta('bankFile', 'bankMeta');
+  setDefaultDates();
+  testConnection().then(loadDashboardData).catch(() => {});
 })();
 </script>
 </body>
