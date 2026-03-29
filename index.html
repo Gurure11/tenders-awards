@@ -512,12 +512,12 @@
 
   const aliasMap = {
     date: ['date','transaction date','swipe date','fuel date'],
-    erNumber: ['er no','er number','er','ernumber','er no.'],
+    erNumber: ['er no','er number','er','ernumber','er no.','er #','er#','er_num','er reference','er ref'],
     approvedAmount: ['approved amount','authorised amount','authorized amount','amount approved','requested amount','amount requested','bcy total','bcy_total'],
     swipeAmount: ['swiped amount','amount','debit','grand total','fuel total','transaction amount'],
-    fuelTotal: ['grand total','fuel total','amount'],
+    fuelTotal: ['grand total','fuel total','amount','fuel amount paid','amount paid','fuel paid','paid amount','total amount'],
     liters: ['litres','liters','fuel litres','fuel liters'],
-    vehicle: ['vehicle','vehicle reg','reg','reg no','reg number','registration','truck','fleet no'],
+    vehicle: ['vehicle','vehicle reg','reg','reg no','reg number','registration','truck','fleet no','fleet number','vehicle number','vehicle no'],
     driver: ['driver','driver name','operator'],
     department: ['department'],
     costCenter: ['cost center','cost centre','costcenter'],
@@ -541,6 +541,13 @@
     return mapped;
   }
 
+  function getAny(obj, keys) {
+    for (const key of keys) {
+      if (obj && Object.prototype.hasOwnProperty.call(obj, key) && obj[key] !== '' && obj[key] != null) return obj[key];
+    }
+    return '';
+  }
+
   function normalizeFileRows(rows, kind) {
     if (!rows.length) return [];
     const headers = Object.keys(rows[0]);
@@ -548,19 +555,19 @@
     const get = (row, field) => mapped[field] ? row[mapped[field]] : '';
     return rows.map(row => ({
       date: get(row, 'date'),
-      erNumber: str(get(row, 'erNumber')),
-      approvedAmount: num(get(row, 'approvedAmount')),
-      swipeAmount: num(get(row, 'swipeAmount')),
-      fuelTotal: num(get(row, 'fuelTotal')),
-      liters: num(get(row, 'liters')),
-      vehicle: str(get(row, 'vehicle')),
-      driver: str(get(row, 'driver')),
-      department: str(get(row, 'department')),
-      costCenter: str(get(row, 'costCenter')),
-      merchant: str(get(row, 'merchant')),
-      kmTraveled: num(get(row, 'kmTraveled')),
-      kmPerLiter: num(get(row, 'kmPerLiter')),
-      timestamp: str(get(row, 'timestamp')),
+      erNumber: str(get(row, 'erNumber') || getAny(row, ['ER No', 'ER Number', 'ER', 'ER No.', 'ER#', 'ER #'])),
+      approvedAmount: num(get(row, 'approvedAmount') || getAny(row, ['BCY Total', 'Approved Amount', 'Authorised Amount', 'Authorized Amount'])),
+      swipeAmount: num(get(row, 'swipeAmount') || getAny(row, ['Swiped Amount', 'Amount', 'Debit', 'Transaction Amount'])),
+      fuelTotal: num(get(row, 'fuelTotal') || getAny(row, ['Fuel Amount Paid', 'Fuel Total', 'Grand Total', 'Amount Paid', 'Amount'])),
+      liters: num(get(row, 'liters') || getAny(row, ['Liters', 'Litres'])),
+      vehicle: str(get(row, 'vehicle') || getAny(row, ['Vehicle', 'Vehicle Reg', 'Reg No', 'Reg Number', 'Registration'])),
+      driver: str(get(row, 'driver') || getAny(row, ['Driver', 'Driver Name', 'Operator'])),
+      department: str(get(row, 'department') || getAny(row, ['Department'])),
+      costCenter: str(get(row, 'costCenter') || getAny(row, ['Cost Center', 'Cost Centre'])),
+      merchant: str(get(row, 'merchant') || getAny(row, ['Merchant', 'Vendor', 'Station'])),
+      kmTraveled: num(get(row, 'kmTraveled') || getAny(row, ['KM Traveled', 'KM Travelled', 'KM'])),
+      kmPerLiter: num(get(row, 'kmPerLiter') || getAny(row, ['KM/Liter', 'KM/Litre', 'KM Per Liter', 'KM Per Litre'])),
+      timestamp: str(get(row, 'timestamp') || getAny(row, ['Timestamp'])),
       sourceKind: kind
     })).filter(r => Object.values(r).some(v => String(v ?? '').trim() !== ''));
   }
@@ -590,20 +597,20 @@
 
   function normaliseServerRows(rows, kind) {
     return (rows || []).map(r => ({
-      date: r.date || r.Date || r['Transaction Date'] || '',
-      erNumber: str(r.erNumber || r['ER Number'] || r['ER No'] || ''),
-      approvedAmount: num(r.approvedAmount || r['Approved Amount'] || r['BCY Total'] || 0),
-      swipeAmount: num(r.swipeAmount || r['Swiped Amount'] || r['Amount'] || r['Grand Total'] || 0),
-      fuelTotal: num(r.fuelTotal || r['Fuel Total'] || r['Grand Total'] || r['Amount'] || 0),
-      liters: num(r.liters || r['Liters'] || r['Litres'] || 0),
-      vehicle: str(r.vehicle || r['Vehicle'] || r['Vehicle Reg'] || r['Reg No'] || ''),
-      driver: str(r.driver || r['Driver'] || r['Driver Name'] || ''),
-      department: str(r.department || r['Department'] || ''),
-      costCenter: str(r.costCenter || r['Cost Center'] || r['Cost Centre'] || ''),
-      merchant: str(r.merchant || r['Merchant'] || ''),
-      kmTraveled: num(r.kmTraveled || r['KM Traveled'] || r['KM Travelled'] || r['KM'] || 0),
-      kmPerLiter: num(r.kmPerLiter || r['KM/Liter'] || r['KM/Litre'] || 0),
-      timestamp: str(r.timestamp || r['Timestamp'] || ''),
+      date: getAny(r, ['date', 'Date', 'Transaction Date', 'Fuel Date', 'Swipe Date']),
+      erNumber: str(getAny(r, ['erNumber', 'ER Number', 'ER No', 'ER No.', 'ER', 'ER#', 'ER #'])),
+      approvedAmount: num(getAny(r, ['approvedAmount', 'Approved Amount', 'BCY Total', 'Authorised Amount', 'Authorized Amount'])),
+      swipeAmount: num(getAny(r, ['swipeAmount', 'Swiped Amount', 'Amount', 'Debit', 'Transaction Amount', 'Grand Total'])),
+      fuelTotal: num(getAny(r, ['fuelTotal', 'Fuel Amount Paid', 'Fuel Total', 'Grand Total', 'Amount Paid', 'Amount'])),
+      liters: num(getAny(r, ['liters', 'Liters', 'Litres'])),
+      vehicle: str(getAny(r, ['vehicle', 'Vehicle', 'Vehicle Reg', 'Reg No', 'Reg Number', 'Registration', 'Vehicle Number'])),
+      driver: str(getAny(r, ['driver', 'Driver', 'Driver Name', 'Operator'])),
+      department: str(getAny(r, ['department', 'Department'])),
+      costCenter: str(getAny(r, ['costCenter', 'Cost Center', 'Cost Centre'])),
+      merchant: str(getAny(r, ['merchant', 'Merchant', 'Vendor', 'Station'])),
+      kmTraveled: num(getAny(r, ['kmTraveled', 'KM Traveled', 'KM Travelled', 'KM'])),
+      kmPerLiter: num(getAny(r, ['kmPerLiter', 'KM/Liter', 'KM/Litre', 'KM Per Liter', 'KM Per Litre'])),
+      timestamp: str(getAny(r, ['timestamp', 'Timestamp'])),
       sourceKind: kind
     }));
   }
@@ -664,26 +671,28 @@
       const amount = num(row[amountField]);
       const date = toDate(row.date);
       if (!inSelectedRange(date)) return;
+      const pKey = periodKey(date || new Date('1900-01-01'), $('periodMode').value);
       const erKey = keyByER(row.erNumber);
       const vehKey = keyByVehicle(row.vehicle);
       const drvKey = keyByDriver(row.driver);
 
-      if (erKey) byER.set(erKey, (byER.get(erKey) || 0) + amount);
-      if (vehKey) byVehicle.set(vehKey, (byVehicle.get(vehKey) || 0) + amount);
-      if (drvKey) byDriver.set(drvKey, (byDriver.get(drvKey) || 0) + amount);
+      if (erKey) byER.set(`${pKey}|${erKey}`, (byER.get(`${pKey}|${erKey}`) || 0) + amount);
+      if (vehKey) byVehicle.set(`${pKey}|${vehKey}`, (byVehicle.get(`${pKey}|${vehKey}`) || 0) + amount);
+      if (drvKey) byDriver.set(`${pKey}|${drvKey}`, (byDriver.get(`${pKey}|${drvKey}`) || 0) + amount);
     });
 
     return { byER, byVehicle, byDriver };
   }
 
   function resolveAmount(indexes, row) {
+    const pKey = periodKey(toDate(row.date) || new Date('1900-01-01'), $('periodMode').value);
     const erKey = keyByER(row.erNumber);
     const vehKey = keyByVehicle(row.vehicle);
     const drvKey = keyByDriver(row.driver);
 
-    if (erKey && indexes.byER.has(erKey)) return { amount: indexes.byER.get(erKey), matchedBy: 'ER No' };
-    if (vehKey && indexes.byVehicle.has(vehKey)) return { amount: indexes.byVehicle.get(vehKey), matchedBy: 'Vehicle' };
-    if (drvKey && indexes.byDriver.has(drvKey)) return { amount: indexes.byDriver.get(drvKey), matchedBy: 'Driver' };
+    if (erKey && indexes.byER.has(`${pKey}|${erKey}`)) return { amount: indexes.byER.get(`${pKey}|${erKey}`), matchedBy: 'ER No' };
+    if (vehKey && indexes.byVehicle.has(`${pKey}|${vehKey}`)) return { amount: indexes.byVehicle.get(`${pKey}|${vehKey}`), matchedBy: 'Vehicle' };
+    if (drvKey && indexes.byDriver.has(`${pKey}|${drvKey}`)) return { amount: indexes.byDriver.get(`${pKey}|${drvKey}`), matchedBy: 'Driver' };
     return { amount: 0, matchedBy: 'No match' };
   }
 
@@ -955,7 +964,7 @@
         <td class="text-end mono ${r.bankVariance >= 0 ? 'text-success' : 'text-danger'}">${fmt(r.bankVariance)}</td>
         <td class="text-end mono ${r.fuelVariance >= 0 ? 'text-success' : 'text-danger'}">${fmt(r.fuelVariance)}</td>
         <td>${html(r.matchedBy)}</td>
-        <td>${r.hasBankMatch ? '<span class="badge-soft bg-soft-success">Bank matched</span>' : '<span class="badge-soft bg-soft-warning">No bank match</span>'}</td>
+        <td>${r.hasBankMatch && r.hasFuelMatch ? '<span class="badge-soft bg-soft-success">Bank + Fuel matched</span>' : r.hasBankMatch ? '<span class="badge-soft bg-soft-info">Bank matched</span>' : r.hasFuelMatch ? '<span class="badge-soft bg-soft-warning">Fuel only matched</span>' : '<span class="badge-soft bg-soft-danger">No match</span>'}</td>
       </tr>
     `).join('') : '<tr><td colspan="13" class="text-center">No comparison rows</td></tr>';
 
