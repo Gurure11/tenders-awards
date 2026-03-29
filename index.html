@@ -245,7 +245,7 @@
               <tr>
                 <th>Date</th>
                 <th>Driver</th>
-                <th>Vehicle</th>
+                <th>Vehicle Reg No</th>
                 <th>ER No</th>
                 <th>Department</th>
                 <th>Cost Center</th>
@@ -271,7 +271,7 @@
               <tr>
                 <th>Date</th>
                 <th>Driver</th>
-                <th>Vehicle</th>
+                <th>Vehicle Reg No</th>
                 <th>ER No</th>
                 <th>Department</th>
                 <th>Cost Center</th>
@@ -294,7 +294,7 @@
                   <tr>
                     <th>Date</th>
                     <th>Driver</th>
-                    <th>Vehicle</th>
+                    <th>Vehicle Reg No</th>
                     <th>Department</th>
                     <th>Cost Center</th>
                     <th class="text-end">Grand Total</th>
@@ -350,7 +350,7 @@
 <script>
 (() => {
   const CONFIG = {
-    APP_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyk98BdcXiM8IMJtal40ihicnqSGl87MJdn03OcBVFt1h41MG55zLMOouVAigOGJkAaWg/exec', // optional only when hosting outside Apps Script
+    APP_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwp5YBiuLNlQorpzLaq2iYy891FKzP8hPbvvq1TwbuFOpBBmiuTmKNkJxs_-XGZNmuC-w/exec', // optional only when hosting outside Apps Script
     RECON_SHEET_ID: '16ijC8ODRMDtC_FtMpZEcukxuuOTCBlA9TLRKAmBrI2w',
     RECON_SHEET_NAME: 'FuelRecon',
     FUEL_LOG_SHEET_ID: '1SnhLTWgzJfkKNmIvtj8uwa-8x7TsnRtqkfX3deEuHIQ',
@@ -492,7 +492,17 @@
     }
     return null;
   };
-  const dateKey = d => d ? d.toISOString().slice(0, 10) : '';
+  const dateKey = d => {
+    if (!d) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const formatDate = value => {
+    const d = value instanceof Date ? value : toDate(value);
+    return d ? dateKey(d) : str(value).split('T')[0];
+  };
   const weekKey = d => {
     const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
     const dayNum = dt.getUTCDay() || 7;
@@ -512,12 +522,12 @@
 
   const aliasMap = {
     date: ['date','transaction date','swipe date','fuel date'],
-    erNumber: ['er no','er number','er','ernumber','er no.','er #','er#','er_num','er reference','er ref'],
+    erNumber: ['er no','er number','er','ernumber','er no.','er #','er#','er_num','er reference','er ref','er driver number','er drivers number'],
     approvedAmount: ['approved amount','authorised amount','authorized amount','amount approved','requested amount','amount requested','bcy total','bcy_total'],
     swipeAmount: ['swiped amount','amount','debit','grand total','fuel total','transaction amount'],
-    fuelTotal: ['grand total','fuel total','amount','fuel amount paid','amount paid','fuel paid','paid amount','total amount'],
+    fuelTotal: ['grand total','fuel total','amount','fuel amount paid','amount paid','fuel paid','paid amount','total amount','fuel amount'],
     liters: ['litres','liters','fuel litres','fuel liters'],
-    vehicle: ['vehicle','vehicle reg','reg','reg no','reg number','registration','truck','fleet no','fleet number','vehicle number','vehicle no'],
+    vehicle: ['vehicle','vehicle reg','vehicle reg no','reg','reg no','reg number','registration','vehicle registration','vehicle registration no','truck','fleet no','fleet number','vehicle number','vehicle no'],
     driver: ['driver','driver name','operator'],
     department: ['department'],
     costCenter: ['cost center','cost centre','costcenter'],
@@ -555,12 +565,12 @@
     const get = (row, field) => mapped[field] ? row[mapped[field]] : '';
     return rows.map(row => ({
       date: get(row, 'date'),
-      erNumber: str(get(row, 'erNumber') || getAny(row, ['ER No', 'ER Number', 'ER', 'ER No.', 'ER#', 'ER #'])),
+      erNumber: str(get(row, 'erNumber') || getAny(row, ['ER No', 'ER Number', 'ER', 'ER No.', 'ER#', 'ER #', 'ER Driver Number', 'ER Drivers Number'])),
       approvedAmount: num(get(row, 'approvedAmount') || getAny(row, ['BCY Total', 'Approved Amount', 'Authorised Amount', 'Authorized Amount'])),
       swipeAmount: num(get(row, 'swipeAmount') || getAny(row, ['Swiped Amount', 'Amount', 'Debit', 'Transaction Amount'])),
-      fuelTotal: num(get(row, 'fuelTotal') || getAny(row, ['Fuel Amount Paid', 'Fuel Total', 'Grand Total', 'Amount Paid', 'Amount'])),
+      fuelTotal: num(get(row, 'fuelTotal') || getAny(row, ['Fuel Amount Paid', 'Fuel Total', 'Fuel Amount', 'Grand Total', 'Amount Paid', 'Amount'])),
       liters: num(get(row, 'liters') || getAny(row, ['Liters', 'Litres'])),
-      vehicle: str(get(row, 'vehicle') || getAny(row, ['Vehicle', 'Vehicle Reg', 'Reg No', 'Reg Number', 'Registration'])),
+      vehicle: str(get(row, 'vehicle') || getAny(row, ['Vehicle', 'Vehicle Reg', 'Vehicle Reg No', 'Reg No', 'Reg Number', 'Registration', 'Vehicle Registration'])),
       driver: str(get(row, 'driver') || getAny(row, ['Driver', 'Driver Name', 'Operator'])),
       department: str(get(row, 'department') || getAny(row, ['Department'])),
       costCenter: str(get(row, 'costCenter') || getAny(row, ['Cost Center', 'Cost Centre'])),
@@ -598,12 +608,12 @@
   function normaliseServerRows(rows, kind) {
     return (rows || []).map(r => ({
       date: getAny(r, ['date', 'Date', 'Transaction Date', 'Fuel Date', 'Swipe Date']),
-      erNumber: str(getAny(r, ['erNumber', 'ER Number', 'ER No', 'ER No.', 'ER', 'ER#', 'ER #'])),
+      erNumber: str(getAny(r, ['erNumber', 'ER Number', 'ER No', 'ER No.', 'ER', 'ER#', 'ER #', 'ER Driver Number', 'ER Drivers Number'])),
       approvedAmount: num(getAny(r, ['approvedAmount', 'Approved Amount', 'BCY Total', 'Authorised Amount', 'Authorized Amount'])),
       swipeAmount: num(getAny(r, ['swipeAmount', 'Swiped Amount', 'Amount', 'Debit', 'Transaction Amount', 'Grand Total'])),
-      fuelTotal: num(getAny(r, ['fuelTotal', 'Fuel Amount Paid', 'Fuel Total', 'Grand Total', 'Amount Paid', 'Amount'])),
+      fuelTotal: num(getAny(r, ['fuelTotal', 'Fuel Amount Paid', 'Fuel Total', 'Fuel Amount', 'Grand Total', 'Amount Paid', 'Amount'])),
       liters: num(getAny(r, ['liters', 'Liters', 'Litres'])),
-      vehicle: str(getAny(r, ['vehicle', 'Vehicle', 'Vehicle Reg', 'Reg No', 'Reg Number', 'Registration', 'Vehicle Number'])),
+      vehicle: str(getAny(r, ['vehicle', 'Vehicle', 'Vehicle Reg', 'Vehicle Reg No', 'Reg No', 'Reg Number', 'Registration', 'Vehicle Registration', 'Vehicle Number'])),
       driver: str(getAny(r, ['driver', 'Driver', 'Driver Name', 'Operator'])),
       department: str(getAny(r, ['department', 'Department'])),
       costCenter: str(getAny(r, ['costCenter', 'Cost Center', 'Cost Centre'])),
@@ -711,7 +721,7 @@
         return {
           id: idx + 1,
           date: toDate(approval.date),
-          dateText: dateKey(toDate(approval.date)) || str(approval.date),
+          dateText: formatDate(approval.date),
           driver: approval.driver,
           vehicle: approval.vehicle,
           erNumber: approval.erNumber,
@@ -747,7 +757,7 @@
         const matched = (erKey && approvalIndexER.has(erKey)) || (vehKey && approvalIndexVehicle.has(vehKey)) || (drvKey && approvalIndexDriver.has(drvKey));
         return {
           id: idx + 1,
-          dateText: dateKey(toDate(row.date)) || str(row.date),
+          dateText: formatDate(row.date),
           driver: row.driver,
           vehicle: row.vehicle,
           erNumber: row.erNumber,
@@ -789,7 +799,7 @@
   function filteredFuelLog() {
     return state.fuelLog.filter(r => {
       const row = {
-        dateText: dateKey(toDate(r.date)) || str(r.date),
+        dateText: formatDate(r.date),
         vehicle: r.vehicle,
         driver: r.driver,
         department: r.department,
@@ -984,7 +994,7 @@
 
     $('fuelLogBody').innerHTML = fuelLogRows.length ? fuelLogRows.map(r => `
       <tr>
-        <td>${html(dateKey(toDate(r.date)) || str(r.date))}</td>
+        <td>${html(formatDate(r.date))}</td>
         <td>${html(r.driver)}</td>
         <td>${html(r.vehicle)}</td>
         <td>${html(r.department)}</td>
