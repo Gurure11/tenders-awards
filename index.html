@@ -350,11 +350,99 @@
 <script>
 (() => {
   const CONFIG = {
-    APP_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyk98BdcXiM8IMJtal40ihicnqSGl87MJdn03OcBVFt1h41MG55zLMOouVAigOGJkAaWg/exec', // optional only when hosting outside Apps Script
+    APP_SCRIPT_URL: '', // optional only when hosting outside Apps Script
     RECON_SHEET_ID: '16ijC8ODRMDtC_FtMpZEcukxuuOTCBlA9TLRKAmBrI2w',
     RECON_SHEET_NAME: 'FuelRecon',
     FUEL_LOG_SHEET_ID: '1SnhLTWgzJfkKNmIvtj8uwa-8x7TsnRtqkfX3deEuHIQ',
     FUEL_LOG_SHEET_NAME: 'Fuel Log'
+  };
+
+
+  const STATIC_OPTIONS = {
+    costCenters: [
+      'Onpoint Group HQ',
+      'DI Solutions',
+      'Aqua Telecoms',
+      'Nkanyezi Projects',
+      'Onpoint Ontime Solutions'
+    ],
+    departments: [
+      'Admin',
+      'Business Development',
+      'Finance & IT',
+      'Fleet',
+      'HR',
+      'Operations',
+      'Procurements',
+      'Sales',
+      'SHEQ',
+      'Tendering',
+      'Warehouse'
+    ],
+    drivers: [
+      'Retselisitsoe Mohapi',
+      'George Rusere',
+      'Nyasha Marira',
+      'Trymore Mtizwa',
+      'Brian Mugiya',
+      'Peter Nong',
+      'Nicholas Dambiranwa',
+      'Curious Sixpence',
+      'Clifonce Matewe',
+      'Moeketsi Tshabalala',
+      'Elias Mashiane',
+      'Leah Phiri',
+      'Lungile Soni',
+      'Washington Musiiwa',
+      'Donald Tawengwa',
+      'Washington Madauka',
+      'Before Simonne',
+      'Happison Mupanedengu',
+      'William Mahlo',
+      'Pride Nyoni',
+      'Petros Mosekidi',
+      'Tonderai Matsikire',
+      'Adelaide Dimingp',
+      'Tumelo Mhlongo',
+      'Sabelo Zulu',
+      'Sprinka Mguni',
+      'Tsitsi Dube',
+      'Stanely Vanigwa',
+      'Phiilip Shambare',
+      'Graham Tsuro',
+      'Meshullum Mugabe',
+      'Tafadzwa Magejo',
+      'Trust Bhila',
+      'Moses Magutse',
+      'Kudakwashe Madzikangava',
+      'Andrew Moloisane',
+      'Zivai Magwaza',
+      'Dzunisani Mabunda',
+      'Brian Nkomo',
+      'Joshua Paradzai',
+      'Goodwill Rakgoko',
+      'Johanne Hendriks',
+      'Claudius Gomo',
+      'Patience Chipundo',
+      'Siyanda Dlamini',
+      'Vusi Mabena',
+      'Ronald Musengwa',
+      'Neo Mogatusi',
+      'Mqondisi Ndlovu',
+      'Govern Paradzai',
+      'Dickens Magwaza',
+      'Kgmotso Letsoalo',
+      'Nametso Bokoane',
+      'Phumzile Cindi',
+      'Sydney Ngwenya',
+      'Bheki Mkhwanazi',
+      'Ntsako Mathe',
+      'Bongile Cuba',
+      'Moses Mashatola',
+      'Tony Takabvakure',
+      'Timothy Wadzema',
+      'Rayman Mugaramanja'
+    ]
   };
 
   const state = {
@@ -704,10 +792,13 @@
     });
   }
 
-  function fillSelect(id, values) {
+  function fillSelect(id, values, staticValues = []) {
     const select = $(id);
     const current = select.value || 'all';
-    const options = ['all', ...Array.from(new Set(values.filter(Boolean).map(str))).sort((a, b) => a.localeCompare(b))];
+    const merged = [...staticValues, ...values]
+      .map(str)
+      .filter(Boolean);
+    const options = ['all', ...Array.from(new Set(merged)).sort((a, b) => a.localeCompare(b))];
     select.innerHTML = options.map(v => `<option value="${html(v)}">${v === 'all' ? 'All' : html(v)}</option>`).join('');
     if (options.includes(current)) select.value = current;
   }
@@ -719,9 +810,9 @@
       ...state.fuelLog
     ].filter(r => inSelectedRange(toDate(r.date)));
     fillSelect('filterVehicle', allRows.map(r => r.vehicle));
-    fillSelect('filterDriver', allRows.map(r => r.driver));
-    fillSelect('filterDepartment', allRows.map(r => r.department));
-    fillSelect('filterCostCenter', allRows.map(r => r.costCenter));
+    fillSelect('filterDriver', allRows.map(r => r.driver), STATIC_OPTIONS.drivers);
+    fillSelect('filterDepartment', allRows.map(r => r.department), STATIC_OPTIONS.departments);
+    fillSelect('filterCostCenter', allRows.map(r => r.costCenter), STATIC_OPTIONS.costCenters);
   }
 
   function aggregateComparisonByPeriod(rows, mode) {
