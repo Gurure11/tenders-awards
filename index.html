@@ -35,6 +35,8 @@
     .chart-wrap { min-height:330px; position:relative; }
     .nav-pills .nav-link.active { background:#0b2b4a; }
     .mini { font-size:.84rem; }
+    .sticky-summary { position:sticky; top:0; z-index:2; }
+    .small-note { font-size:.78rem; color:#6b7c90; }
   </style>
 </head>
 <body>
@@ -185,14 +187,69 @@
     </div>
   </div>
 
+
+  <div class="row g-3 mb-4">
+    <div class="col-lg-12">
+      <div class="shell p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+          <div>
+            <div class="section-title mb-1">Cross-source fuel comparison summary</div>
+            <div class="muted">Compares Zoho approved requests, bank/swipe transactions, and Fuel Log totals by the selected grouping. Variances show where requested, paid, and logged fuel do not agree.</div>
+          </div>
+        </div>
+        <div class="scroll-table">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Group</th>
+                <th class="text-end">Zoho Approved</th>
+                <th class="text-end">Bank / Swipes</th>
+                <th class="text-end">Fuel Log</th>
+                <th class="text-end">Swipe vs Approved</th>
+                <th class="text-end">Fuel Log vs Swipes</th>
+                <th class="text-end">Fuel Log vs Approved</th>
+              </tr>
+            </thead>
+            <tbody id="comparisonSummaryBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="shell p-4 mb-4">
     <ul class="nav nav-pills mb-3" role="tablist">
       <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tabSwipes" type="button">Swipe Analysis</button></li>
+      <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabSummary" type="button">Summary</button></li>
       <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabFuelLog" type="button">Fuel Log Transactions</button></li>
       <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabAlarms" type="button">Alarms</button></li>
       <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabUploads" type="button">Uploads</button></li>
     </ul>
     <div class="tab-content">
+
+      <div class="tab-pane fade" id="tabSummary">
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <div class="section-title">Source totals</div>
+            <div class="scroll-table">
+              <table class="table table-sm align-middle">
+                <thead><tr><th>Source</th><th class="text-end">Transactions</th><th class="text-end">Amount</th></tr></thead>
+                <tbody id="sourceSummaryBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="section-title">Approval coverage</div>
+            <div class="scroll-table">
+              <table class="table table-sm align-middle">
+                <thead><tr><th>Metric</th><th class="text-end">Value</th></tr></thead>
+                <tbody id="coverageSummaryBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="tab-pane fade show active" id="tabSwipes">
         <div class="row g-3">
           <div class="col-lg-8">
@@ -290,6 +347,13 @@
     return isFinite(parsed) ? parsed : 0;
   };
   const str = (v) => v == null ? '' : String(v).trim();
+  const pick = (row, ...keys) => {
+    for (const key of keys) {
+      if (row && row[key] != null && String(row[key]).trim() !== '') return row[key];
+    }
+    return '';
+  };
+  const pickNum = (row, ...keys) => num(pick(row, ...keys));
   const toDate = (v) => {
     if (!v) return null;
     if (v instanceof Date && !isNaN(v)) return v;
@@ -440,6 +504,15 @@
       out.approvedAmount = 0;
     }
     return out;
+  }
+
+
+  function normalizeDatasetRows(rows, kind) {
+    return (rows || []).map((row) => {
+      const headers = Object.keys(row || {});
+      const mapped = mapHeaders(headers);
+      return normalizeRow(row, mapped, kind);
+    });
   }
 
   async function apiGet(action) {
@@ -623,13 +696,13 @@
     const search = $('searchText').value.trim().toLowerCase();
     return state.fuelLog.filter(r => {
       const row = {
-        department: str(r['Department']),
-        costCenter: str(r['Cost Center']),
-        driver: str(r['Driver']),
-        dateText: str(r['Date']),
-        vehicle: str(r['Vehicle']),
-        erNumber: str(r['ER Number']),
-        merchant: str(r['Merchant'])
+        department: str(pick(r, 'department', 'Department')),
+        costCenter: str(pick(r, 'costCenter', 'Cost Center', 'Cost Centre')),
+        driver: str(pick(r, 'driver', 'Driver')),
+        dateText: str(pick(r, 'date', 'Date')),
+        vehicle: str(pick(r, 'vehicle', 'Vehicle')),
+        erNumber: str(pick(r, 'erNumber', 'ER Number')),
+        merchant: str(pick(r, 'merchant', 'Merchant'))
       };
       if (dep !== 'all' && row.department !== dep) return false;
       if (cc !== 'all' && row.costCenter !== cc) return false;
@@ -670,16 +743,55 @@
   function aggregateFuelLog(rows, mode) {
     const agg = new Map();
     rows.forEach(r => {
-      const date = toDate(r['Date']);
+      const date = toDate(pick(r, 'date', 'Date', 'timestamp', 'Timestamp'));
       const key = periodKey(date, mode);
       if (!agg.has(key)) agg.set(key, { period:key, transactions:0, grandTotal:0, km:0, liters:0 });
       const o = agg.get(key);
       o.transactions += 1;
-      o.grandTotal += num(r['Grand Total']);
-      o.km += num(r['KM Traveled']);
-      o.liters += num(r['Liters']);
+      o.grandTotal += pickNum(r, 'grandTotal', 'Grand Total', 'fuelTotal', 'Fuel Total');
+      o.km += pickNum(r, 'kmTraveled', 'KM Traveled');
+      o.liters += pickNum(r, 'liters', 'Liters', 'Litres');
     });
     return Array.from(agg.values()).sort((a,b) => a.period.localeCompare(b.period));
+  }
+
+
+  function summarizeByGroup(groupField, fuelRows) {
+    const summary = new Map();
+    const ensure = (key) => {
+      if (!summary.has(key)) summary.set(key, {
+        group: key || 'Unassigned',
+        approved: 0,
+        swiped: 0,
+        fuelLog: 0,
+        swipeVsApproved: 0,
+        fuelVsSwipes: 0,
+        fuelVsApproved: 0
+      });
+      return summary.get(key);
+    };
+
+    state.approvals.forEach(r => {
+      const key = str(r[groupField]) || 'Unassigned';
+      ensure(key).approved += pickNum(r, 'approvedAmount', 'Approved Amount');
+    });
+
+    filteredRecon().forEach(r => {
+      const key = str(r[groupField]) || 'Unassigned';
+      ensure(key).swiped += num(r.swipeAmount);
+    });
+
+    fuelRows.forEach(r => {
+      const key = str(pick(r, groupField, groupField === 'costCenter' ? 'Cost Center' : groupField === 'department' ? 'Department' : 'Driver')) || 'Unassigned';
+      ensure(key).fuelLog += pickNum(r, 'grandTotal', 'Grand Total', 'fuelTotal', 'Fuel Total');
+    });
+
+    return Array.from(summary.values()).map(r => ({
+      ...r,
+      swipeVsApproved: r.swiped - r.approved,
+      fuelVsSwipes: r.fuelLog - r.swiped,
+      fuelVsApproved: r.fuelLog - r.approved
+    })).sort((a,b) => (Math.abs(b.fuelVsSwipes) + Math.abs(b.swipeVsApproved)) - (Math.abs(a.fuelVsSwipes) + Math.abs(a.swipeVsApproved)));
   }
 
   function updateKpis(rows) {
@@ -727,6 +839,7 @@
     const groupData = aggregateReconByGroup(recon, groupField);
     const fuelLogRows = filteredFuelLog();
     const fuelLogAgg = aggregateFuelLog(fuelLogRows, periodMode);
+    const comparisonSummary = summarizeByGroup(groupField, fuelLogRows);
 
     updateKpis(recon);
     renderCharts(periodData, groupData);
@@ -776,14 +889,14 @@
 
     $('fuelLogBody').innerHTML = fuelLogRows.length ? fuelLogRows.map(r => `
       <tr>
-        <td>${str(r['Date'])}</td>
-        <td>${str(r['Driver'])}</td>
-        <td>${str(r['Vehicle'])}</td>
-        <td>${str(r['Department'])}</td>
-        <td>${str(r['Cost Center'])}</td>
-        <td class="text-end mono">${fmt(r['Grand Total'])}</td>
-        <td class="text-end mono">${num(r['KM Traveled']).toFixed(2)}</td>
-        <td class="text-end mono">${num(r['KM/Liter']).toFixed(2)}</td>
+        <td>${str(pick(r, 'date', 'Date', 'timestamp', 'Timestamp'))}</td>
+        <td>${str(pick(r, 'driver', 'Driver'))}</td>
+        <td>${str(pick(r, 'vehicle', 'Vehicle'))}</td>
+        <td>${str(pick(r, 'department', 'Department'))}</td>
+        <td>${str(pick(r, 'costCenter', 'Cost Center', 'Cost Centre'))}</td>
+        <td class="text-end mono">${fmt(pickNum(r, 'grandTotal', 'Grand Total', 'fuelTotal', 'Fuel Total'))}</td>
+        <td class="text-end mono">${pickNum(r, 'kmTraveled', 'KM Traveled').toFixed(2)}</td>
+        <td class="text-end mono">${pickNum(r, 'kmPerLiter', 'KM/Liter').toFixed(2)}</td>
       </tr>`).join('') : '<tr><td colspan="8" class="text-center">No Fuel Log transactions</td></tr>';
 
     $('fuelLogTotalsBody').innerHTML = fuelLogAgg.length ? fuelLogAgg.map(r => `
@@ -794,6 +907,47 @@
         <td class="text-end mono">${r.km.toFixed(2)}</td>
         <td class="text-end mono">${r.liters.toFixed(2)}</td>
       </tr>`).join('') : '<tr><td colspan="5" class="text-center">No Fuel Log totals</td></tr>';
+
+    $('comparisonSummaryBody').innerHTML = comparisonSummary.length ? comparisonSummary.map(r => `
+      <tr>
+        <td>${r.group}</td>
+        <td class="text-end mono">${fmt(r.approved)}</td>
+        <td class="text-end mono">${fmt(r.swiped)}</td>
+        <td class="text-end mono">${fmt(r.fuelLog)}</td>
+        <td class="text-end mono ${r.swipeVsApproved >= 0 ? 'text-success' : 'text-danger'}">${fmt(r.swipeVsApproved)}</td>
+        <td class="text-end mono ${r.fuelVsSwipes >= 0 ? 'text-success' : 'text-danger'}">${fmt(r.fuelVsSwipes)}</td>
+        <td class="text-end mono ${r.fuelVsApproved >= 0 ? 'text-success' : 'text-danger'}">${fmt(r.fuelVsApproved)}</td>
+      </tr>`).join('') : '<tr><td colspan="7" class="text-center">No comparison data</td></tr>';
+
+    const totalApproved = state.approvals.reduce((s, r) => s + pickNum(r, 'approvedAmount', 'Approved Amount'), 0);
+    const totalSwipes = state.swipes.reduce((s, r) => s + pickNum(r, 'swipeAmount', 'Swiped Amount', 'grandTotal', 'Grand Total', 'fuelTotal', 'Fuel Total'), 0);
+    const totalFuelLog = state.fuelLog.reduce((s, r) => s + pickNum(r, 'grandTotal', 'Grand Total', 'fuelTotal', 'Fuel Total'), 0);
+    const authorisedCount = recon.filter(r => r.authorised).length;
+    const approvalCoveragePct = recon.length ? (authorisedCount / recon.length) * 100 : 0;
+
+    $('sourceSummaryBody').innerHTML = [
+      ['Zoho approvals', state.approvals.length, totalApproved],
+      ['Bank / swipe rows', state.swipes.length, totalSwipes],
+      ['Fuel Log rows', state.fuelLog.length, totalFuelLog]
+    ].map(r => `
+      <tr>
+        <td>${r[0]}</td>
+        <td class="text-end mono">${Number(r[1]).toLocaleString()}</td>
+        <td class="text-end mono">${fmt(r[2])}</td>
+      </tr>`).join('');
+
+    $('coverageSummaryBody').innerHTML = [
+      ['Authorised swipe rows', authorisedCount.toLocaleString()],
+      ['Unauthorised swipe rows', (recon.length - authorisedCount).toLocaleString()],
+      ['Approval coverage %', `${approvalCoveragePct.toFixed(2)}%`],
+      ['Bank / swipes minus approved', fmt(totalSwipes - totalApproved)],
+      ['Fuel Log minus bank / swipes', fmt(totalFuelLog - totalSwipes)],
+      ['Fuel Log minus approved', fmt(totalFuelLog - totalApproved)]
+    ].map(r => `
+      <tr>
+        <td>${r[0]}</td>
+        <td class="text-end mono">${r[1]}</td>
+      </tr>`).join('');
 
     $('alarmsBody').innerHTML = state.alarms.length ? state.alarms.map(r => `
       <tr>
@@ -816,7 +970,14 @@
   }
 
   function refreshFilters() {
-    const reconAndFuel = [...state.reconRows.map(r => ({ department:r.department, costCenter:r.costCenter, driver:r.driver })), ...state.fuelLog.map(r => ({ department:r['Department'], costCenter:r['Cost Center'], driver:r['Driver'] }))];
+    const reconAndFuel = [
+      ...state.reconRows.map(r => ({ department:r.department, costCenter:r.costCenter, driver:r.driver })),
+      ...state.fuelLog.map(r => ({
+        department: pick(r, 'department', 'Department'),
+        costCenter: pick(r, 'costCenter', 'Cost Center', 'Cost Centre'),
+        driver: pick(r, 'driver', 'Driver')
+      }))
+    ];
     populateSelect('filterDepartment', reconAndFuel.map(r => r.department));
     populateSelect('filterCostCenter', reconAndFuel.map(r => r.costCenter));
     populateSelect('filterDriver', reconAndFuel.map(r => r.driver));
@@ -825,9 +986,9 @@
   async function loadDashboardData() {
     const result = await apiGet('getDashboardData');
     if (!result.success) throw new Error(result.error || 'Failed to load dashboard data');
-    state.approvals = result.approvals || [];
-    state.swipes = result.swipes || [];
-    state.fuelLog = result.fuelLog || [];
+    state.approvals = normalizeDatasetRows(result.approvals || [], 'approvals');
+    state.swipes = normalizeDatasetRows(result.swipes || [], 'swipes');
+    state.fuelLog = normalizeDatasetRows(result.fuelLog || [], 'fuelLog');
     state.uploads = result.uploads || [];
     buildReconRows();
     buildAlarms();
@@ -836,8 +997,8 @@
   }
 
   async function testConnection() {
-    if (CONFIG.GAS_URL.includes('https://script.google.com/macros/s/AKfycbxfclYCjj2MuszFonJ6hsm1N1oNkFamzUDsuH5kIiQ5ijg4yaHZaj47mvYnKVly3G8e8w/exec')) {
-      setStatus('status-bad', '<i class="fas fa-triangle-exclamation"></i>Paste your deployed Apps Script URL in the HTML file');
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/i.test(CONFIG.GAS_URL)) {
+      setStatus('status-bad', '<i class="fas fa-triangle-exclamation"></i>Invalid Apps Script URL in CONFIG.GAS_URL');
       return;
     }
     try {
@@ -861,8 +1022,8 @@
   }
 
   async function analyse() {
-    if (CONFIG.GAS_URL.includes('https://script.google.com/macros/s/AKfycbxfclYCjj2MuszFonJ6hsm1N1oNkFamzUDsuH5kIiQ5ijg4yaHZaj47mvYnKVly3G8e8w/exec')) {
-      alert('Paste your deployed Apps Script URL into CONFIG.GAS_URL inside this HTML file first.');
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/i.test(CONFIG.GAS_URL)) {
+      alert('Enter a valid deployed Apps Script URL in CONFIG.GAS_URL inside this HTML file first.');
       return;
     }
     const btn = $('analyseBtn');
