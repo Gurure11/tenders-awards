@@ -306,7 +306,7 @@
   </div>
 
   <script>
-    const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw58RqVeiwPhkZCYAF_z8uNHC-lxMYZH5AKGrpr2Dwqe-gGs6r2AIDJ3V6OpMBioWxj/exec';
+    const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxbzLMD2Zb2nZTPP8EPRFhfrRwR9XaGf799lNEt-gb_ONJxXkzUJOjdw_ljUkx77Qcn3Q/exec';
     const STORAGE_KEYS = { scriptUrl:'onpoint.scriptUrl', fallbackMode:'onpoint.fallbackMode', revenueBudgetMemory:'onpoint.revenueBudgetMemory', formDraft:'onpoint.formDraft' };
     const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
     const DIVISION_COLORS = ['#0f172a','#334155','#475569','#64748b','#94a3b8','#1e293b','#475569'];
@@ -315,7 +315,7 @@
     const PROJECT_MANAGERS = ['Moses','Andrew','Govern','Phillip','Timothy','Stanley','Brian','Johan','Siyanda','Dave','James','Rayman','Tony','Graham','Ronald','Petros','Elroy','Mesh','Vusi','Tinotenda','Sydney','Moeti'];
 
     const state = { period:'Daily', division:'All', manager:'All', query:'', activeKpi:'all', analysisMode:'costCenter', analysisValue:'All', analysisPeriod:'Daily' };
-    let charts = {}, projectsData = [], revenueData = [], invoiceData = [], lastDiagnostics = [], autoRefreshHandle = null, isLoadingData = false;
+    let charts = {}, projectsData = [], revenueData = [], invoiceData = [], managerBudgetData = [], lastDiagnostics = [], autoRefreshHandle = null, isLoadingData = false;
 
     const byId = id => document.getElementById(id);
     const showLoading = msg => { byId('loadingOverlay').style.display='flex'; byId('loadingMessage').textContent = msg || 'Loading...'; };
@@ -575,9 +575,47 @@
     const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const STRAIGHT_LINE_MONTHLY_BUDGET = 22000000;
-    function systemStraightLineBudgetForPeriod(periodLabel, dateLike = new Date()){
-      const d = safeDate(dateLike) || new Date();
-      const monthly = STRAIGHT_LINE_MONTHLY_BUDGET;
+    const REPORTING_MONTH_DATE = new Date(2026, 2, 1);
+    const MANAGER_STRAIGHT_LINE_MONTHLY_TARGETS = {
+      'johan': 5000000,
+      'moses': 4040000,
+      'stanley': 2429000,
+      'timothy': 6000000
+    };
+    const FISCAL_MONTH_COLUMN_ALIASES = {
+      2: ['Mar26','Mar 26','March 2026','March-2026','March_2026','March26','L'],
+      3: ['Apr26','Apr 26','April 2026','April-2026','April_2026','April26','M'],
+      4: ['May26','May 26','May 2026','May-2026','May_2026','May26','N'],
+      5: ['Jun26','Jun 26','June 2026','June-2026','June_2026','June26','O'],
+      6: ['Jul26','Jul 26','July 2026','July-2026','July_2026','July26','P'],
+      7: ['Aug26','Aug 26','August 2026','August-2026','August_2026','August26','Q'],
+      8: ['Sep26','Sep 26','September 2026','September-2026','September_2026','September26','R'],
+      9: ['Oct26','Oct 26','October 2026','October-2026','October_2026','October26','S'],
+      10: ['Nov26','Nov 26','November 2026','November-2026','November_2026','November26','T'],
+      11: ['Dec26','Dec 26','December 2026','December-2026','December_2026','December26','U'],
+      0: ['Jan27','Jan 27','January 2027','January-2027','January_2027','January27','V'],
+      1: ['Feb27','Feb 27','February 2027','February-2027','February_2027','February27','W']
+    };
+    function managerStraightLineMonthlyBudget(manager){
+      const row = getManagerBudgetRow(manager);
+      if (row && num(row.budget) > 0) return num(row.budget);
+      const key = normalizedString(manager);
+      return MANAGER_STRAIGHT_LINE_MONTHLY_TARGETS[key] || 0;
+    }
+    function managerStraightLineBudgetForPeriod(manager, periodLabel, dateLike = REPORTING_MONTH_DATE){
+      const monthly = managerStraightLineMonthlyBudget(manager);
+      const d = safeDate(dateLike) || REPORTING_MONTH_DATE;
+      if (!monthly) return 0;
+      if (periodLabel === 'Daily') return monthly / Math.max(daysInMonth(d), 1);
+      if (periodLabel === 'Weekly') return (monthly / Math.max(daysInMonth(d), 1)) * 7;
+      if (periodLabel === 'Monthly') return monthly;
+      if (periodLabel === 'Quarterly') return monthly * 3;
+      if (periodLabel === 'Yearly') return monthly * 12;
+      return monthly;
+    }
+    function systemStraightLineBudgetForPeriod(periodLabel, dateLike = REPORTING_MONTH_DATE){
+      const d = safeDate(dateLike) || REPORTING_MONTH_DATE;
+      const monthly = managerBudgetData.length ? managerBudgetData.reduce((sum, row) => sum + num(row.budget), 0) : STRAIGHT_LINE_MONTHLY_BUDGET;
       if (periodLabel === 'Daily') return monthly / Math.max(daysInMonth(d), 1);
       if (periodLabel === 'Weekly') return (monthly / Math.max(daysInMonth(d), 1)) * 7;
       if (periodLabel === 'Monthly') return monthly;
@@ -594,7 +632,11 @@
       if (totalActual > 0 && sliceActual > 0) return Math.max(0, sliceActual / totalActual);
       return (!filters || Object.values(filters).every(v => !v || v === 'All')) ? 1 : 0;
     }
-    function fixedStraightLineBudgetForPeriod(periodLabel, filters = {}, dateLike = new Date()){
+    function fixedStraightLineBudgetForPeriod(periodLabel, filters = {}, dateLike = REPORTING_MONTH_DATE){
+      const managerTarget = filters?.manager && filters.manager !== 'All'
+        ? managerStraightLineBudgetForPeriod(filters.manager, periodLabel, dateLike)
+        : 0;
+      if (managerTarget > 0 && (!filters.costCenter || filters.costCenter === 'All') && (!filters.project || filters.project === 'All')) return managerTarget;
       const fullBudget = systemStraightLineBudgetForPeriod(periodLabel, dateLike);
       const ratio = straightLineAllocationRatio(filters, periodLabel);
       return fullBudget * ratio;
@@ -625,6 +667,7 @@
       const targets = {};
       MONTH_NAMES.forEach((monthName, monthIndex) => {
         const shortName = MONTH_SHORT[monthIndex];
+        const aliasCandidates = FISCAL_MONTH_COLUMN_ALIASES[monthIndex] || [];
         const value = firstNumericFromLookup(lookup, [
           monthName, shortName,
           `${monthName} Target`, `${monthName}_Target`, `${monthName}Target`,
@@ -632,7 +675,8 @@
           `Target ${monthName}`, `Budget ${monthName}`,
           `${shortName} Target`, `${shortName}_Target`, `${shortName}Target`,
           `${shortName} Budget`, `${shortName}_Budget`, `${shortName}Budget`,
-          `Target ${shortName}`, `Budget ${shortName}`
+          `Target ${shortName}`, `Budget ${shortName}`,
+          ...aliasCandidates
         ]);
         if (value != null) targets[monthIndex] = value;
       });
@@ -642,8 +686,8 @@
       const d = safeDate(dateLike) || new Date();
       return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
     }
-    function getMonthTargetForProject(project, dateLike = new Date()){
-      const d = safeDate(dateLike) || new Date();
+    function getMonthTargetForProject(project, dateLike = REPORTING_MONTH_DATE){
+      const d = safeDate(dateLike) || REPORTING_MONTH_DATE;
       const monthIndex = d.getMonth();
       if (project?.monthlyTargets && Object.prototype.hasOwnProperty.call(project.monthlyTargets, monthIndex)) return num(project.monthlyTargets[monthIndex]);
       if (num(project?.monthlyTarget) > 0) return num(project.monthlyTarget);
@@ -656,31 +700,18 @@
       if (filters.project && filters.project !== 'All' && project.project !== filters.project) return false;
       return true;
     }
-    function projectTargetForPeriod(project, period, dateLike = new Date()){
-      const d = safeDate(dateLike) || new Date();
+    function projectTargetForPeriod(project, period, dateLike = REPORTING_MONTH_DATE){
+      const d = safeDate(dateLike) || REPORTING_MONTH_DATE;
       const monthTarget = getMonthTargetForProject(project, d);
-      const annual = num(project?.totalIncome);
+      const annual = monthTarget ? monthTarget * 12 : num(project?.totalIncome);
       if (period === 'Daily') return monthTarget / Math.max(daysInMonth(d), 1);
       if (period === 'Weekly') return (monthTarget / Math.max(daysInMonth(d), 1)) * 7;
       if (period === 'Monthly') return monthTarget;
-      if (period === 'Quarterly') {
-        const quarterStart = Math.floor(d.getMonth() / 3) * 3;
-        let total = 0;
-        for (let i = 0; i < 3; i += 1){
-          total += getMonthTargetForProject(project, new Date(d.getFullYear(), quarterStart + i, 1));
-        }
-        return total;
-      }
-      if (period === 'Yearly') {
-        let total = 0;
-        for (let i = 0; i < 12; i += 1){
-          total += getMonthTargetForProject(project, new Date(d.getFullYear(), i, 1));
-        }
-        return total || annual;
-      }
+      if (period === 'Quarterly') return monthTarget * 3;
+      if (period === 'Yearly') return annual;
       return monthTarget;
     }
-    function sumProjectTargets(periodLabel, filters = {}, dateLike = new Date()){
+    function sumProjectTargets(periodLabel, filters = {}, dateLike = REPORTING_MONTH_DATE){
       return projectsData
         .filter(project => projectMatchesFilters(project, filters))
         .reduce((sum, project) => sum + projectTargetForPeriod(project, periodLabel, dateLike), 0);
@@ -693,6 +724,15 @@
     }
 
     function actualRevenueForPeriod(periodLabel, filters = {}){
+      const useManagerBudgetSheet = ['Monthly','Quarterly','Yearly'].includes(periodLabel) && (!filters.project || filters.project === 'All') && (!filters.costCenter || filters.costCenter === 'All');
+      if (useManagerBudgetSheet && filters.manager && filters.manager !== 'All') {
+        const fromManagerSheet = managerBudgetActualForPeriod(filters.manager, periodLabel);
+        if (fromManagerSheet > 0) return fromManagerSheet;
+      }
+      if (useManagerBudgetSheet && (!filters.manager || filters.manager === 'All') && managerBudgetData.length) {
+        const fromManagerSheet = totalManagerBudgetActualForPeriod(periodLabel);
+        if (fromManagerSheet > 0) return fromManagerSheet;
+      }
       return periodRevenueRows(periodLabel, filters).reduce((sum, row) => sum + num(row.amount), 0);
     }
     function actualBudgetForPeriod(periodLabel, filters = {}){
@@ -862,6 +902,48 @@
       });
     }
 
+    function normaliseManagerBudgets(raw){
+      return raw.map((row, index) => ({
+        id: row.id || `MB${index+1}`,
+        manager: row.ProjectManager || row['PROJECT MANAGER'] || row.Manager || row.manager || row.pm || '',
+        costCenter: normalizeCostCenterName(row.CostCenter || row['COST CENTER'] || row.Division || row.division || ''),
+        budget: num(row.Budget || row['BUDGET'] || row.MonthlyBudget || row['MONTHLY BUDGET']),
+        actual: num(row.Actual || row['ACTUAL'] || row.Amount || row['AMOUNT']),
+        variance: num(row.Variance || row['VARIANCE']),
+        performancePct: num(row['% PERFOMANCE'] || row['% PERFORMANCE'] || row.Performance || row.performance || row.PerformancePct || row.performancePct)
+      })).filter(row => row.manager || row.budget || row.actual);
+    }
+
+    function getManagerBudgetRow(manager){
+      const key = normalizedString(manager);
+      return managerBudgetData.find(row => normalizedString(row.manager) === key) || null;
+    }
+
+    function managerBudgetActualForPeriod(manager, periodLabel, dateLike = REPORTING_MONTH_DATE){
+      const row = getManagerBudgetRow(manager);
+      const monthly = row ? num(row.actual) : 0;
+      const d = safeDate(dateLike) || REPORTING_MONTH_DATE;
+      if (!monthly) return 0;
+      if (periodLabel === 'Daily') return monthly / Math.max(daysInMonth(d), 1);
+      if (periodLabel === 'Weekly') return (monthly / Math.max(daysInMonth(d), 1)) * 7;
+      if (periodLabel === 'Monthly') return monthly;
+      if (periodLabel === 'Quarterly') return monthly * 3;
+      if (periodLabel === 'Yearly') return monthly * 12;
+      return monthly;
+    }
+
+    function totalManagerBudgetActualForPeriod(periodLabel, dateLike = REPORTING_MONTH_DATE){
+      const monthly = managerBudgetData.reduce((sum, row) => sum + num(row.actual), 0);
+      const d = safeDate(dateLike) || REPORTING_MONTH_DATE;
+      if (!monthly) return 0;
+      if (periodLabel === 'Daily') return monthly / Math.max(daysInMonth(d), 1);
+      if (periodLabel === 'Weekly') return (monthly / Math.max(daysInMonth(d), 1)) * 7;
+      if (periodLabel === 'Monthly') return monthly;
+      if (periodLabel === 'Quarterly') return monthly * 3;
+      if (periodLabel === 'Yearly') return monthly * 12;
+      return monthly;
+    }
+
     function getFetchOptions(method='GET', body){
       const options = { method, mode:'cors', cache:'no-store', redirect:'follow', headers:{ Accept:'application/json' } };
       if (body != null) {
@@ -912,20 +994,23 @@
       if (showOverlay) showLoading('Loading live data from Google Sheets...');
       setConnection('Connecting', 'b-amber');
       try {
-        const [projectsResult, revenueResult, invoicesResult] = await Promise.all([
+        const [projectsResult, revenueResult, invoicesResult, managerBudgetsResult] = await Promise.all([
           loadEndpoint(scriptUrl, 'getProjects'),
           loadEndpoint(scriptUrl, 'getRevenue'),
-          loadEndpoint(scriptUrl, 'getInvoices')
+          loadEndpoint(scriptUrl, 'getInvoices'),
+          loadEndpoint(scriptUrl, 'getManagerBudgets')
         ]);
         projectsData = projectsResult.ok ? normaliseProjects(projectsResult.rows) : [];
         revenueData = revenueResult.ok ? normaliseRevenue(revenueResult.rows) : [];
         invoiceData = invoicesResult.ok ? normaliseInvoices(invoicesResult.rows) : [];
+        managerBudgetData = managerBudgetsResult.ok ? normaliseManagerBudgets(managerBudgetsResult.rows) : [];
         const warnings = [];
         if (!projectsResult.ok) warnings.push('Projects failed.');
         if (!revenueResult.ok) warnings.push('Revenue failed.');
         if (!invoicesResult.ok) warnings.push('Invoices failed.');
+        if (!managerBudgetsResult.ok) warnings.push('Manager budgets failed.');
         setConnection(warnings.length ? 'Partially Connected' : 'Live Connected', warnings.length ? 'b-amber' : 'b-green');
-        setStatusSummary(`Loaded live data.<br><br>Projects: ${projectsData.length}<br>Revenue rows: ${revenueData.length}<br>Invoice rows: ${invoiceData.length}<br>Last sync: ${new Date().toLocaleTimeString()}`);
+        setStatusSummary(`Loaded live data.<br><br>Projects: ${projectsData.length}<br>Revenue rows: ${revenueData.length}<br>Invoice rows: ${invoiceData.length}<br>Manager budgets: ${managerBudgetData.length}<br>Last sync: ${new Date().toLocaleTimeString()}`);
         populateInputs(snapshot);
         render();
       } finally {
@@ -1073,9 +1158,8 @@
       rows.forEach(row => {
         const key = analysisBucketKey(row.date, period);
         if (!key) return;
-        const current = buckets.get(key) || { name:key, actual:0, budget:0 };
+        const current = buckets.get(key) || { name:key, actual:0 };
         current.actual += num(row.amount);
-        current.budget += num(row.budget);
         buckets.set(key, current);
       });
       const ordered = Array.from(buckets.values()).sort((a,b) => String(a.name).localeCompare(String(b.name)));
@@ -1229,7 +1313,7 @@
         const straightAchievementPct = straightPct(actual, straightLineBudget);
         const varianceProjected = actual - projectedTarget;
         const varianceStraight = actual - straightLineBudget;
-        return `<div class="progress-item"><div class="progress-head"><strong>${escapeHtml(name)}</strong>${badge(projectedAchievementPct + '% / ' + straightAchievementPct + '%', statusTone(Math.min(projectedAchievementPct, straightAchievementPct)))}</div>${dualProgressBar(projectedAchievementPct, straightAchievementPct, 'Actual vs projected', 'Actual vs straight-line')}<div class="progress-label"><span>${activePeriod} actual ${money(actual)}</span><span>${activePeriod} projected ${money(projectedTarget)}</span></div><div class="progress-label"><span>${activePeriod} straight-line ${money(straightLineBudget)}</span><span>Projected variance ${money(varianceProjected)}</span></div><div class="progress-label"><span>Straight-line variance ${money(varianceStraight)}</span><span>Monthly straight-line base ${money(STRAIGHT_LINE_MONTHLY_BUDGET)}</span></div></div>`;
+        return `<div class="progress-item"><div class="progress-head"><strong>${escapeHtml(name)}</strong>${badge(projectedAchievementPct + '% / ' + straightAchievementPct + '%', statusTone(Math.min(projectedAchievementPct, straightAchievementPct)))}</div>${dualProgressBar(projectedAchievementPct, straightAchievementPct, 'Actual vs projected', 'Actual vs straight-line')}<div class="progress-label"><span>${activePeriod} actual ${money(actual)}</span><span>${activePeriod} projected ${money(projectedTarget)}</span></div><div class="progress-label"><span>${activePeriod} straight-line ${money(straightLineBudget)}</span><span>Projected variance ${money(varianceProjected)}</span></div><div class="progress-label"><span>Straight-line variance ${money(varianceStraight)}</span><span>Monthly straight-line base ${money(managerBudgetData.length ? managerBudgetData.reduce((sum, row) => sum + num(row.budget), 0) : STRAIGHT_LINE_MONTHLY_BUDGET)}</span></div></div>`;
       }).join('');
     }
 
@@ -1301,8 +1385,8 @@
       byId('dailyRevenueSummary').innerHTML = [
         { label:'Daily reported revenue', value:money(todayRevenue), note:'Sum of all totals from Revenue sheet for today' },
         { label:'Daily target', value:money(todayTarget), note:'Projected from Projects sheet' },
-        { label:'Straight-line budget', value:money(todayBudget), note:'From Revenue sheet budget rows' },
-        { label:'Daily variance', value:money(todayVariance), note:'Actual minus budget basis for today' },
+        { label:'Straight-line budget', value:money(todayBudget), note:'From manager budget sheet straight-line targets' },
+        { label:'Daily variance', value:money(todayVariance), note:'Actual minus selected budget basis for today' },
         { label:'Daily profitability %', value:todayProfitability + '%', note:'Weighted from project margin % set per project' }
       ].map(item => `<div class="mini-stat"><div class="label">${item.label}</div><div class="value">${item.value}</div><div class="muted" style="margin-top:6px;">${item.note}</div></div>`).join('');
     }
