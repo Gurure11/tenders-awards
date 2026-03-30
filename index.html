@@ -200,6 +200,10 @@
         <div class="table-wrap"><table id="scorecardTable"></table></div>
       </div>
       <div class="card section"><h3>Performance report by division</h3><canvas id="areaChart"></canvas><div class="table-wrap" style="margin-top:18px;"><table id="projectPerfTable"></table></div></div>
+      <div class="row two section">
+        <div class="card"><h3>Variance: Actual Revenue vs Straight-line Budget</h3><canvas id="varianceChart"></canvas></div>
+        <div class="card"><h3>Actual vs Projected Budget</h3><canvas id="projectedChart"></canvas></div>
+      </div>
       <div class="card section"><h3>Performance by cost center / division variance</h3><div class="table-wrap"><table id="divisionVarianceTable"></table></div></div>
     </div>
 
@@ -256,16 +260,38 @@
 
     <div id="invoices" class="tab-content section">
       <div class="card">
+        <h3>Invoice summary</h3>
+        <div id="invoiceSummaryCards" class="mini-stats"></div>
+      </div>
+      <div class="card section">
         <h3>Invoice input</h3>
         <div class="form-grid">
           <div class="field span-2"><label>Invoice Date</label><input id="invDate" type="date" /></div>
           <div class="field span-3"><label>Project Manager</label><select id="invManager"></select></div>
           <div class="field span-4"><label>Project Name</label><select id="invProjectName"></select></div>
+          <div class="field span-3"><label>Invoice Number</label><input id="invInvoiceNumber" type="text" placeholder="INV-001" /></div>
           <div class="field span-3"><label>Invoice Amount</label><input id="invAmount" type="number" min="0" placeholder="0" /></div>
           <div class="field span-3"><label>Payment Received</label><select id="paymentReceived"><option value="false">No</option><option value="true">Yes</option></select></div>
           <div class="field span-3"><label>Payment Date</label><input id="paymentDate" type="date" /></div>
           <div class="field span-12"><button id="saveInvoiceBtn">Save Invoice</button></div>
         </div>
+      </div>
+      <div class="card section">
+        <h3>Payments received</h3>
+        <div class="form-grid">
+          <div class="field span-2"><label>Payment Date</label><input id="payDate" type="date" /></div>
+          <div class="field span-3"><label>Project Manager</label><select id="payManager"></select></div>
+          <div class="field span-4"><label>Project Name</label><select id="payProjectName"></select></div>
+          <div class="field span-3"><label>Invoice Number</label><input id="payInvoiceNumber" type="text" placeholder="INV-001" /></div>
+          <div class="field span-3"><label>Amount Received</label><input id="payAmount" type="number" min="0" placeholder="0" /></div>
+          <div class="field span-3"><label>Cost Center</label><select id="payCostCenter"></select></div>
+          <div class="field span-6"><label>Notes</label><input id="payNotes" type="text" placeholder="Optional note" /></div>
+          <div class="field span-12"><button id="savePaymentBtn">Save Payment Received</button></div>
+        </div>
+      </div>
+      <div class="row two section">
+        <div class="card"><h3>Total by cost center</h3><div class="table-wrap"><table id="invoiceCostCenterTable"></table></div></div>
+        <div class="card"><h3>Total by project manager</h3><div class="table-wrap"><table id="invoiceManagerTable"></table></div></div>
       </div>
       <div class="card section"><h3>Invoice log</h3><div class="table-wrap"><table id="invoiceLogTable"></table></div></div>
     </div>
@@ -279,7 +305,7 @@
   </div>
 
   <script>
-    const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxXqomp1iTMG6Pi2pmGdNb2FmHtcO2--U0D697YroV4FTRlRNP6CWHo7X65lIn5ofDa/exec';
+    const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw58RqVeiwPhkZCYAF_z8uNHC-lxMYZH5AKGrpr2Dwqe-gGs6r2AIDJ3V6OpMBioWxj/exec';
     const STORAGE_KEYS = { scriptUrl:'onpoint.scriptUrl', fallbackMode:'onpoint.fallbackMode', revenueBudgetMemory:'onpoint.revenueBudgetMemory', formDraft:'onpoint.formDraft' };
     const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
     const DIVISION_COLORS = ['#0f172a','#334155','#475569','#64748b','#94a3b8','#1e293b','#475569'];
@@ -363,7 +389,7 @@
       return 0;
     }
     function captureDashboardInputs(){
-      const ids = ['revDate','revCostCenter','revManager','revProjectName','revAmount','revBudget','revQuality','revSafety','revAchievement','invDate','invManager','invProjectName','invAmount','paymentReceived','paymentDate','newProjCreatedAt','newProjDivision','newProjManager','newProjName','newProjLocation','newProjStatus','newProjTotalIncome','newProjMargin','newProjStartDate','newProjEndDate','newProjRemarks','quickNewProjectName','quickNewProjectIncome','quickNewProjectMargin','quickNewProjectStartDate','quickNewProjectEndDate','query'];
+      const ids = ['revDate','revCostCenter','revManager','revProjectName','revAmount','revBudget','revQuality','revSafety','revAchievement','invDate','invManager','invProjectName','invInvoiceNumber','invAmount','paymentReceived','paymentDate','payDate','payManager','payProjectName','payInvoiceNumber','payAmount','payCostCenter','payNotes','newProjCreatedAt','newProjDivision','newProjManager','newProjName','newProjLocation','newProjStatus','newProjTotalIncome','newProjMargin','newProjStartDate','newProjEndDate','newProjRemarks','quickNewProjectName','quickNewProjectIncome','quickNewProjectMargin','quickNewProjectStartDate','quickNewProjectEndDate','query'];
       const values = {};
       ids.forEach(id => {
         const el = byId(id);
@@ -450,6 +476,12 @@
       };
       return aliases[key] || raw;
     }
+    function normalizedString(value){
+      return String(value ?? '').trim().toLowerCase();
+    }
+    function sameText(a, b){
+      return normalizedString(a) === normalizedString(b);
+    }
     function getLocalDateString(value){
       if (value == null || value === '') return '';
       if (typeof value === 'string') {
@@ -507,8 +539,8 @@
       return d >= range.start && d < range.end;
     }
     function getProjectRecord(projectName, manager='', costCenter=''){
-      const direct = projectsData.find(p => p.project === projectName && (!manager || !p.pm || p.pm === manager) && (!costCenter || !p.division || normalizeCostCenterName(p.division) === normalizeCostCenterName(costCenter)));
-      return direct || projectsData.find(p => p.project === projectName) || null;
+      const direct = projectsData.find(p => sameText(p.project, projectName) && (!manager || !p.pm || sameText(p.pm, manager)) && (!costCenter || !p.division || normalizeCostCenterName(p.division) === normalizeCostCenterName(costCenter)));
+      return direct || projectsData.find(p => sameText(p.project, projectName)) || null;
     }
     function marginForRevenueRow(row){
       const project = getProjectRecord(row.projectName, row.manager, row.costCenter);
@@ -768,14 +800,27 @@
       }));
     }
     function normaliseInvoices(raw){
-      return raw.map(row => ({
-        date: normaliseDate(row.Date || row.date),
-        manager: row.Manager || row.manager || '',
-        projectName: row.ProjectName || row.projectName || '',
-        amount: num(row.Amount || row.amount),
-        paymentReceived: String(row.PaymentReceived || row.paymentReceived).toLowerCase() === 'true',
-        paymentDate: normaliseDate(row.PaymentDate || row.paymentDate)
-      }));
+      return raw.map(row => {
+        const projectName = row.ProjectName || row.projectName || '';
+        const manager = row.Manager || row.manager || '';
+        const projectRecord = getProjectRecord(projectName, manager) || {};
+        const explicitType = String(row.EntryType || row.entryType || row.Type || row.type || '').trim();
+        const paymentReceived = String(row.PaymentReceived || row.paymentReceived).toLowerCase() === 'true';
+        const type = explicitType || (paymentReceived ? 'Payment Received' : 'Invoice Issued');
+        const amount = num(row.Amount || row.amount || row.PaymentAmount || row.paymentAmount);
+        return {
+          date: normaliseDate(row.Date || row.date),
+          manager,
+          projectName,
+          amount,
+          invoiceNumber: row.InvoiceNumber || row.invoiceNumber || row.InvoiceNo || row.invoiceNo || '',
+          paymentReceived,
+          paymentDate: normaliseDate(row.PaymentDate || row.paymentDate),
+          costCenter: normalizeCostCenterName(row.CostCenter || row.costCenter || row.Division || row.division || projectRecord.division || ''),
+          type,
+          notes: row.Notes || row.notes || ''
+        };
+      });
     }
 
     function getFetchOptions(method='GET', body){
@@ -850,20 +895,25 @@
       }
     }
 
+    function getRevenueRowsForProject(project, period = null){
+      const byProject = revenueData.filter(r => sameText(r.projectName, project.project));
+      const byDivision = byProject.filter(r => !project.division || !r.costCenter || normalizeCostCenterName(r.costCenter) === normalizeCostCenterName(project.division));
+      const byManager = byDivision.filter(r => !project.pm || !r.manager || sameText(r.manager, project.pm));
+      const preferred = byManager.length ? byManager : (byDivision.length ? byDivision : byProject);
+      return preferred.filter(r => !period || isDateInPeriod(r.date, period));
+    }
     function projectRevenueForPeriod(project, period){
-      return revenueData
-        .filter(r => r.projectName === project.project && (!project.pm || !r.manager || r.manager === project.pm) && (!project.division || !r.costCenter || normalizeCostCenterName(r.costCenter) === normalizeCostCenterName(project.division)))
-        .filter(r => isDateInPeriod(r.date, period))
-        .reduce((s,r)=>s+r.amount,0);
+      return getRevenueRowsForProject(project, period).reduce((s,r)=>s+r.amount,0);
     }
     function projectCashForPeriod(project, period){
       return invoiceData
-        .filter(r => r.projectName === project.project && r.paymentReceived)
+        .filter(r => sameText(r.projectName, project.project) && r.paymentReceived)
+        .filter(r => !project.pm || !r.manager || sameText(r.manager, project.pm))
         .filter(r => isDateInPeriod(r.date, period))
         .reduce((s,r)=>s+r.amount,0);
     }
-    const projectQuality = project => { const rows = revenueData.filter(r => r.projectName === project.project); return rows.length ? Math.round(rows.reduce((s,r)=>s+(r.quality||80),0)/rows.length) : 80; };
-    const projectSafety = project => { const rows = revenueData.filter(r => r.projectName === project.project); return Math.max(0,100 - rows.reduce((s,r)=>s+(r.safety||0),0)*10); };
+    const projectQuality = project => { const rows = getRevenueRowsForProject(project); return rows.length ? Math.round(rows.reduce((s,r)=>s+(r.quality||80),0)/rows.length) : 80; };
+    const projectSafety = project => { const rows = getRevenueRowsForProject(project); return Math.max(0,100 - rows.reduce((s,r)=>s+(r.safety||0),0)*10); };
     const projectDeadline = project => { const start=safeDate(project.startDate), end=safeDate(project.endDate); if (!start||!end) return 75; const total=end.getTime()-start.getTime(); if (total<=0) return 100; const elapsed=Math.min(Math.max(Date.now()-start.getTime(),0),total); return Math.round((elapsed/total)*100); };
 
     function enrichedProjects(){
@@ -944,6 +994,183 @@
       if (!options.includes(state.analysisValue) && state.analysisValue !== 'All') state.analysisValue = 'All';
     }
 
+
+    function getAnalysisFilters(mode = state.analysisMode, selected = state.analysisValue){
+      return {
+        costCenter: mode === 'costCenter' && selected !== 'All' ? selected : 'All',
+        manager: mode === 'manager' && selected !== 'All' ? selected : 'All',
+        project: mode === 'project' && selected !== 'All' ? selected : 'All'
+      };
+    }
+
+    function analysisDimensionLabel(mode){
+      return mode === 'project' ? 'Project' : mode === 'manager' ? 'Project Manager' : 'Cost Center';
+    }
+
+    function analysisBucketKey(dateValue, periodLabel){
+      const localDate = getLocalDateString(dateValue);
+      if (!localDate) return '';
+      const d = safeDate(`${localDate}T00:00:00`);
+      if (!d) return '';
+      if (periodLabel === 'Daily') return localDate;
+      if (periodLabel === 'Weekly') {
+        const start = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const day = start.getDay();
+        start.setDate(start.getDate() - day);
+        return getLocalDateString(start);
+      }
+      if (periodLabel === 'Monthly') return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (periodLabel === 'Quarterly') return `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1}`;
+      return String(d.getFullYear());
+    }
+
+    function buildAnalysisTrendSeries(){
+      const mode = state.analysisMode;
+      const selected = state.analysisValue;
+      const period = state.analysisPeriod || 'Daily';
+      const filters = getAnalysisFilters(mode, selected);
+      const rows = periodRevenueRows(period, filters).filter(row => rowMatchesQuery(row, state.query));
+      const buckets = new Map();
+      rows.forEach(row => {
+        const key = analysisBucketKey(row.date, period);
+        if (!key) return;
+        const current = buckets.get(key) || { name:key, actual:0, budget:0 };
+        current.actual += num(row.amount);
+        current.budget += num(row.budget);
+        buckets.set(key, current);
+      });
+      const ordered = Array.from(buckets.values()).sort((a,b) => String(a.name).localeCompare(String(b.name)));
+      const projectedTotal = sumProjectTargetsForPeriodWithQuery(period, filters, state.query);
+      const projectedPerBucket = ordered.length ? projectedTotal / ordered.length : projectedTotal;
+      return ordered.map(item => ({
+        name: item.name,
+        actual: item.actual,
+        budget: item.budget,
+        projected: projectedPerBucket
+      }));
+    }
+
+    function renderPerformanceAnalysisCharts(){
+      const trend = buildAnalysisTrendSeries();
+      const mode = state.analysisMode;
+      const selected = state.analysisValue;
+      const period = state.analysisPeriod || 'Daily';
+      const filters = getAnalysisFilters(mode, selected);
+      const modeLabel = analysisDimensionLabel(mode);
+      const selectedLabel = selected === 'All'
+        ? (mode === 'project' ? 'All Projects' : mode === 'manager' ? 'All Project Managers' : 'All Cost Centers')
+        : selected;
+
+      const varianceCanvas = byId('varianceChart');
+      const projectedCanvas = byId('projectedChart');
+
+      if (charts.variance) charts.variance.destroy();
+      if (charts.projectedAnalysis) charts.projectedAnalysis.destroy();
+
+      if (varianceCanvas) {
+        charts.variance = new Chart(varianceCanvas, {
+          type:'line',
+          data:{
+            labels: trend.map(item => item.name),
+            datasets:[
+              { label:'Actual Revenue', data: trend.map(item => item.actual), borderColor:'#0f172a', backgroundColor:'rgba(15,23,42,.10)', fill:true, tension:.35 },
+              { label:'Straight-line Budget', data: trend.map(item => item.budget), borderColor:'#64748b', backgroundColor:'rgba(100,116,139,.08)', fill:true, tension:.35 }
+            ]
+          },
+          options:{
+            responsive:true,
+            maintainAspectRatio:false,
+            plugins:{
+              title:{ display:true, text:`${modeLabel}: ${selectedLabel} · ${period}` }
+            }
+          }
+        });
+      }
+
+      const rows = aggregateDimensionFromSheets(
+        mode === 'manager' ? 'pm' : mode === 'project' ? 'project' : 'division',
+        filters
+      ).map(row => {
+        const actual = period === 'Daily' ? row.daily : period === 'Weekly' ? row.weekly : period === 'Monthly' ? row.monthly : period === 'Quarterly' ? row.quarterly : row.yearly;
+        const projected = period === 'Daily' ? row.projectedDaily : period === 'Weekly' ? row.projectedWeekly : period === 'Monthly' ? row.projectedMonthly : period === 'Quarterly' ? row.projectedQuarterly : row.projectedYearly;
+        const score = pct(actual, projected);
+        return { name:row.name, actual, projected, score };
+      }).filter(item => item.actual || item.projected)
+        .sort((a,b) => a.score - b.score);
+
+      if (projectedCanvas) {
+        charts.projectedAnalysis = new Chart(projectedCanvas, {
+          type:'bar',
+          data:{
+            labels: rows.map(item => item.name),
+            datasets:[
+              { label:'Actual Revenue', data: rows.map(item => item.actual), backgroundColor:'#0f172a', borderRadius:10 },
+              { label:'Projected Budget', data: rows.map(item => item.projected), backgroundColor:'#cbd5e1', borderRadius:10 }
+            ]
+          },
+          options:{
+            responsive:true,
+            maintainAspectRatio:false,
+            plugins:{
+              title:{ display:true, text:`Lowest % first · ${modeLabel} · ${period}` }
+            }
+          }
+        });
+      }
+    }
+
+    function renderInvoiceSummary(){
+      const issuedRows = invoiceData.filter(item => item.type !== 'Payment Received');
+      const paymentRows = invoiceData.filter(item => item.type === 'Payment Received' || item.paymentReceived);
+      const invoicesIssued = issuedRows.reduce((sum,item)=>sum + num(item.amount),0);
+      const paymentsReceived = paymentRows.reduce((sum,item)=>sum + num(item.amount),0);
+      const outstanding = invoicesIssued - paymentsReceived;
+      const paymentRate = pct(paymentsReceived, invoicesIssued);
+      byId('invoiceSummaryCards').innerHTML = [
+        { label:'Total invoices issued', value:money(invoicesIssued), note:`${issuedRows.length} invoice rows` },
+        { label:'Payments received', value:money(paymentsReceived), note:`${paymentRows.length} payment rows` },
+        { label:'Outstanding balance', value:money(outstanding), note:'Invoices issued less payments received' },
+        { label:'Payment collection %', value:paymentRate + '%', note:'Payments received as % of invoices issued' }
+      ].map(item => `<div class="mini-stat"><div class="label">${item.label}</div><div class="value">${item.value}</div><div class="muted" style="margin-top:6px;">${item.note}</div></div>`).join('');
+    }
+
+    function renderInvoiceBreakdowns(){
+      const issuedRows = invoiceData.filter(item => item.type !== 'Payment Received');
+      const paymentRows = invoiceData.filter(item => item.type === 'Payment Received' || item.paymentReceived);
+
+      const costCenterMap = new Map();
+      const managerMap = new Map();
+
+      const updateEntry = (map, key, field, amount) => {
+        if (!key) return;
+        const current = map.get(key) || { name:key, invoices:0, payments:0 };
+        current[field] += amount;
+        map.set(key, current);
+      };
+
+      issuedRows.forEach(item => {
+        updateEntry(costCenterMap, item.costCenter || normalizeCostCenterName(getProjectRecord(item.projectName, item.manager)?.division || ''), 'invoices', num(item.amount));
+        updateEntry(managerMap, item.manager, 'invoices', num(item.amount));
+      });
+      paymentRows.forEach(item => {
+        updateEntry(costCenterMap, item.costCenter || normalizeCostCenterName(getProjectRecord(item.projectName, item.manager)?.division || ''), 'payments', num(item.amount));
+        updateEntry(managerMap, item.manager, 'payments', num(item.amount));
+      });
+
+      const costCenterRows = Array.from(costCenterMap.values()).map(row => ({ ...row, score:pct(row.payments, row.invoices) })).sort((a,b) => a.score - b.score);
+      const managerRows = Array.from(managerMap.values()).map(row => ({ ...row, score:pct(row.payments, row.invoices) })).sort((a,b) => a.score - b.score);
+
+      buildTable(byId('invoiceCostCenterTable'),
+        [{label:'Cost Center'},{label:'Invoices',class:'right'},{label:'Payments',class:'right'},{label:'Collection %',class:'right'}],
+        costCenterRows.map(item => [cell(item.name), cell(money(item.invoices),'right'), cell(money(item.payments),'right'), cell(badge(item.score + '%', statusTone(item.score)),'right')])
+      );
+
+      buildTable(byId('invoiceManagerTable'),
+        [{label:'Project Manager'},{label:'Invoices',class:'right'},{label:'Payments',class:'right'},{label:'Collection %',class:'right'}],
+        managerRows.map(item => [cell(item.name), cell(money(item.invoices),'right'), cell(money(item.payments),'right'), cell(badge(item.score + '%', statusTone(item.score)),'right')])
+      );
+    }
+
     function renderConnectionProgressBars(){
       const container = byId('connectionProgressBars');
       const activePeriod = state.period || 'Daily';
@@ -1002,7 +1229,7 @@
         const groupTarget = sumProjectTargets(period, groupFilters);
         return [name, items, groupActual, groupTarget];
       }).filter(([, items, groupActual, groupTarget]) => items.length || groupTarget > 0)
-        .sort((a,b) => b[2] - a[2]);
+        .sort((a,b) => pct(a[2], a[3]) - pct(b[2], b[3]));
       if (!entries.length){
         container.innerHTML = '<div class="notice">No revenue rows found for this selection and period.</div>';
         return;
@@ -1129,18 +1356,25 @@
       const divisionAtGlance = divisionRollup.map(row => ({ name:row.name, actual:row[activeBucket], projected:row['projected'+state.period], budget:row['budget'+state.period], target:row['target'+state.period], score:pct(row[activeBucket],row['target'+state.period]) })).sort((a,b)=>b.actual-a.actual);
       buildTable(byId('divisionTable'), [{label:'Division'},{label:'Actual',class:'right'},{label:'Projected',class:'right'},{label:'Budget',class:'right'},{label:'Score',class:'right'}], divisionAtGlance.map(item => [cell(item.name),cell(money(item.actual),'right'),cell(money(item.projected),'right'),cell(money(item.budget),'right'),cell(badge(item.score+'%',statusTone(item.score)),'right')]));
 
-      const pmBalancedScorecard = pmRollup.map(row => {
+      let pmBalancedScorecard = pmRollup.map(row => {
         const pmProjects = filtered.filter(p=>p.pm===row.name), dailyScore=pct(row.daily,row.targetDaily), weeklyScore=pct(row.weekly,row.targetWeekly), monthlyScore=pct(row.monthly,row.targetMonthly), quarterlyScore=pct(row.quarterly,row.targetQuarterly), yearlyScore=pct(row.yearly,row.targetYearly), profitability=Math.round(pmProjects.reduce((s,p)=>s+p.gpPercent,0)/Math.max(pmProjects.length,1)), deadlines=Math.round(pmProjects.reduce((s,p)=>s+p.deadlineScore,0)/Math.max(pmProjects.length,1)), safety=Math.round(pmProjects.reduce((s,p)=>s+p.safetyScore,0)/Math.max(pmProjects.length,1)), quality=Math.round(pmProjects.reduce((s,p)=>s+p.qualityScore,0)/Math.max(pmProjects.length,1)), overallScore=Math.round(dailyScore*.15+weeklyScore*.15+monthlyScore*.2+quarterlyScore*.1+yearlyScore*.1+profitability*.1+deadlines*.05+safety*.05+quality*.1);
         return { name:row.name, dailyActual:row.daily, dailyTarget:row.targetDaily, dailyScore, weeklyActual:row.weekly, weeklyTarget:row.targetWeekly, weeklyScore, monthlyActual:row.monthly, monthlyTarget:row.targetMonthly, monthlyScore, quarterlyActual:row.quarterly, quarterlyTarget:row.targetQuarterly, quarterlyScore, yearlyActual:row.yearly, yearlyTarget:row.targetYearly, yearlyScore, profitability, deadlines, safety, quality, cash:pmProjects.reduce((s,p)=>s+p.cashCollected,0), actionCount:pmProjects.filter(p=>p.actionStatus!=='Closed').length, overallScore };
-      }).sort((a,b)=>b.overallScore-a.overallScore).map((row,index)=>({ ...row, rank:index+1 }));
-
+      })
       const currentActualKey = state.period === 'Daily' ? 'dailyActual' : state.period === 'Weekly' ? 'weeklyActual' : state.period === 'Monthly' ? 'monthlyActual' : state.period === 'Quarterly' ? 'quarterlyActual' : 'yearlyActual';
       const currentTargetKey = state.period === 'Daily' ? 'dailyTarget' : state.period === 'Weekly' ? 'weeklyTarget' : state.period === 'Monthly' ? 'monthlyTarget' : state.period === 'Quarterly' ? 'quarterlyTarget' : 'yearlyTarget';
       const currentScoreKey = state.period === 'Daily' ? 'dailyScore' : state.period === 'Weekly' ? 'weeklyScore' : state.period === 'Monthly' ? 'monthlyScore' : state.period === 'Quarterly' ? 'quarterlyScore' : 'yearlyScore';
-      buildTable(byId('pmTable'), [{label:'Rank',class:'right'},{label:'PM'},{label:'Actual',class:'right'},{label:'Target',class:'right'},{label:'Score',class:'right'}], pmBalancedScorecard.slice(0,8).map(item => [cell('#'+item.rank,'right'),cell(item.name),cell(money(item[currentActualKey]),'right'),cell(money(item[currentTargetKey]),'right'),cell(badge(item[currentScoreKey]+'%',statusTone(item[currentScoreKey])),'right')]));
+      pmBalancedScorecard = pmBalancedScorecard
+        .filter(row => row.name && (row.dailyActual || row.weeklyActual || row.monthlyActual || row.quarterlyActual || row.yearlyActual || row.dailyTarget || row.weeklyTarget || row.monthlyTarget || row.quarterlyTarget || row.yearlyTarget))
+        .sort((a,b)=>(b[currentScoreKey] - a[currentScoreKey]) || (b[currentActualKey] - a[currentActualKey]) || a.name.localeCompare(b.name));
+      pmBalancedScorecard = pmBalancedScorecard.map((row,index)=>({ ...row, rank:index+1 }));
+      buildTable(byId('pmTable'), [{label:'Rank',class:'right'},{label:'PM'},{label:'Actual',class:'right'},{label:'Target',class:'right'},{label:'Score',class:'right'}], pmBalancedScorecard.map(item => [cell('#'+item.rank,'right'),cell(item.name),cell(money(item[currentActualKey]),'right'),cell(money(item[currentTargetKey]),'right'),cell(badge(item[currentScoreKey]+'%',statusTone(item[currentScoreKey])),'right')]));
       buildTable(byId('scorecardTable'), [{label:'Rank',class:'right'},{label:'PM'},{label:'Daily A',class:'right'},{label:'Daily T',class:'right'},{label:'Daily %',class:'right'},{label:'Weekly A',class:'right'},{label:'Weekly T',class:'right'},{label:'Weekly %',class:'right'},{label:'Monthly A',class:'right'},{label:'Monthly T',class:'right'},{label:'Monthly %',class:'right'},{label:'Quarter A',class:'right'},{label:'Quarter T',class:'right'},{label:'Quarter %',class:'right'},{label:'Year A',class:'right'},{label:'Year T',class:'right'},{label:'Year %',class:'right'},{label:'GP%',class:'right'},{label:'DDL',class:'right'},{label:'SFT',class:'right'},{label:'QLT',class:'right'},{label:'Cash',class:'right'},{label:'Acts',class:'right'},{label:'Overall',class:'right'}], pmBalancedScorecard.map(row => [cell('#'+row.rank,'right'),cell(row.name),cell(money(row.dailyActual),'right'),cell(money(row.dailyTarget),'right'),cell(badge(row.dailyScore+'%',statusTone(row.dailyScore)),'right'),cell(money(row.weeklyActual),'right'),cell(money(row.weeklyTarget),'right'),cell(badge(row.weeklyScore+'%',statusTone(row.weeklyScore)),'right'),cell(money(row.monthlyActual),'right'),cell(money(row.monthlyTarget),'right'),cell(badge(row.monthlyScore+'%',statusTone(row.monthlyScore)),'right'),cell(money(row.quarterlyActual),'right'),cell(money(row.quarterlyTarget),'right'),cell(badge(row.quarterlyScore+'%',statusTone(row.quarterlyScore)),'right'),cell(money(row.yearlyActual),'right'),cell(money(row.yearlyTarget),'right'),cell(badge(row.yearlyScore+'%',statusTone(row.yearlyScore)),'right'),cell(row.profitability+'%','right'),cell(row.deadlines+'%','right'),cell(row.safety+'%','right'),cell(row.quality+'%','right'),cell(money(row.cash),'right'),cell(String(row.actionCount),'right'),cell(badge(row.overallScore+'%',statusTone(row.overallScore)),'right')]));
 
-      const actionLayer = filtered.map(project => ({ ...project, periodRevenue:project['revenue'+state.period], periodTarget:project['target'+state.period], score:pct(project['revenue'+state.period],project['target'+state.period]) })).sort((a,b)=>a.score-b.score);
+      const actionLayer = filtered.map(project => {
+        const actualRevenue = projectRevenueForPeriod(project, state.period);
+        const targetRevenue = project['target'+state.period];
+        return { ...project, periodRevenue:actualRevenue, periodTarget:targetRevenue, score:pct(actualRevenue,targetRevenue) };
+      }).sort((a,b)=>b.periodRevenue-a.periodRevenue || b.score-a.score);
       buildTable(byId('projectPerfTable'), [{label:'Project'},{label:'Revenue',class:'right'},{label:'Target',class:'right'},{label:'Profit',class:'right'},{label:'Deadline',class:'right'},{label:'Quality',class:'right'}], actionLayer.map(item => [cell(`<div><div style="font-weight:600;">${item.project}</div><div class="muted" style="font-size:12px;">${item.division} • ${item.pm}</div></div>`),cell(money(item.periodRevenue),'right'),cell(money(item.periodTarget),'right'),cell(badge(item.gpPercent+'%',statusTone(item.gpPercent*4)),'right'),cell(badge(item.deadlineScore+'%',statusTone(item.deadlineScore)),'right'),cell(badge(item.qualityScore+'%',statusTone(item.qualityScore)),'right')]));
       buildTable(byId('actionTable'), [{label:'Project'},{label:'Owner'},{label:'Due'},{label:'Status',class:'right'},{label:'Recovery'}], actionLayer.map(item => [cell(`<div><div style="font-weight:600;">${item.project}</div><div class="muted" style="font-size:12px;">${item.pm} • ${item.client}</div></div>`),cell(item.actionOwner),cell(item.actionDue),cell(badge(item.actionStatus,actionTone(item.actionStatus)),'right'),cell(item.recovery)]));
       byId('actionSummary').innerHTML = actionLayer.slice(0,4).map(item => `<div class="action-mini"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;"><div><div style="font-weight:600;">${item.project}</div><div class="muted" style="font-size:12px;margin-top:4px;">Owner: ${item.actionOwner}</div></div>${badge(item.actionStatus,actionTone(item.actionStatus))}</div><div style="margin-top:10px;color:var(--muted);font-size:14px;">Due: ${item.actionDue}</div><div style="margin-top:10px;">${item.recovery}</div></div>`).join('');
@@ -1176,13 +1410,32 @@
       renderFocusedProgressBars();
       renderDailyRevenueSummary();
       renderCharts(divisionRollup.map(row => ({ name:row.name, projected:row['projected'+state.period], budget:row['budget'+state.period], actual:row[activeBucket] })), divisionMix);
+      renderPerformanceAnalysisCharts();
       renderRevenueLog();
+      renderInvoiceSummary();
+      renderInvoiceBreakdowns();
       renderInvoiceLog();
       bindDynamicEvents();
     }
 
     function renderRevenueLog(){ buildTable(byId('revenueLogTable'), [{label:'Date'},{label:'Cost Center'},{label:'Manager'},{label:'Project'},{label:'Amount',class:'right'},{label:'Budget',class:'right'},{label:'Ach %',class:'right'}], revenueData.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(item => [cell(item.date),cell(item.costCenter || '-'),cell(item.manager),cell(item.projectName),cell(money(item.amount),'right'),cell(money(item.budget || 0),'right'),cell(badge(pct(item.amount,item.budget || 0)+'%',statusTone(pct(item.amount,item.budget || 0))),'right')])); }
-    function renderInvoiceLog(){ buildTable(byId('invoiceLogTable'), [{label:'Date'},{label:'Manager'},{label:'Project'},{label:'Amount',class:'right'},{label:'Paid',class:'right'},{label:'Payment Date'}], invoiceData.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(item => [cell(item.date),cell(item.manager),cell(item.projectName),cell(money(item.amount),'right'),cell(badge(item.paymentReceived?'Yes':'No',item.paymentReceived?'b-green':'b-amber'),'right'),cell(item.paymentDate || '-')])); }
+    function renderInvoiceLog(){
+      buildTable(
+        byId('invoiceLogTable'),
+        [{label:'Date'},{label:'Type'},{label:'Cost Center'},{label:'Manager'},{label:'Project'},{label:'Invoice No'},{label:'Amount',class:'right'},{label:'Paid',class:'right'},{label:'Payment Date'}],
+        invoiceData.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(item => [
+          cell(item.date),
+          cell(item.type || (item.paymentReceived ? 'Payment Received' : 'Invoice Issued')),
+          cell(item.costCenter || '-'),
+          cell(item.manager),
+          cell(item.projectName),
+          cell(item.invoiceNumber || '-'),
+          cell(money(item.amount),'right'),
+          cell(badge(item.paymentReceived?'Yes':'No',item.paymentReceived?'b-green':'b-amber'),'right'),
+          cell(item.paymentDate || '-')
+        ])
+      );
+    }
 
     function renderCharts(performanceTrend, divisionMix){
       Object.values(charts).forEach(chart => chart?.destroy?.()); charts = {};
@@ -1210,14 +1463,18 @@
       byId('newProjDivision').innerHTML = liveCostCenters.map(v => `<option value="${v}">${v}</option>`).join('');
       byId('revProjectName').innerHTML = liveProjects.map(v => `<option value="${v}">${v}</option>`).join('');
       byId('invProjectName').innerHTML = liveProjects.map(v => `<option value="${v}">${v}</option>`).join('');
+      byId('payProjectName').innerHTML = liveProjects.map(v => `<option value="${v}">${v}</option>`).join('');
+      byId('payCostCenter').innerHTML = liveCostCenters.map(v => `<option value="${v}">${v}</option>`).join('');
 
       const liveManagers = [...new Set([...PROJECT_MANAGERS, ...projectsData.map(p => p.pm).filter(Boolean), ...revenueData.map(r => r.manager).filter(Boolean)])].filter(Boolean).sort((a,b)=>a.localeCompare(b));
       byId('revManager').innerHTML = liveManagers.map(v => `<option value="${v}">${v}</option>`).join('');
       byId('invManager').innerHTML = liveManagers.map(v => `<option value="${v}">${v}</option>`).join('');
+      byId('payManager').innerHTML = liveManagers.map(v => `<option value="${v}">${v}</option>`).join('');
       byId('newProjManager').innerHTML = liveManagers.filter(v => v !== 'All').map(v => `<option value="${v}">${v}</option>`).join('');
 
       if (!current?.values?.revDate) byId('revDate').value = todayISO();
       if (!current?.values?.invDate) byId('invDate').value = todayISO();
+      if (!current?.values?.payDate) byId('payDate').value = todayISO();
       if (!current?.values?.newProjCreatedAt) byId('newProjCreatedAt').value = todayISO();
       byId('scriptUrlInput').value = localStorage.getItem(STORAGE_KEYS.scriptUrl) || DEFAULT_SCRIPT_URL;
       byId('fallbackMode').value = localStorage.getItem(STORAGE_KEYS.fallbackMode) || 'auto';
@@ -1306,7 +1563,57 @@ ${error.message}`);
       return safeFetchJson(scriptUrl, getFetchOptions('POST', payload));
     }
     async function saveRevenue(){ const payload = { action:'addRevenue', data:{ date:byId('revDate').value, manager:byId('revManager').value, costCenter:normalizeCostCenterName(byId('revCostCenter').value), projectName:byId('revProjectName').value, amount:num(byId('revAmount').value), budget:num(byId('revBudget').value), quality:num(byId('revQuality').value), safety:num(byId('revSafety').value) } }; if (!payload.data.date || !payload.data.projectName || payload.data.amount <= 0) return alert('Please complete the daily revenue fields.'); showLoading('Saving daily revenue...'); try { rememberBudgetValue(payload.data.projectName, payload.data.manager, payload.data.costCenter, payload.data.budget); await postJsonToScript(payload); byId('revAmount').value = ''; byId('revAchievement').value = ''; await loadLiveData(false); applyRememberedBudget(true); } finally { hideLoading(); } }
-    async function saveInvoice(){ const payload = { action:'addInvoice', data:{ date:byId('invDate').value, manager:byId('invManager').value, projectName:byId('invProjectName').value, amount:num(byId('invAmount').value), paymentReceived:byId('paymentReceived').value === 'true', paymentDate:byId('paymentDate').value } }; if (!payload.data.date || !payload.data.projectName || payload.data.amount <= 0) return alert('Please complete the invoice fields.'); showLoading('Saving invoice...'); try { await postJsonToScript(payload); await loadLiveData(false); } finally { hideLoading(); } }
+    async function saveInvoice(){
+      const payload = {
+        action:'addInvoice',
+        data:{
+          date:byId('invDate').value,
+          manager:byId('invManager').value,
+          projectName:byId('invProjectName').value,
+          invoiceNumber:byId('invInvoiceNumber').value.trim(),
+          amount:num(byId('invAmount').value),
+          paymentReceived:byId('paymentReceived').value === 'true',
+          paymentDate:byId('paymentDate').value,
+          costCenter: normalizeCostCenterName(getProjectRecord(byId('invProjectName').value, byId('invManager').value)?.division || ''),
+          entryType:'Invoice Issued'
+        }
+      };
+      if (!payload.data.date || !payload.data.projectName || payload.data.amount <= 0) return alert('Please complete the invoice fields.');
+      showLoading('Saving invoice...');
+      try {
+        await postJsonToScript(payload);
+        byId('invInvoiceNumber').value = '';
+        byId('invAmount').value = '';
+        await loadLiveData(false);
+      } finally { hideLoading(); }
+    }
+
+    async function savePaymentReceived(){
+      const payload = {
+        action:'addPaymentReceived',
+        data:{
+          date:byId('payDate').value,
+          manager:byId('payManager').value,
+          projectName:byId('payProjectName').value,
+          invoiceNumber:byId('payInvoiceNumber').value.trim(),
+          amount:num(byId('payAmount').value),
+          paymentReceived:true,
+          paymentDate:byId('payDate').value,
+          costCenter:normalizeCostCenterName(byId('payCostCenter').value),
+          notes:byId('payNotes').value.trim(),
+          entryType:'Payment Received'
+        }
+      };
+      if (!payload.data.date || !payload.data.projectName || payload.data.amount <= 0) return alert('Please complete the payment received fields.');
+      showLoading('Saving payment received...');
+      try {
+        await postJsonToScript(payload);
+        byId('payInvoiceNumber').value = '';
+        byId('payAmount').value = '';
+        byId('payNotes').value = '';
+        await loadLiveData(false);
+      } finally { hideLoading(); }
+    }
 
     async function saveProject(){
       const payload = {
@@ -1379,11 +1686,21 @@ ${error.message}`);
       byId('quickSaveProjectBtn').onclick = saveQuickProject;
       byId('cancelQuickProjectBtn').onclick = () => { resetQuickProjectInputs(); toggleQuickProjectPanel(false); };
       byId('saveInvoiceBtn').onclick = saveInvoice;
+      byId('savePaymentBtn').onclick = savePaymentReceived;
       byId('saveProjectBtn').onclick = saveProject;
       byId('saveSettingsBtn').onclick = () => { writeSettings(); loadLiveData(); };
       byId('revAmount').oninput = updateAchievement;
       byId('revBudget').oninput = updateAchievement;
       byId('revDate').onchange = () => { syncQuickProjectDefaults(); updateAchievement(); };
+      const syncInvoiceManagerFromProject = (projectSelectId, managerSelectId, costCenterSelectId = null) => {
+        const projectName = byId(projectSelectId)?.value;
+        const project = getProjectRecord(projectName);
+        if (!project) return;
+        if (managerSelectId && byId(managerSelectId)) byId(managerSelectId).value = project.pm || byId(managerSelectId).value;
+        if (costCenterSelectId && byId(costCenterSelectId)) byId(costCenterSelectId).value = normalizeCostCenterName(project.division || byId(costCenterSelectId).value);
+      };
+      byId('invProjectName').onchange = () => syncInvoiceManagerFromProject('invProjectName','invManager');
+      byId('payProjectName').onchange = () => syncInvoiceManagerFromProject('payProjectName','payManager','payCostCenter');
       bindRevenueDefaults();
       startAutoRefresh();
       loadLiveData();
