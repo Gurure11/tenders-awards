@@ -95,6 +95,7 @@
     .progress-track{width:100%;height:12px;background:#e2e8f0;border-radius:999px;overflow:hidden;position:relative}
     .progress-fill{height:100%;border-radius:999px}
     .progress-label{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);margin-top:6px}
+    .dual-progress{display:grid;gap:8px}.dual-progress-row{display:grid;gap:4px}.dual-progress-top{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12px;color:var(--muted)}.dual-progress-track{width:100%;height:12px;background:#e2e8f0;border-radius:999px;overflow:hidden;position:relative}.dual-progress-fill{height:100%;border-radius:999px}.fill-projected{background:#0f172a}.fill-straight{background:#94a3b8}.dual-progress-note{font-size:12px;color:var(--muted)}
     .fill-green{background:#16a34a}.fill-amber{background:#f59e0b}.fill-red{background:#dc2626}
     @media (max-width:1280px){.grid-6{grid-template-columns:repeat(3,1fr)}.grid-5{grid-template-columns:repeat(2,1fr)}.summary-grid{grid-template-columns:repeat(2,1fr)}.row.two,.row.two-wide,.grid-3,.diagnostics,.connection-shell,.analysis-toolbar,.mini-stats{grid-template-columns:1fr}.tabs{grid-template-columns:repeat(3,1fr)}}
     @media (max-width:900px){.controls,.form-grid,.grid-6,.grid-5,.summary-grid,.tabs,.connection-actions,.analysis-toolbar,.mini-stats{grid-template-columns:1fr}.searchbox{grid-column:span 1}.span-2,.span-3,.span-4,.span-8,.span-12{grid-column:span 1}.hero h1{font-size:28px}
@@ -325,10 +326,20 @@
     const pct = (actual,target) => target ? Math.round((actual/target)*100) : 0;
     const badge = (text, cls) => `<span class="badge ${cls}">${text}</span>`;
     const cell = (html, cls='') => ({ html, class: cls });
+    const progressFillClass = value => value >= 80 ? 'fill-green' : value >= 50 ? 'fill-amber' : 'fill-red';
+    const progressStatusText = value => value < 50 ? 'Below target' : value < 80 ? 'Watch' : 'On track';
     const progressBar = value => {
       const pctValue = Math.max(0, Math.min(100, Math.round(value || 0)));
-      const fillClass = pctValue < 50 ? 'fill-red' : pctValue < 80 ? 'fill-amber' : 'fill-green';
-      return `<div class="progress-cell"><div class="progress-track"><div class="progress-fill ${fillClass}" style="width:${pctValue}%"></div></div><div class="progress-label"><span>${pctValue}%</span><span>${pctValue < 50 ? 'Below target' : pctValue < 80 ? 'Watch' : 'On track'}</span></div></div>`;
+      const fillClass = progressFillClass(pctValue);
+      return `<div class="progress-cell"><div class="progress-track"><div class="progress-fill ${fillClass}" style="width:${pctValue}%"></div></div><div class="progress-label"><span>${pctValue}%</span><span>${progressStatusText(pctValue)}</span></div></div>`;
+    };
+    const dualProgressBar = (projectedPct, straightPct, projectedLabel='Projected budget', straightLabel='Straight-line budget') => {
+      const projectedValue = Math.max(0, Math.min(100, Math.round(projectedPct || 0)));
+      const straightValue = Math.max(0, Math.min(100, Math.round(straightPct || 0)));
+      return `<div class="progress-cell dual-progress">`
+        + `<div class="dual-progress-row"><div class="dual-progress-top"><span>${projectedLabel}</span><strong>${projectedValue}%</strong></div><div class="dual-progress-track"><div class="dual-progress-fill fill-projected" style="width:${projectedValue}%"></div></div><div class="dual-progress-note">${progressStatusText(projectedValue)}</div></div>`
+        + `<div class="dual-progress-row"><div class="dual-progress-top"><span>${straightLabel}</span><strong>${straightValue}%</strong></div><div class="dual-progress-track"><div class="dual-progress-fill fill-straight" style="width:${straightValue}%"></div></div><div class="dual-progress-note">${progressStatusText(straightValue)}</div></div>`
+        + `</div>`;
     };
     const variancePercent = (actual, target) => target ? Math.round(((actual - target) / target) * 100) : 0;
     const varianceFillClass = value => value >= 0 ? 'fill-green' : value >= -10 ? 'fill-amber' : 'fill-red';
@@ -563,6 +574,34 @@
     }
     const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const STRAIGHT_LINE_MONTHLY_BUDGET = 22000000;
+    function systemStraightLineBudgetForPeriod(periodLabel, dateLike = new Date()){
+      const d = safeDate(dateLike) || new Date();
+      const monthly = STRAIGHT_LINE_MONTHLY_BUDGET;
+      if (periodLabel === 'Daily') return monthly / Math.max(daysInMonth(d), 1);
+      if (periodLabel === 'Weekly') return (monthly / Math.max(daysInMonth(d), 1)) * 7;
+      if (periodLabel === 'Monthly') return monthly;
+      if (periodLabel === 'Quarterly') return monthly * 3;
+      if (periodLabel === 'Yearly') return monthly * 12;
+      return monthly;
+    }
+    function straightLineAllocationRatio(filters = {}, periodLabel = 'Monthly'){
+      const totalProjected = sumProjectTargets(periodLabel, { costCenter:'All', manager:'All', project:'All' });
+      const sliceProjected = sumProjectTargets(periodLabel, filters);
+      if (totalProjected > 0 && sliceProjected > 0) return Math.max(0, sliceProjected / totalProjected);
+      const totalActual = actualRevenueForPeriod(periodLabel, { costCenter:'All', manager:'All', project:'All' });
+      const sliceActual = actualRevenueForPeriod(periodLabel, filters);
+      if (totalActual > 0 && sliceActual > 0) return Math.max(0, sliceActual / totalActual);
+      return (!filters || Object.values(filters).every(v => !v || v === 'All')) ? 1 : 0;
+    }
+    function fixedStraightLineBudgetForPeriod(periodLabel, filters = {}, dateLike = new Date()){
+      const fullBudget = systemStraightLineBudgetForPeriod(periodLabel, dateLike);
+      const ratio = straightLineAllocationRatio(filters, periodLabel);
+      return fullBudget * ratio;
+    }
+    function projectedPct(actual, projected){ return pct(actual, projected); }
+    function straightPct(actual, straight){ return pct(actual, straight); }
+
     function normaliseKeyName(value){ return String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
     function buildRowLookup(row){
       const lookup = {};
@@ -647,7 +686,7 @@
         .reduce((sum, project) => sum + projectTargetForPeriod(project, periodLabel, dateLike), 0);
     }
     function straightLineBudgetForPeriod(periodLabel, filters = {}){
-      return actualBudgetForPeriod(periodLabel, filters);
+      return fixedStraightLineBudgetForPeriod(periodLabel, filters);
     }
     function effectiveBudgetTarget(projectedTarget, straightLineBudget){
       return straightLineBudget > 0 ? straightLineBudget : projectedTarget;
@@ -1042,10 +1081,12 @@
       const ordered = Array.from(buckets.values()).sort((a,b) => String(a.name).localeCompare(String(b.name)));
       const projectedTotal = sumProjectTargetsForPeriodWithQuery(period, filters, state.query);
       const projectedPerBucket = ordered.length ? projectedTotal / ordered.length : projectedTotal;
+      const straightLineTotal = straightLineBudgetForPeriod(period, filters);
+      const straightLinePerBucket = ordered.length ? straightLineTotal / ordered.length : straightLineTotal;
       return ordered.map(item => ({
         name: item.name,
         actual: item.actual,
-        budget: item.budget,
+        budget: straightLinePerBucket,
         projected: projectedPerBucket
       }));
     }
@@ -1184,12 +1225,11 @@
         const actual = actualRevenueForPeriod(activePeriod, filters);
         const projectedTarget = sumProjectTargets(activePeriod, filters);
         const straightLineBudget = straightLineBudgetForPeriod(activePeriod, filters);
-        const comparisonTarget = effectiveBudgetTarget(projectedTarget, straightLineBudget);
-        const achievementPct = pct(actual, comparisonTarget);
-        const variance = actual - comparisonTarget;
-        const tone = statusTone(achievementPct);
-        const progressStatus = achievementPct >= 100 ? 'Target achieved' : achievementPct >= 80 ? 'Near target' : 'Below target';
-        return `<div class="progress-item"><div class="progress-head"><strong>${escapeHtml(name)}</strong>${badge(achievementPct + '%', tone)}</div>${progressBar(achievementPct)}<div class="progress-label"><span>${activePeriod} actual ${money(actual)}</span><span>${activePeriod} projected target ${money(projectedTarget)}</span></div><div class="progress-label"><span>${activePeriod} straight-line budget ${money(straightLineBudget)}</span><span>${progressStatus}</span></div><div class="progress-label"><span>Variance ${money(variance)}</span><span>Achievement uses ${straightLineBudget > 0 ? 'straight-line budget' : 'projected target'}</span></div></div>`;
+        const projectedAchievementPct = projectedPct(actual, projectedTarget);
+        const straightAchievementPct = straightPct(actual, straightLineBudget);
+        const varianceProjected = actual - projectedTarget;
+        const varianceStraight = actual - straightLineBudget;
+        return `<div class="progress-item"><div class="progress-head"><strong>${escapeHtml(name)}</strong>${badge(projectedAchievementPct + '% / ' + straightAchievementPct + '%', statusTone(Math.min(projectedAchievementPct, straightAchievementPct)))}</div>${dualProgressBar(projectedAchievementPct, straightAchievementPct, 'Actual vs projected', 'Actual vs straight-line')}<div class="progress-label"><span>${activePeriod} actual ${money(actual)}</span><span>${activePeriod} projected ${money(projectedTarget)}</span></div><div class="progress-label"><span>${activePeriod} straight-line ${money(straightLineBudget)}</span><span>Projected variance ${money(varianceProjected)}</span></div><div class="progress-label"><span>Straight-line variance ${money(varianceStraight)}</span><span>Monthly straight-line base ${money(STRAIGHT_LINE_MONTHLY_BUDGET)}</span></div></div>`;
       }).join('');
     }
 
@@ -1207,11 +1247,14 @@
       const rows = periodRevenueRows(period, filters);
       const actual = rows.reduce((sum, row) => sum + num(row.amount), 0);
       const target = sumProjectTargets(period, filters);
-      const variance = actual - target;
-      const variancePct = target ? Math.round((variance / target) * 100) : 0;
+      const straightLineTarget = straightLineBudgetForPeriod(period, filters);
+      const projectedVariance = actual - target;
+      const projectedVariancePct = target ? Math.round((projectedVariance / target) * 100) : 0;
+      const straightVariance = actual - straightLineTarget;
+      const straightVariancePct = straightLineTarget ? Math.round((straightVariance / straightLineTarget) * 100) : 0;
       const profitability = profitabilityForRows(rows);
       const title = selected === 'All' ? (mode === 'project' ? 'All projects' : mode === 'manager' ? 'All managers' : 'All cost centers') : selected;
-      summary.innerHTML = `<strong>${escapeHtml(title)}</strong><br>${period} actual ${money(actual)} vs target ${money(target)} · Variance ${money(variance)} (${variancePct}%)`;
+      summary.innerHTML = `<strong>${escapeHtml(title)}</strong><br>${period} actual ${money(actual)} vs projected ${money(target)} · Variance ${money(projectedVariance)} (${projectedVariancePct}%)<br>${period} actual ${money(actual)} vs straight-line ${money(straightLineTarget)} · Variance ${money(straightVariance)} (${straightVariancePct}%)`;
       const groupNames = mode === 'project'
         ? getAnalysisOptions('project')
         : mode === 'manager'
@@ -1227,19 +1270,23 @@
         const items = periodRevenueRows(period, groupFilters);
         const groupActual = items.reduce((sum,row)=>sum+num(row.amount),0);
         const groupTarget = sumProjectTargets(period, groupFilters);
-        return [name, items, groupActual, groupTarget];
-      }).filter(([, items, groupActual, groupTarget]) => items.length || groupTarget > 0)
-        .sort((a,b) => pct(a[2], a[3]) - pct(b[2], b[3]));
+        const groupStraight = straightLineBudgetForPeriod(period, groupFilters);
+        return [name, items, groupActual, groupTarget, groupStraight];
+      }).filter(([, items, groupActual, groupTarget, groupStraight]) => items.length || groupTarget > 0 || groupStraight > 0)
+        .sort((a,b) => Math.min(pct(a[2], a[3]), pct(a[2], a[4])) - Math.min(pct(b[2], b[3]), pct(b[2], b[4])));
       if (!entries.length){
         container.innerHTML = '<div class="notice">No revenue rows found for this selection and period.</div>';
         return;
       }
-      container.innerHTML = entries.map(([name, items, groupActual, groupTarget]) => {
-        const groupVariance = groupActual - groupTarget;
-        const groupVariancePct = groupTarget ? Math.round((groupVariance / groupTarget) * 100) : 0;
+      container.innerHTML = entries.map(([name, items, groupActual, groupTarget, groupStraight]) => {
+        const projectedVariance = groupActual - groupTarget;
+        const projectedVariancePct = groupTarget ? Math.round((projectedVariance / groupTarget) * 100) : 0;
+        const straightVariance = groupActual - groupStraight;
+        const straightVariancePct = groupStraight ? Math.round((straightVariance / groupStraight) * 100) : 0;
         const groupProfitability = profitabilityForRows(items);
-        const score = pct(groupActual, groupTarget);
-        return `<div class="progress-item"><div class="progress-head"><strong>${escapeHtml(name)}</strong>${badge(groupVariancePct + '%', statusTone(score))}</div>${progressBar(score)}<div class="progress-label"><span>Variance ${money(groupVariance)} (${groupVariancePct}%)</span><span>Profitability ${groupProfitability}%</span></div></div>`;
+        const projectedScore = pct(groupActual, groupTarget);
+        const straightScore = pct(groupActual, groupStraight);
+        return `<div class="progress-item"><div class="progress-head"><strong>${escapeHtml(name)}</strong>${badge(projectedScore + '% / ' + straightScore + '%', statusTone(Math.min(projectedScore, straightScore)))}</div>${dualProgressBar(projectedScore, straightScore, 'Actual vs projected', 'Actual vs straight-line')}<div class="progress-label"><span>Projected variance ${money(projectedVariance)} (${projectedVariancePct}%)</span><span>Straight-line variance ${money(straightVariance)} (${straightVariancePct}%)</span></div><div class="progress-label"><span>Projected ${money(groupTarget)}</span><span>Straight-line ${money(groupStraight)}</span></div><div class="progress-label"><span>Actual ${money(groupActual)}</span><span>Profitability ${groupProfitability}%</span></div></div>`;
       }).join('');
     }
 
@@ -1268,7 +1315,7 @@
         const rows = periodRevenueRows(label, baseFilters).filter(row => rowMatchesQuery(row, state.query));
         const actual = rows.reduce((sum, row) => sum + num(row.amount), 0);
         const projectedTarget = sumProjectTargetsForPeriodWithQuery(label, baseFilters, state.query);
-        const straightLineBudget = rows.reduce((sum, row) => sum + num(row.budget), 0);
+        const straightLineBudget = straightLineBudgetForPeriod(label, baseFilters);
         const target = effectiveBudgetTarget(projectedTarget, straightLineBudget);
         const cash = invoiceTotalForPeriod(label, baseFilters);
         const profitability = profitabilityForRows(rows);
@@ -1338,8 +1385,9 @@
         const revenueValue = summary.actual;
         const targetValue = summary.projectedTarget;
         const budgetValue = summary.straightLineBudget;
-        const achievementValue = summary.achievement;
-        return `<div class="summary-box"><div class="muted" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">${label}</div><div class="big">${money(revenueValue)}</div><div class="muted" style="margin-top:6px;">Target ${money(targetValue)}</div><div class="muted" style="margin-top:6px;">Budget ${money(budgetValue)}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;"><span class="muted">Achievement</span>${badge(achievementValue+'%', statusTone(achievementValue))}</div></div>`;
+        const projectedAchievement = pct(revenueValue, targetValue);
+        const straightAchievement = pct(revenueValue, budgetValue);
+        return `<div class="summary-box"><div class="muted" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">${label}</div><div class="big">${money(revenueValue)}</div><div class="muted" style="margin-top:6px;">Projected ${money(targetValue)}</div><div class="muted" style="margin-top:6px;">Straight-line ${money(budgetValue)}</div><div style="margin-top:14px;">${dualProgressBar(projectedAchievement, straightAchievement, 'Actual vs projected', 'Actual vs straight-line')}</div></div>`;
       }).join('');
 
       const budgetVsActualRisk = ['Daily','Weekly','Monthly','Quarterly','Yearly'].map(label => {
@@ -1353,8 +1401,8 @@
       });
       buildTable(byId('budgetRiskTable'), [{label:'Period'},{label:'Projected',class:'right'},{label:'Budget',class:'right'},{label:'Actual',class:'right'},{label:'Gap',class:'right'},{label:'Ach %',class:'right'},{label:'Risk',class:'right'}], budgetVsActualRisk.map(item => [cell(item.label),cell(money(item.projectedTarget),'right'),cell(money(item.budget),'right'),cell(money(item.actual),'right'),cell(`<span style="color:${item.gap>0?'#b91c1c':'#15803d'}">${money(item.gap)}</span>`,'right'),cell(item.achievement+'%','right'),cell(badge(item.risk,item.riskTone),'right')]));
 
-      const divisionAtGlance = divisionRollup.map(row => ({ name:row.name, actual:row[activeBucket], projected:row['projected'+state.period], budget:row['budget'+state.period], target:row['target'+state.period], score:pct(row[activeBucket],row['target'+state.period]) })).sort((a,b)=>b.actual-a.actual);
-      buildTable(byId('divisionTable'), [{label:'Division'},{label:'Actual',class:'right'},{label:'Projected',class:'right'},{label:'Budget',class:'right'},{label:'Score',class:'right'}], divisionAtGlance.map(item => [cell(item.name),cell(money(item.actual),'right'),cell(money(item.projected),'right'),cell(money(item.budget),'right'),cell(badge(item.score+'%',statusTone(item.score)),'right')]));
+      const divisionAtGlance = divisionRollup.map(row => ({ name:row.name, actual:row[activeBucket], projected:row['projected'+state.period], budget:row['budget'+state.period], projectedScore:pct(row[activeBucket],row['projected'+state.period]), straightScore:pct(row[activeBucket],row['budget'+state.period]) })).sort((a,b)=>b.actual-a.actual);
+      buildTable(byId('divisionTable'), [{label:'Division'},{label:'Actual',class:'right'},{label:'Projected',class:'right'},{label:'Straight-line',class:'right'},{label:'Proj %',class:'right'},{label:'SL %',class:'right'}], divisionAtGlance.map(item => [cell(item.name),cell(money(item.actual),'right'),cell(money(item.projected),'right'),cell(money(item.budget),'right'),cell(badge(item.projectedScore+'%',statusTone(item.projectedScore)),'right'),cell(badge(item.straightScore+'%',statusTone(item.straightScore)),'right')]));
 
       let pmBalancedScorecard = pmRollup.map(row => {
         const pmProjects = filtered.filter(p=>p.pm===row.name), dailyScore=pct(row.daily,row.targetDaily), weeklyScore=pct(row.weekly,row.targetWeekly), monthlyScore=pct(row.monthly,row.targetMonthly), quarterlyScore=pct(row.quarterly,row.targetQuarterly), yearlyScore=pct(row.yearly,row.targetYearly), profitability=Math.round(pmProjects.reduce((s,p)=>s+p.gpPercent,0)/Math.max(pmProjects.length,1)), deadlines=Math.round(pmProjects.reduce((s,p)=>s+p.deadlineScore,0)/Math.max(pmProjects.length,1)), safety=Math.round(pmProjects.reduce((s,p)=>s+p.safetyScore,0)/Math.max(pmProjects.length,1)), quality=Math.round(pmProjects.reduce((s,p)=>s+p.qualityScore,0)/Math.max(pmProjects.length,1)), overallScore=Math.round(dailyScore*.15+weeklyScore*.15+monthlyScore*.2+quarterlyScore*.1+yearlyScore*.1+profitability*.1+deadlines*.05+safety*.05+quality*.1);
@@ -1383,24 +1431,24 @@
       byId('divisionMixLegend').innerHTML = divisionMix.map(item => `<div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;margin-top:10px;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:12px;height:12px;display:inline-block;border-radius:50%;background:${item.color};"></span>${item.name}</div><strong>${money(item.value)}</strong></div>`).join('');
       const divisionVarianceRows = divisionRollup.map(row => {
         const metrics = {
-          Daily: pct(row.daily, row.targetDaily),
-          Weekly: pct(row.weekly, row.targetWeekly),
-          Monthly: pct(row.monthly, row.targetMonthly),
-          Quarterly: pct(row.quarterly, row.targetQuarterly)
+          Daily: { projected:pct(row.daily, row.projectedDaily), straight:pct(row.daily, row.budgetDaily) },
+          Weekly: { projected:pct(row.weekly, row.projectedWeekly), straight:pct(row.weekly, row.budgetWeekly) },
+          Monthly: { projected:pct(row.monthly, row.projectedMonthly), straight:pct(row.monthly, row.budgetMonthly) },
+          Quarterly: { projected:pct(row.quarterly, row.projectedQuarterly), straight:pct(row.quarterly, row.budgetQuarterly) }
         };
-        const lowest = Math.min(metrics.Daily, metrics.Weekly, metrics.Monthly, metrics.Quarterly);
+        const lowest = Math.min(metrics.Daily.projected, metrics.Daily.straight, metrics.Weekly.projected, metrics.Weekly.straight, metrics.Monthly.projected, metrics.Monthly.straight, metrics.Quarterly.projected, metrics.Quarterly.straight);
         return { name: row.name, metrics, lowest };
       }).sort((a,b) => a.lowest - b.lowest);
 
       buildTable(
         byId('divisionVarianceTable'),
-        [{label:'Division'},{label:'Daily %'},{label:'Weekly %'},{label:'Monthly %'},{label:'Quarterly %'},{label:'Lowest', class:'right'}],
+        [{label:'Division'},{label:'Daily'},{label:'Weekly'},{label:'Monthly'},{label:'Quarterly'},{label:'Lowest', class:'right'}],
         divisionVarianceRows.map(item => [
           cell(item.name),
-          cell(progressBar(item.metrics.Daily)),
-          cell(progressBar(item.metrics.Weekly)),
-          cell(progressBar(item.metrics.Monthly)),
-          cell(progressBar(item.metrics.Quarterly)),
+          cell(dualProgressBar(item.metrics.Daily.projected, item.metrics.Daily.straight, 'Proj', 'SL')),
+          cell(dualProgressBar(item.metrics.Weekly.projected, item.metrics.Weekly.straight, 'Proj', 'SL')),
+          cell(dualProgressBar(item.metrics.Monthly.projected, item.metrics.Monthly.straight, 'Proj', 'SL')),
+          cell(dualProgressBar(item.metrics.Quarterly.projected, item.metrics.Quarterly.straight, 'Proj', 'SL')),
           cell(badge(item.lowest + '%', statusTone(item.lowest)), 'right')
         ])
       );
