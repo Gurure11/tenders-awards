@@ -576,7 +576,8 @@
     const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const STRAIGHT_LINE_MONTHLY_BUDGET = 22000000;
     const REPORTING_MONTH_DATE = new Date(2026, 2, 1);
-    const PROJECTED_MONTHLY_BUDGET_MAR26 = 56140157;
+    const ONPOINT_YEARLY_PROJECTED_BUDGET = 670679374;
+    const PROJECTED_MONTHLY_BUDGET_MAR26 = ONPOINT_YEARLY_PROJECTED_BUDGET / 12;
     const MANAGER_STRAIGHT_LINE_MONTHLY_TARGETS = {
       'johan': 5000000,
       'moses': 4040000,
@@ -606,6 +607,15 @@
       if (periodLabel === 'Quarterly') return monthly * 3;
       if (periodLabel === 'Yearly') return monthly * 12;
       return monthly;
+    }
+    function monthlyProjectedBudgetFromYearly(){
+      return ONPOINT_YEARLY_PROJECTED_BUDGET / 12;
+    }
+    function projectOrderBookTotal(project){
+      return num(project?.totalIncome);
+    }
+    function totalOrderBookValue(projects = projectsData){
+      return (projects || []).reduce((sum, item) => sum + projectOrderBookTotal(item), 0);
     }
     function allFiltersCleared(filters = {}){
       return (!filters.costCenter || filters.costCenter === 'All') && (!filters.manager || filters.manager === 'All') && (!filters.project || filters.project === 'All');
@@ -746,11 +756,11 @@
       const d = safeDate(dateLike) || REPORTING_MONTH_DATE;
       let monthTarget = getMonthTargetForProject(project, d);
       if (!monthTarget) {
-        const totalIncome = projectsData.reduce((sum, item) => sum + num(item.totalIncome), 0);
-        const projectIncome = num(project?.totalIncome);
-        if (projectIncome > 0 && totalIncome > 0) monthTarget = PROJECTED_MONTHLY_BUDGET_MAR26 * (projectIncome / totalIncome);
+        const totalOrderBook = totalOrderBookValue(projectsData);
+        const projectOrderBook = projectOrderBookTotal(project);
+        if (projectOrderBook > 0 && totalOrderBook > 0) monthTarget = monthlyProjectedBudgetFromYearly() * (projectOrderBook / totalOrderBook);
       }
-      const annual = monthTarget ? monthTarget * 12 : num(project?.totalIncome);
+      const annual = monthTarget ? monthTarget * 12 : projectOrderBookTotal(project);
       if (period === 'Daily') return monthTarget / Math.max(daysInMonth(d), 1);
       if (period === 'Weekly') return (monthTarget / Math.max(daysInMonth(d), 1)) * 7;
       if (period === 'Monthly') return monthTarget;
@@ -759,13 +769,13 @@
       return monthTarget;
     }
     function sumProjectTargets(periodLabel, filters = {}, dateLike = REPORTING_MONTH_DATE){
-      if (allFiltersCleared(filters)) return scaleMonthlyProjectedBudgetForPeriod(PROJECTED_MONTHLY_BUDGET_MAR26, periodLabel, dateLike);
+      if (allFiltersCleared(filters)) return scaleMonthlyProjectedBudgetForPeriod(monthlyProjectedBudgetFromYearly(), periodLabel, dateLike);
       const filteredTotal = projectsData
         .filter(project => projectMatchesFilters(project, filters))
         .reduce((sum, project) => sum + projectTargetForPeriod(project, periodLabel, dateLike), 0);
       if (filteredTotal > 0) return filteredTotal;
       const ratio = projectedAllocationRatio(filters, dateLike);
-      if (ratio > 0) return scaleMonthlyProjectedBudgetForPeriod(PROJECTED_MONTHLY_BUDGET_MAR26 * ratio, periodLabel, dateLike);
+      if (ratio > 0) return scaleMonthlyProjectedBudgetForPeriod(monthlyProjectedBudgetFromYearly() * ratio, periodLabel, dateLike);
       return 0;
     }
     function straightLineBudgetForPeriod(periodLabel, filters = {}){
@@ -924,14 +934,17 @@
           raw: row
         };
       });
-      const mappedMarchTotal = mapped.reduce((sum, item) => sum + num(item.monthlyTargets?.[2] || item.monthlyTarget), 0);
-      if (mappedMarchTotal > 0) return mapped;
-      const totalIncome = mapped.reduce((sum, item) => sum + num(item.totalIncome), 0);
-      if (totalIncome > 0) {
+      const hasExplicitMonthlyTargets = mapped.some(item => Object.keys(item.monthlyTargets || {}).length > 0 || num(item.monthlyTarget) > 0);
+      if (hasExplicitMonthlyTargets) return mapped;
+      const totalOrderBook = mapped.reduce((sum, item) => sum + num(item.totalIncome), 0);
+      if (totalOrderBook > 0) {
         mapped.forEach(item => {
-          const share = num(item.totalIncome) / totalIncome;
-          item.monthlyTargets[2] = PROJECTED_MONTHLY_BUDGET_MAR26 * share;
-          item.monthlyTarget = item.monthlyTargets[2];
+          const share = num(item.totalIncome) / totalOrderBook;
+          const monthlyShare = monthlyProjectedBudgetFromYearly() * share;
+          [2,3,4,5,6,7,8,9,10,11,0,1].forEach(monthIndex => {
+            item.monthlyTargets[monthIndex] = monthlyShare;
+          });
+          item.monthlyTarget = monthlyShare;
         });
       }
       return mapped;
