@@ -31,6 +31,9 @@
     .exec-lines .rowline strong{font-size:13px}
     .section-gap{margin-top:16px}
 
+    canvas{display:block;width:100% !important;max-width:100%;height:180px !important;max-height:180px;}
+    .chart-compact{position:relative;height:180px;max-height:180px;overflow:hidden;}
+
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -63,8 +66,9 @@
       <div id="progressCards" class="progress-cards"></div>
     </div>
 
-    <div class="tabs">
+    <div class="tabs" style="grid-template-columns:repeat(6,1fr)">
       <div class="tab active" data-panel="summaryPanel">Summary</div>
+      <div class="tab" data-panel="performancePanel">Performance</div>
       <div class="tab" data-panel="revenuePanel">Daily Revenue</div>
       <div class="tab" data-panel="projectsPanel">Projects</div>
       <div class="tab" data-panel="invoicesPanel">Invoices</div>
@@ -82,14 +86,31 @@
         <div class="card"><h3 style="margin-top:0">Financial summary by period</h3><div id="executiveFinanceGrid" class="exec-finance"></div></div>
       </div>
       <div class="grid two section-gap">
-        <div class="card"><h3 style="margin-top:0">Actual vs Projected vs Straight-line</h3><canvas id="performancePeriodChart" height="140"></canvas></div>
-        <div class="card"><h3 style="margin-top:0">Manager performance contour</h3><canvas id="managerPerformanceChart" height="140"></canvas></div>
+        <div class="card"><h3 style="margin-top:0">Actual vs Projected vs Straight-line</h3><div class="chart-compact"><canvas id="performancePeriodChart" height="140"></canvas></div></div>
+        <div class="card"><h3 style="margin-top:0">Manager performance contour</h3><div class="chart-compact"><canvas id="managerPerformanceChart" height="140"></canvas></div></div>
       </div>
       <div class="grid two section-gap">
         <div class="card"><h3 style="margin-top:0">Revenue by cost center</h3><div class="table-wrap"><table id="costCenterTable"></table></div></div>
         <div class="card"><h3 style="margin-top:0">PM performance at a glance</h3><div class="table-wrap"><table id="managerTable"></table></div></div>
       </div>
       <div class="card" style="margin-top:16px"><h3 style="margin-top:0">Recent revenue rows</h3><div class="table-wrap"><table id="revenueTable"></table></div></div>
+    </div>
+
+
+    <div class="panel" id="performancePanel">
+      <div class="card">
+        <h3 style="margin-top:0">Performance section</h3>
+        <div class="muted" style="margin-bottom:12px">Project manager performance using Actual from Revenue, Projected from Straightline, and Straight-line from Orders monthly budget columns for the selected period.</div>
+        <div id="performanceSummaryStats" class="stats"></div>
+      </div>
+      <div class="grid two section-gap">
+        <div class="card"><h3 style="margin-top:0">Performance by project manager</h3><div class="table-wrap"><table id="performanceManagerTable"></table></div></div>
+        <div class="card"><h3 style="margin-top:0">Selected period totals</h3><div class="chart-compact"><canvas id="performanceSelectedTotalsChart" height="140"></canvas></div></div>
+      </div>
+      <div class="grid two section-gap">
+        <div class="card"><h3 style="margin-top:0">Project managers comparison: Actual vs Projected</h3><div class="chart-compact"><canvas id="pmActualProjectedChart" height="140"></canvas></div></div>
+        <div class="card"><h3 style="margin-top:0">Project managers comparison: Actual vs Straight-line</h3><div class="chart-compact"><canvas id="pmActualStraightlineChart" height="140"></canvas></div></div>
+      </div>
     </div>
 
     <div class="panel" id="revenuePanel">
@@ -154,7 +175,7 @@
   </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzl375vV4TzslLJP8tLHDYVJTI3I_KBOnpEPvRQjdY_qUjArhsjAA889w7iBzjCx_mm/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwkpecXh9Q9Mudl2OJGhQyaxF0refZJ0OtWMhGOxmNPdaIELIs-HY0tM4xmiEbLMwLI4w/exec';
 const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
 const DEFAULT_COST_CENTERS = ['Onpoint Ontime','Aqua Telecoms','Nkanyezi','Distinct Hire'];
 const state = { projects:[], revenue:[], invoices:[], managerBudgets:[], orders:[], straightline:[], filters:{ period:'Monthly', division:'All', manager:'All', search:'' } }; let charts = {};
@@ -266,46 +287,227 @@ function managerPerformanceRows(period = state.filters.period){
   });
   return Object.values(map).map(item => ({...item, ActualVsProjectedPct: item.Projected ? Math.round((item.Actual/item.Projected)*100) : 0, ActualVsStraightPct: item.Straightline ? Math.round((item.Actual/item.Straightline)*100) : 0 })).sort((a,b)=>a.ActualVsProjectedPct-b.ActualVsProjectedPct || a.ActualVsStraightPct-b.ActualVsStraightPct || a.Manager.localeCompare(b.Manager));
 }
+
+const FISCAL_MONTH_KEYS = ['Mar26','Apr26','May26','Jun26','Jul26','Aug26','Sep26','Oct26','Nov26','Dec26','Jan27','Feb27'];
+function currentFiscalMonthIndex(refDate = new Date()){
+  const year = refDate.getFullYear();
+  const month = refDate.getMonth();
+  if (year === 2026 && month >= 2) return month - 2;
+  if (year === 2027 && month <= 1) return 10 + month;
+  return Math.max(0, Math.min(11, ((month + 10) % 12)));
+}
+function periodBudgetMonthKeys(period, refDate = new Date()){
+  const idx = currentFiscalMonthIndex(refDate);
+  if (period === 'Daily' || period === 'Weekly' || period === 'Monthly') return [FISCAL_MONTH_KEYS[idx]];
+  if (period === 'Quarterly') {
+    const qStart = Math.floor(idx / 3) * 3;
+    return FISCAL_MONTH_KEYS.slice(qStart, qStart + 3);
+  }
+  return FISCAL_MONTH_KEYS.slice();
+}
+function pickBudgetValueFromOrderRow(row, key){
+  const aliases = [key, key.replace(/(\D)(\d+)/,'$1 $2'), key.replace('26',' 26').replace('27',' 27')];
+  for (const name of aliases) {
+    if (row && Object.prototype.hasOwnProperty.call(row, name) && String(row[name] ?? '').trim() !== '') return num(row[name]);
+  }
+  return 0;
+}
+function filteredOrdersForBudget(){
+  return state.orders.filter(r => {
+    if (state.filters.division !== 'All' && normalizeCostCenterName(r.Division || r.CostCenter) !== state.filters.division) return false;
+    if (state.filters.manager !== 'All' && text(r.Manager) !== state.filters.manager) return false;
+    if (state.filters.search && !`${r.ProjectName} ${r.Manager} ${r.Division || r.CostCenter}`.toLowerCase().includes(state.filters.search.toLowerCase())) return false;
+    return true;
+  });
+}
+function orderStraightlineRowsForPeriod(period){
+  const keys = periodBudgetMonthKeys(period);
+  return filteredOrdersForBudget().map(r => {
+    const total = keys.reduce((sum, key) => sum + pickBudgetValueFromOrderRow(r, key), 0);
+    let scaled = total;
+    if (period === 'Daily') {
+      const ref = new Date();
+      scaled = total / Math.max(daysInMonth(normaliseDate(ref)), 1);
+    } else if (period === 'Weekly') {
+      const ref = new Date();
+      scaled = (total / Math.max(daysInMonth(normaliseDate(ref)), 1)) * 7;
+    }
+    return {
+      Manager: text(r.Manager) || 'Unassigned',
+      CostCenter: normalizeCostCenterName(r.Division || r.CostCenter),
+      ProjectName: text(r.ProjectName),
+      StraightlineBudget: scaled
+    };
+  }).filter(r => num(r.StraightlineBudget) !== 0);
+}
+function managerPerformanceSectionRows(period = state.filters.period){
+  const actualRows = state.revenue.filter(r => {
+    if (!inPeriod(r.Date, period)) return false;
+    if (state.filters.division !== 'All' && normalizeCostCenterName(r.CostCenter) !== state.filters.division) return false;
+    if (state.filters.manager !== 'All' && text(r.Manager) !== state.filters.manager) return false;
+    if (state.filters.search && !`${r.ProjectName} ${r.Manager} ${r.CostCenter}`.toLowerCase().includes(state.filters.search.toLowerCase())) return false;
+    return true;
+  });
+  const projectedInfo = straightlineRowsForPeriod(period);
+  const straightRows = orderStraightlineRowsForPeriod(period);
+  const map = {};
+  actualRows.forEach(r => {
+    const key = text(r.Manager) || 'Unassigned';
+    if (!map[key]) map[key] = { Manager:key, Actual:0, Projected:0, Straightline:0 };
+    map[key].Actual += num(r.Amount);
+  });
+  projectedInfo.rows.forEach(r => {
+    const key = text(r.Manager) || 'Unassigned';
+    if (!map[key]) map[key] = { Manager:key, Actual:0, Projected:0, Straightline:0 };
+    map[key].Projected += projectedInfo.scaled ? scalePeriodValue(r.Projected, period, r.Date) : num(r.Projected);
+  });
+  straightRows.forEach(r => {
+    const key = text(r.Manager) || 'Unassigned';
+    if (!map[key]) map[key] = { Manager:key, Actual:0, Projected:0, Straightline:0 };
+    map[key].Straightline += num(r.StraightlineBudget);
+  });
+  return Object.values(map).map(item => ({
+    ...item,
+    ActualVsProjectedPct: item.Projected ? Math.round((item.Actual / item.Projected) * 100) : 0,
+    ActualVsStraightPct: item.Straightline ? Math.round((item.Actual / item.Straightline) * 100) : 0
+  })).sort((a,b)=>a.ActualVsProjectedPct - b.ActualVsProjectedPct || a.ActualVsStraightPct - b.ActualVsStraightPct || a.Manager.localeCompare(b.Manager));
+}
+
 function perfBadgeClass(value){ return value >= 100 ? 'ok' : value >= 80 ? 'warn' : 'bad'; }
+function summaryPanelActive(){ return $('summaryPanel') && $('summaryPanel').classList.contains('active'); }
+function destroyCharts(){ ['periodChart','managerChart','performanceTotalsChart','pmActualProjectedChart','pmActualStraightlineChart'].forEach(k => { if (charts[k]) { charts[k].destroy(); charts[k]=null; } }); }
 function periodCardHtml(label, snap){ const projPct = snap.actualVsProjectedPct; const straightPct = snap.actualVsStraightPct; return `<div class="exec-card"><h4>${escapeHtml(label)}</h4><div class="exec-lines"><div class="rowline"><span>Actual</span><strong>${money(snap.actual)}</strong></div><div class="rowline"><span>Projected</span><strong>${money(snap.projected)}</strong></div><div class="rowline"><span>Straight-line</span><strong>${money(snap.straight)}</strong></div><div class="rowline"><span>Actual vs Projected</span><span class="badge ${perfBadgeClass(projPct)}">${projPct}%</span></div><div class="rowline"><span>Actual vs Straight-line</span><span class="badge ${perfBadgeClass(straightPct)}">${straightPct}%</span></div></div></div>`; }
 function financeCardHtml(label, snap){ return `<div class="exec-card"><h4>${escapeHtml(label)}</h4><div class="exec-lines"><div class="rowline"><span>Invoices issued</span><strong>${money(snap.invoicesIssued)}</strong></div><div class="rowline"><span>Payments received</span><strong>${money(snap.paymentsReceived)}</strong></div><div class="rowline"><span>Gross profit</span><strong>${money(snap.grossProfit)}</strong></div><div class="rowline"><span>Profitability</span><span class="badge ${perfBadgeClass(snap.profitability)}">${snap.profitability}%</span></div><div class="rowline"><span>Gross profit / day</span><strong>${money(label==='Daily' ? snap.grossProfit : (snap.grossProfit / Math.max(snap.revenueRows.length ? new Set(snap.revenueRows.map(r=>r.Date)).size : 1,1)))}</strong></div></div></div>`; }
 function renderExecutiveDashboard(){ const periods = ['Daily','Weekly','Monthly','Quarterly','Yearly']; const snaps = periods.map(period => ({ period, snap: performanceSnapshot(period) })); $('executiveGroupGrid').innerHTML = snaps.map(item => periodCardHtml(item.period, item.snap)).join(''); $('executiveFinanceGrid').innerHTML = snaps.map(item => financeCardHtml(item.period, item.snap)).join(''); const managerRows = managerPerformanceRows(state.filters.period); buildTable($('executiveManagerTable'), [{label:'Manager'},{label:'Actual',class:'right'},{label:'Projected Budget',class:'right'},{label:'Straight-line',class:'right'},{label:'Actual vs Projected %',class:'right'},{label:'Actual vs Straight-line %',class:'right'}], managerRows.map(r => [escapeHtml(r.Manager), money(r.Actual), money(r.Projected), money(r.Straightline), `<span class="badge ${perfBadgeClass(r.ActualVsProjectedPct)}">${r.ActualVsProjectedPct}%</span>`, `<span class="badge ${perfBadgeClass(r.ActualVsStraightPct)}">${r.ActualVsStraightPct}%</span>`])); renderPerformanceCharts(snaps, managerRows); }
 function renderPerformanceCharts(snaps, managerRows){
-  if (typeof Chart === 'undefined') return;
-  const periodCtx = $('performancePeriodChart')?.getContext('2d');
-  const managerCtx = $('managerPerformanceChart')?.getContext('2d');
-  if (charts.periodChart) { charts.periodChart.destroy(); charts.periodChart = null; }
-  if (charts.managerChart) { charts.managerChart.destroy(); charts.managerChart = null; }
+  if (typeof Chart === 'undefined' || !summaryPanelActive()) { destroyCharts(); return; }
+  const periodCanvas = $('performancePeriodChart');
+  const managerCanvas = $('managerPerformanceChart');
+  const periodCtx = periodCanvas?.getContext('2d');
+  const managerCtx = managerCanvas?.getContext('2d');
+  destroyCharts();
   if (periodCtx) {
     charts.periodChart = new Chart(periodCtx, {
       type: 'bar',
       data: {
         labels: snaps.map(x => x.period),
         datasets: [
-          { label: 'Actual', data: snaps.map(x => Math.round(x.snap.actual)) },
-          { label: 'Projected', data: snaps.map(x => Math.round(x.snap.projected)) },
-          { label: 'Straight-line', data: snaps.map(x => Math.round(x.snap.straight)) }
+          { label: 'Actual', data: snaps.map(x => Math.round(x.snap.actual)), borderWidth: 1, maxBarThickness: 22 },
+          { label: 'Projected', data: snaps.map(x => Math.round(x.snap.projected)), borderWidth: 1, maxBarThickness: 22 },
+          { label: 'Straight-line', data: snaps.map(x => Math.round(x.snap.straight)), borderWidth: 1, maxBarThickness: 22 }
         ]
       },
-      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}, scales:{y:{beginAtZero:true}} }
+      options: {
+        responsive:true,
+        maintainAspectRatio:false,
+        animation:false,
+        normalized:true,
+        parsing:false,
+        interaction:{mode:'index',intersect:false},
+        plugins:{legend:{position:'bottom', labels:{boxWidth:10, padding:10}}},
+        scales:{x:{ticks:{maxRotation:0,minRotation:0}}, y:{beginAtZero:true, ticks:{maxTicksLimit:5}}}
+      }
     });
   }
   if (managerCtx) {
-    const topRows = managerRows.slice(0, 12);
+    const topRows = managerRows.slice(0, 8);
     charts.managerChart = new Chart(managerCtx, {
       type: 'line',
       data: {
         labels: topRows.map(r => r.Manager),
         datasets: [
-          { label: 'Actual', data: topRows.map(r => Math.round(r.Actual)) },
-          { label: 'Projected', data: topRows.map(r => Math.round(r.Projected)) },
-          { label: 'Straight-line', data: topRows.map(r => Math.round(r.Straightline)) }
+          { label: 'Actual', data: topRows.map(r => Math.round(r.Actual)), tension:0.25, pointRadius:2, borderWidth:2 },
+          { label: 'Projected', data: topRows.map(r => Math.round(r.Projected)), tension:0.25, pointRadius:2, borderWidth:2 },
+          { label: 'Straight-line', data: topRows.map(r => Math.round(r.Straightline)), tension:0.25, pointRadius:2, borderWidth:2 }
         ]
       },
-      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}, scales:{y:{beginAtZero:true}} }
+      options: {
+        responsive:true,
+        maintainAspectRatio:false,
+        animation:false,
+        normalized:true,
+        parsing:false,
+        interaction:{mode:'index',intersect:false},
+        plugins:{legend:{position:'bottom', labels:{boxWidth:10, padding:10}}},
+        scales:{x:{ticks:{maxRotation:0,minRotation:0, autoSkip:false, font:{size:10}}}, y:{beginAtZero:true, ticks:{maxTicksLimit:5}}}
+      }
     });
   }
 }
+
+function renderPerformanceSection(){
+  const rows = managerPerformanceSectionRows(state.filters.period);
+  buildTable($('performanceManagerTable'), [
+    {label:'Manager'},
+    {label:'Actual', class:'right'},
+    {label:'Projected', class:'right'},
+    {label:'Straight-line', class:'right'},
+    {label:'Actual vs Projected %', class:'right'},
+    {label:'Actual vs Straight-line %', class:'right'}
+  ], rows.map(r => [
+    escapeHtml(r.Manager),
+    money(r.Actual),
+    money(r.Projected),
+    money(r.Straightline),
+    `<span class="badge ${perfBadgeClass(r.ActualVsProjectedPct)}">${r.ActualVsProjectedPct}%</span>`,
+    `<span class="badge ${perfBadgeClass(r.ActualVsStraightPct)}">${r.ActualVsStraightPct}%</span>`
+  ]));
+  const totalActual = rows.reduce((s,r)=>s+num(r.Actual),0);
+  const totalProjected = rows.reduce((s,r)=>s+num(r.Projected),0);
+  const totalStraight = rows.reduce((s,r)=>s+num(r.Straightline),0);
+  $('performanceSummaryStats').innerHTML = [
+    ['Actual', money(totalActual), state.filters.period],
+    ['Projected', money(totalProjected), 'Straightline sheet'],
+    ['Straight-line', money(totalStraight), 'Orders month budgets'],
+    ['Managers', String(rows.length), 'Filtered results']
+  ].map(([a,b,c])=>`<div class="kpi"><div class="label">${a}</div><div class="value">${b}</div><div class="sub">${c}</div></div>`).join('');
+  renderPerformanceSectionCharts(rows);
+}
+function renderPerformanceSectionCharts(rows){
+  if (typeof Chart === 'undefined' || !($('performancePanel') && $('performancePanel').classList.contains('active'))) {
+    if (charts.performanceTotalsChart) { charts.performanceTotalsChart.destroy(); charts.performanceTotalsChart = null; }
+    if (charts.pmActualProjectedChart) { charts.pmActualProjectedChart.destroy(); charts.pmActualProjectedChart = null; }
+    if (charts.pmActualStraightlineChart) { charts.pmActualStraightlineChart.destroy(); charts.pmActualStraightlineChart = null; }
+    return;
+  }
+  ['performanceTotalsChart','pmActualProjectedChart','pmActualStraightlineChart'].forEach(k => { if (charts[k]) { charts[k].destroy(); charts[k]=null; }});
+  const totalsCtx = $('performanceSelectedTotalsChart')?.getContext('2d');
+  const apCtx = $('pmActualProjectedChart')?.getContext('2d');
+  const asCtx = $('pmActualStraightlineChart')?.getContext('2d');
+  const topRows = rows.slice(0,8);
+  if (totalsCtx) {
+    charts.performanceTotalsChart = new Chart(totalsCtx, {
+      type:'bar',
+      data:{labels:['Selected Period'], datasets:[
+        {label:'Actual', data:[Math.round(rows.reduce((s,r)=>s+num(r.Actual),0))], maxBarThickness:30},
+        {label:'Projected', data:[Math.round(rows.reduce((s,r)=>s+num(r.Projected),0))], maxBarThickness:30},
+        {label:'Straight-line', data:[Math.round(rows.reduce((s,r)=>s+num(r.Straightline),0))], maxBarThickness:30}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:10}}},scales:{y:{beginAtZero:true,ticks:{maxTicksLimit:5}}}}
+    });
+  }
+  if (apCtx) {
+    charts.pmActualProjectedChart = new Chart(apCtx, {
+      type:'bar',
+      data:{labels:topRows.map(r=>r.Manager), datasets:[
+        {label:'Actual', data:topRows.map(r=>Math.round(r.Actual)), maxBarThickness:18},
+        {label:'Projected', data:topRows.map(r=>Math.round(r.Projected)), maxBarThickness:18}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:10}}},scales:{x:{ticks:{maxRotation:0,minRotation:0,font:{size:10}}},y:{beginAtZero:true,ticks:{maxTicksLimit:5}}}}
+    });
+  }
+  if (asCtx) {
+    charts.pmActualStraightlineChart = new Chart(asCtx, {
+      type:'bar',
+      data:{labels:topRows.map(r=>r.Manager), datasets:[
+        {label:'Actual', data:topRows.map(r=>Math.round(r.Actual)), maxBarThickness:18},
+        {label:'Straight-line', data:topRows.map(r=>Math.round(r.Straightline)), maxBarThickness:18}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:10}}},scales:{x:{ticks:{maxRotation:0,minRotation:0,font:{size:10}}},y:{beginAtZero:true,ticks:{maxTicksLimit:5}}}}
+    });
+  }
+}
+
 function fillSelect(id, values, selected=''){ const el = $(id); const uniq = [...new Set(values.filter(Boolean))]; el.innerHTML = uniq.map(v => `<option value="${escapeHtml(v)}" ${v===selected?'selected':''}>${escapeHtml(v)}</option>`).join(''); }
 function populateFilters(){ fillSelect('periodFilter', PERIODS, state.filters.period); const divisions = ['All', ...new Set([...DEFAULT_COST_CENTERS, ...state.projects.map(p=>normalizeCostCenterName(p.Division)), ...state.revenue.map(r=>normalizeCostCenterName(r.CostCenter)), ...state.orders.map(r=>normalizeCostCenterName(r.Division || r.CostCenter))].filter(Boolean))]; fillSelect('divisionFilter', divisions, state.filters.division); const managers = ['All', ...new Set([...state.projects.map(p=>p.Manager), ...state.revenue.map(r=>r.Manager), ...state.managerBudgets.map(r=>r.ProjectManager), ...state.orders.map(r=>r.Manager)].filter(Boolean))].sort(); fillSelect('managerFilter', managers, state.filters.manager);
   fillSelect('revManager', managers.filter(v=>v!=='All')); fillSelect('projManager', managers.filter(v=>v!=='All')); fillSelect('invManager', managers.filter(v=>v!=='All'));
@@ -379,15 +581,15 @@ function renderSummary(){
   buildTable($('invoicesTable'), [{label:'Date'},{label:'Manager'},{label:'ProjectName'},{label:'InvoiceNumber'},{label:'Amount',class:'right'},{label:'Paid'},{label:'PaymentDate'},{label:'CostCenter'}], state.invoices.sort((a,b)=>String(b.Date).localeCompare(String(a.Date))).map(i => [escapeHtml(i.Date), escapeHtml(i.Manager), escapeHtml(i.ProjectName), escapeHtml(i.InvoiceNumber), money(i.Amount), i.PaymentReceived ? '<span class="badge ok">Yes</span>' : '<span class="badge warn">No</span>', escapeHtml(i.PaymentDate), escapeHtml(i.CostCenter)]));
 }
 function wireFilters(){ $('periodFilter').onchange = e => { state.filters.period = e.target.value; renderAll(); }; $('divisionFilter').onchange = e => { state.filters.division = e.target.value; renderAll(); }; $('managerFilter').onchange = e => { state.filters.manager = e.target.value; renderAll(); }; $('searchFilter').oninput = e => { state.filters.search = e.target.value; renderAll(); }; }
-function bindTabs(){ document.querySelectorAll('.tab').forEach(tab => tab.onclick = () => { document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active')); tab.classList.add('active'); $(tab.dataset.panel).classList.add('active'); }); }
+function bindTabs(){ document.querySelectorAll('.tab').forEach(tab => tab.onclick = () => { document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active')); tab.classList.add('active'); $(tab.dataset.panel).classList.add('active'); if (tab.dataset.panel === 'summaryPanel') { renderSummary(); } else if (tab.dataset.panel === 'performancePanel') { renderPerformanceSection(); } else { destroyCharts(); } }); }
 function mapRevenueRow(r){ return { Date: normaliseDate(r.Date || r.date || r.Timestamp || r.CreatedAt), Manager: text(r.Manager || r.manager || r['Project Manager'] || r.ProjectManager), CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Costcenter || r.Division || r['Cost Center']), ProjectName: text(r.ProjectName || r.projectName || r['Project Name'] || r.ProjectsName), Amount: num(r.Amount || r.amount || r.Actuals || r.actuals), Budget: num(r.Budget || r.budget || r.ProjectedBudget || r.projectedBudget), Quality: num(r.Quality || r.quality || 80), Safety: num(r.Safety || r.safety || 0) }; }
 function mapProjectRow(r){ return { CreatedAt: normaliseDate(r.CreatedAt || r.createdAt || r.Date), Division: normalizeCostCenterName(r.Division || r.division || r.CostCenter || r['Cost Center']), Manager: text(r.Manager || r.manager || r['Project Manager'] || r.ProjectManager), ProjectName: text(r.ProjectName || r.projectName || r['Project Name']), Location: text(r.Location || r.location), Status: text(r.Status || r.status || 'Confirmed'), TotalIncome: num(r.TotalIncome || r.totalIncome || r['Total Income'] || r.Amount), Margin: num(r.Margin || r.margin || r['Margin %']), StartDate: normaliseDate(r.StartDate || r.startDate), EndDate: normaliseDate(r.EndDate || r.endDate), Remarks: text(r.Remarks || r.remarks) }; }
 function mapInvoiceRow(r){ return { Date: normaliseDate(r.Date || r.date), Manager: text(r.Manager || r.manager), ProjectName: text(r.ProjectName || r.projectName), InvoiceNumber: text(r.InvoiceNumber || r.invoiceNumber || r['Invoice No']), Amount: num(r.Amount || r.amount), PaymentReceived: String(r.PaymentReceived || r.paymentReceived).toLowerCase()==='true' || r.PaymentReceived===true, PaymentDate: normaliseDate(r.PaymentDate || r.paymentDate), CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Division), Notes: text(r.Notes || r.notes) }; }
 function mapManagerBudgetRow(r){ return { ProjectManager: text(r.ProjectManager || r.Manager || r.manager), CostCenter: normalizeCostCenterName(r.CostCenter || r.Division), Actual: num(r.Actual || r.Actuals || r.Amount), Budget: num(r.Budget || r.Projected || r.projected), StraightlineBudget: num(r.StraightlineBudget || r['Straightline Budget'] || r['Straight-line Budget']), PerformancePct: num(r.PerformancePct || r['% PERFORMANCE'] || r['% PERFOMANCE']) }; }
 function mapStraightlineRow(r){ return { Date: normaliseDate(r.Date || r.date || r.CreatedAt), Manager: text(r.Manager || r.manager || r.ProjectManager || r['Project Manager']), CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Division || r['Cost Center']), ProjectName: text(r.ProjectName || r.projectName || r['Project Name']), Projected: num(r.Projected || r['Projected Budget'] || r['Projected Amount'] || r.Budget || r.projected || r.Target), StraightlineBudget: num(r.StraightlineBudget || r['Straightline Budget'] || r['Straight-line Budget'] || r['Straight Line Budget'] || r.Straightline || r['Straight Line']) }; }
-function mapOrderRow(r){ return { Date: normaliseDate(r.Date || r.CreatedAt), Division: normalizeCostCenterName(r.Division || r.CostCenter || r['Cost Center']), Manager: text(r.Manager || r.manager || r['Project Manager']), ProjectName: text(r.ProjectName || r.projectName || r['Project Name']), Status: text(r.Status || r.status), TotalIncome: num(r.TotalIncome || r['Total Income'] || r.Amount || r.OrderValue || r.ConfirmedValue || r.ForecastValue) }; }
+function mapOrderRow(r){ return Object.assign({}, r, { Date: normaliseDate(r.Date || r.CreatedAt), Division: normalizeCostCenterName(r.Division || r.CostCenter || r['Cost Center']), Manager: text(r.Manager || r.manager || r['Project Manager']), ProjectName: text(r.ProjectName || r.projectName || r['Project Name']), Status: text(r.Status || r.status), TotalIncome: num(r.TotalIncome || r['Total Income'] || r.Amount || r.OrderValue || r.ConfirmedValue || r.ForecastValue) }); }
 async function loadData(){ setConn('Connecting','warn'); try { const [projects,revenue,invoices,managerBudgets,orders,straightline] = await Promise.all([fetchAction('getProjects'),fetchAction('getRevenue'),fetchAction('getInvoices'),fetchAction('getManagerBudgets'),fetchAction('getOrders'),fetchAction('getStraightline')]); state.projects = projects.map(mapProjectRow); state.revenue = revenue.map(mapRevenueRow); state.invoices = invoices.map(mapInvoiceRow); state.managerBudgets = managerBudgets.map(mapManagerBudgetRow); state.orders = orders.map(mapOrderRow); state.straightline = straightline.map(mapStraightlineRow); log('Loaded rows', { revenue: state.revenue.length, straightline: state.straightline.length, managerBudgets: state.managerBudgets.length, orders: state.orders.length, invoices: state.invoices.length, straightlineProjectedTotal: state.straightline.reduce((s,r)=>s+num(r.Projected),0), straightlineBudgetTotal: state.straightline.reduce((s,r)=>s+num(r.StraightlineBudget),0), revenueActualTotal: state.revenue.reduce((s,r)=>s+num(r.Amount),0) }); populateFilters(); setConn('Live Connected','ok'); renderAll(); } catch (e) { setConn('Connection Failed','bad'); log('Load failed', e.message); } }
-function renderAll(){ renderKPIs(); renderProgressCards(); renderSummary(); }
+function renderAll(){ renderKPIs(); renderProgressCards(); renderSummary(); renderPerformanceSection(); }
 async function saveRevenue(){ const payload = { action:'addRevenue', date:$('revDate').value || todayISO(), manager:$('revManager').value, costCenter:$('revCostCenter').value, projectName:$('revProjectName').value, amount:num($('revAmount').value), budget:num($('revBudget').value), quality:num($('revQuality').value), safety:num($('revSafety').value) }; if (!payload.date || !payload.projectName || payload.amount <= 0) return alert('Complete the revenue fields first.'); await postAction(payload); await loadData(); }
 async function saveProject(){ const payload = { action:'addProject', createdAt:$('projCreatedAt').value || todayISO(), division:$('projDivision').value, manager:$('projManager').value, projectName:$('projName').value, location:$('projLocation').value, status:$('projStatus').value, totalIncome:num($('projIncome').value), margin:num($('projMargin').value), startDate:$('projStartDate').value, endDate:$('projEndDate').value, remarks:$('projRemarks').value }; if (!payload.projectName || payload.totalIncome <= 0) return alert('Complete the project fields first.'); await postAction(payload); await loadData(); }
 async function saveInvoice(){ const payload = { action:'addInvoice', date:$('invDate').value || todayISO(), manager:$('invManager').value, projectName:$('invProjectName').value, invoiceNumber:$('invNumber').value, amount:num($('invAmount').value), paymentReceived:$('invPaid').value==='true', paymentDate:$('invPaymentDate').value, costCenter:$('invCostCenter').value, notes:$('invNotes').value }; if (!payload.projectName || payload.amount <= 0) return alert('Complete the invoice fields first.'); await postAction(payload); await loadData(); }
