@@ -1,9 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Onpoint Group | Live Revenue Dashboard</title>
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-id="th-modified">Onpoint Group | Live Revenue Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root{
@@ -112,7 +110,7 @@
       cursor: pointer;
     }
   </style>
-</head>
+<meta property="og:title" content="Onpoint Group | Live Revenue Dashboard" data-id="th-modified"><meta name="description" content="onpoint_progressbar_revenue_sheet_fix" data-id="th-modified"><meta property="og:description" content="onpoint_progressbar_revenue_sheet_fix" data-id="th-modified"><meta property="og:image" content="https://tiiny.host/assets/logo-purple-bg.png" data-id="th-modified"><meta property="og:url" content="https://management-reports.tiiny.site/" data-id="th-modified"><meta property="og:type" content="website" data-id="th-modified"><script defer="" data-domain="management-reports.tiiny.site" src="https://analytics.tiiny.site/js/plausible.js"></script><script type="text/javascript" src="https://tiiny.host/ad-script.js"></script></head>
 <body>
   <div class="loading" id="loadingOverlay"><div class="loading-card"><div class="spinner"></div><div id="loadingMessage">Loading live data from Google Sheets...</div></div></div>
   <div class="container">
@@ -137,7 +135,7 @@
         <select id="period" class="control"></select>
         <select id="division" class="control"></select>
         <select id="managerFilter" class="control"></select>
-        <div class="searchbox"><input id="query" placeholder="Search division, PM or project..." /></div>
+        <div class="searchbox"><input id="query" placeholder="Search division, PM or project..."></div>
       </div>
     </div>
 
@@ -147,7 +145,7 @@
         <div class="progress-panel">
           <h4>Dashboard controls</h4>
           <div class="form-grid">
-            <div class="field span-12 hidden"><label>Apps Script Web App URL</label><input id="scriptUrlInput" type="url" placeholder="Paste deployed Apps Script web app URL" /></div>
+            <div class="field span-12 hidden"><label>Apps Script Web App URL</label><input id="scriptUrlInput" type="url" placeholder="Embedded Apps Script web app URL"><div class="helper">Apps Script URL is embedded in code.</div></div>
             <div class="field span-12"><label>Fallback mode</label><select id="fallbackMode"><option value="auto">Auto</option><option value="always">Always</option><option value="never">Never</option></select></div>
             <div class="field span-12"><label>Save settings</label><button id="saveSettingsBtn">Save</button></div>
           </div>
@@ -218,40 +216,40 @@
       <div class="card">
         <h3>Daily revenue input</h3>
         <div class="form-grid">
-          <div class="field span-2"><label>Date</label><input id="revDate" type="date" /></div>
+          <div class="field span-2"><label>Date</label><input id="revDate" type="date"></div>
           <div class="field span-3"><label>Cost Center</label><select id="revCostCenter"></select></div>
           <div class="field span-3"><label>Project Manager</label><select id="revManager"></select></div>
           <div class="field span-4"><label>Project Name</label><select id="revProjectName"></select><div class="helper" style="margin-top:6px;">If the project is not on the list, add it here and save it first.</div><button type="button" id="showQuickProjectBtn" class="btn-secondary" style="margin-top:8px;">Add New Project Name</button></div>
-          <div class="field span-3"><label>Actual Revenue</label><input id="revAmount" type="number" min="0" placeholder="0" /></div>
-          <div class="field span-3"><label>Budget Revenue</label><input id="revBudget" type="number" min="0" placeholder="0" /></div>
-          <div class="field span-2"><label>Quality %</label><input id="revQuality" type="number" min="0" max="100" value="80" /></div>
-          <div class="field span-2"><label>Safety Incidents</label><input id="revSafety" type="number" min="0" value="0" /></div>
-          <div class="field span-2"><label>Achievement %</label><input id="revAchievement" readonly /></div>
+          <div class="field span-3"><label>Actual Revenue</label><input id="revAmount" type="number" min="0" placeholder="0"></div>
+          <div class="field span-3"><label>Budget Revenue</label><input id="revBudget" type="number" min="0" placeholder="0"></div>
+          <div class="field span-2"><label>Quality %</label><input id="revQuality" type="number" min="0" max="100" value="80"></div>
+          <div class="field span-2"><label>Safety Incidents</label><input id="revSafety" type="number" min="0" value="0"></div>
+          <div class="field span-2"><label>Achievement %</label><input id="revAchievement" readonly=""></div>
           <div class="field span-12"><button id="saveRevenueBtn">Save Daily Revenue</button></div>
         </div>
         <div id="quickProjectPanel" class="form-grid hidden" style="margin-top:14px; padding-top:14px; border-top:1px solid var(--line);">
-          <div class="field span-4"><label>New Project Name</label><input id="quickNewProjectName" placeholder="Enter new project name" /></div>
-          <div class="field span-2"><label>Total Income</label><input id="quickNewProjectIncome" type="number" min="0" placeholder="0" /></div>
-          <div class="field span-2"><label>Margin %</label><input id="quickNewProjectMargin" type="number" min="0" placeholder="0" /></div>
-          <div class="field span-2"><label>Start Date</label><input id="quickNewProjectStartDate" type="date" /></div>
-          <div class="field span-2"><label>End Date</label><input id="quickNewProjectEndDate" type="date" /></div>
+          <div class="field span-4"><label>New Project Name</label><input id="quickNewProjectName" placeholder="Enter new project name"></div>
+          <div class="field span-2"><label>Total Income</label><input id="quickNewProjectIncome" type="number" min="0" placeholder="0"></div>
+          <div class="field span-2"><label>Margin %</label><input id="quickNewProjectMargin" type="number" min="0" placeholder="0"></div>
+          <div class="field span-2"><label>Start Date</label><input id="quickNewProjectStartDate" type="date"></div>
+          <div class="field span-2"><label>End Date</label><input id="quickNewProjectEndDate" type="date"></div>
           <div class="field span-12" style="display:flex; gap:12px; flex-wrap:wrap;"><button type="button" id="quickSaveProjectBtn">Save New Project Name</button><button type="button" id="cancelQuickProjectBtn" class="btn-secondary">Cancel</button></div>
         </div>
       </div>
       <div class="card section">
         <h3>Add New Project to Projects Sheet</h3><div class="helper" style="margin-bottom:12px;">Use this when the project is not in the Daily Revenue project list. It saves directly into the Projects sheet.</div>
         <div class="form-grid">
-          <div class="field span-2"><label>Date</label><input id="newProjCreatedAt" type="date" /></div>
+          <div class="field span-2"><label>Date</label><input id="newProjCreatedAt" type="date"></div>
           <div class="field span-2"><label>Division</label><select id="newProjDivision"></select></div>
           <div class="field span-2"><label>Manager</label><select id="newProjManager"></select></div>
-          <div class="field span-3"><label>Project Name</label><input id="newProjName" placeholder="Enter new project name" /></div>
-          <div class="field span-3"><label>Location</label><input id="newProjLocation" placeholder="Location" /></div>
+          <div class="field span-3"><label>Project Name</label><input id="newProjName" placeholder="Enter new project name"></div>
+          <div class="field span-3"><label>Location</label><input id="newProjLocation" placeholder="Location"></div>
           <div class="field span-2"><label>Status</label><select id="newProjStatus"><option value="Confirmed">Confirmed</option><option value="Forecast">Forecast</option></select></div>
-          <div class="field span-2"><label>Total Income</label><input id="newProjTotalIncome" type="number" min="0" placeholder="0" /></div>
-          <div class="field span-2"><label>Margin %</label><input id="newProjMargin" type="number" min="0" placeholder="0" /></div>
-          <div class="field span-2"><label>Start Date</label><input id="newProjStartDate" type="date" /></div>
-          <div class="field span-2"><label>End Date</label><input id="newProjEndDate" type="date" /></div>
-          <div class="field span-4"><label>Remarks</label><input id="newProjRemarks" placeholder="Remarks" /></div>
+          <div class="field span-2"><label>Total Income</label><input id="newProjTotalIncome" type="number" min="0" placeholder="0"></div>
+          <div class="field span-2"><label>Margin %</label><input id="newProjMargin" type="number" min="0" placeholder="0"></div>
+          <div class="field span-2"><label>Start Date</label><input id="newProjStartDate" type="date"></div>
+          <div class="field span-2"><label>End Date</label><input id="newProjEndDate" type="date"></div>
+          <div class="field span-4"><label>Remarks</label><input id="newProjRemarks" placeholder="Remarks"></div>
           <div class="field span-12"><button id="saveProjectBtn">Save New Project</button></div>
         </div>
         <div class="helper" style="margin-top:10px;">This saves Date, Project Name, Project Manager and Cost Center into the Projects sheet, then refreshes the dashboard and adds the project to the Daily Revenue project list.</div>
@@ -271,26 +269,26 @@
       <div class="card section">
         <h3>Invoice input</h3>
         <div class="form-grid">
-          <div class="field span-2"><label>Invoice Date</label><input id="invDate" type="date" /></div>
+          <div class="field span-2"><label>Invoice Date</label><input id="invDate" type="date"></div>
           <div class="field span-3"><label>Project Manager</label><select id="invManager"></select></div>
           <div class="field span-4"><label>Project Name</label><select id="invProjectName"></select></div>
-          <div class="field span-3"><label>Invoice Number</label><input id="invInvoiceNumber" type="text" placeholder="INV-001" /></div>
-          <div class="field span-3"><label>Invoice Amount</label><input id="invAmount" type="number" min="0" placeholder="0" /></div>
+          <div class="field span-3"><label>Invoice Number</label><input id="invInvoiceNumber" type="text" placeholder="INV-001"></div>
+          <div class="field span-3"><label>Invoice Amount</label><input id="invAmount" type="number" min="0" placeholder="0"></div>
           <div class="field span-3"><label>Payment Received</label><select id="paymentReceived"><option value="false">No</option><option value="true">Yes</option></select></div>
-          <div class="field span-3"><label>Payment Date</label><input id="paymentDate" type="date" /></div>
+          <div class="field span-3"><label>Payment Date</label><input id="paymentDate" type="date"></div>
           <div class="field span-12"><button id="saveInvoiceBtn">Save Invoice</button></div>
         </div>
       </div>
       <div class="card section">
         <h3>Payments received</h3>
         <div class="form-grid">
-          <div class="field span-2"><label>Payment Date</label><input id="payDate" type="date" /></div>
+          <div class="field span-2"><label>Payment Date</label><input id="payDate" type="date"></div>
           <div class="field span-3"><label>Project Manager</label><select id="payManager"></select></div>
           <div class="field span-4"><label>Project Name</label><select id="payProjectName"></select></div>
-          <div class="field span-3"><label>Invoice Number</label><input id="payInvoiceNumber" type="text" placeholder="INV-001" /></div>
-          <div class="field span-3"><label>Amount Received</label><input id="payAmount" type="number" min="0" placeholder="0" /></div>
+          <div class="field span-3"><label>Invoice Number</label><input id="payInvoiceNumber" type="text" placeholder="INV-001"></div>
+          <div class="field span-3"><label>Amount Received</label><input id="payAmount" type="number" min="0" placeholder="0"></div>
           <div class="field span-3"><label>Cost Center</label><select id="payCostCenter"></select></div>
-          <div class="field span-6"><label>Notes</label><input id="payNotes" type="text" placeholder="Optional note" /></div>
+          <div class="field span-6"><label>Notes</label><input id="payNotes" type="text" placeholder="Optional note"></div>
           <div class="field span-12"><button id="savePaymentBtn">Save Payment Received</button></div>
         </div>
       </div>
@@ -310,7 +308,7 @@
   </div>
 
   <script>
-    const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz4CMKGdXAzlrTDDYcKN1BjCRu8HsQOEs5lVeQ0B5jWK4fTN8fZcNqpTo-OXAncg5hKyQ/exec';
+    const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzCCckr3jrBARo5PXeMiEjpIMok0BrWgHVSC7CRYtq1we4NfL1qwN3VUZp-CfZfcFPLlQ/exec';
     const STORAGE_KEYS = { scriptUrl:'onpoint.scriptUrl', fallbackMode:'onpoint.fallbackMode', revenueBudgetMemory:'onpoint.revenueBudgetMemory', straightLineMemory:'onpoint.straightLineMemory', formDraft:'onpoint.formDraft' };
     const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
     const DIVISION_COLORS = ['#0f172a','#334155','#475569','#64748b','#94a3b8','#1e293b','#475569'];
@@ -737,6 +735,7 @@
 
     function managerStraightLineMonthlyBudget(manager){
       const row = getManagerBudgetRow(manager);
+      if (row && num(row.straightLineBudget) > 0) return num(row.straightLineBudget);
       if (row && num(row.budget) > 0) return num(row.budget);
       const key = normalizedString(manager);
       return MANAGER_STRAIGHT_LINE_MONTHLY_TARGETS[key] || 0;
@@ -1002,7 +1001,7 @@
     }
 
     function writeSettings(){
-      localStorage.setItem(STORAGE_KEYS.scriptUrl, byId('scriptUrlInput').value.trim() || DEFAULT_SCRIPT_URL);
+      localStorage.setItem(STORAGE_KEYS.scriptUrl, DEFAULT_SCRIPT_URL);
       localStorage.setItem(STORAGE_KEYS.fallbackMode, byId('fallbackMode').value);
       logDiagnostic('Settings saved.');
     }
@@ -1061,14 +1060,15 @@
     }
     function normaliseRevenue(raw){
       return raw.map(row => ({
-        date: normaliseDate(row.Date || row.date || row.Timestamp || row.timestamp),
-        manager: row.Manager || row.manager || row['Project Manager'] || row.projectManager || '',
-        costCenter: normalizeCostCenterName(row['Cost Center'] || row.CostCenter || row['CostCentre'] || row.CostCentre || row.Division || row.division || row.costCenter || ''),
-        projectName: row.ProjectName || row.projectName || row['Project Name'] || row.Project || row.project || '',
-        amount: num(row.Amount || row.amount || row['Actual Revenue'] || row.Revenue || row.revenue),
-        budget: num(row['Budget Revenue'] || row.Budget || row.budget || row.DailyBudget || row['Projected Budget'] || row.projectedBudget),
-        quality: num(row['Quality %'] || row.Quality || row.quality || 80),
-        safety: num(row['Safety Incidents'] || row.Safety || row.safety || 0)
+        date: normaliseDate(row.Date || row.date),
+        manager: row.Manager || row.manager || '',
+        costCenter: normalizeCostCenterName(row.CostCenter || row.Division || row.costCenter || ''),
+        projectName: row.ProjectName || row.projectName || '',
+        amount: num(row.Actuals || row.ACTUALS || row.Amount || row.amount),
+        budget: num(row.Budget || row.budget),
+        straightLineBudget: num(row['Straightline Budget'] || row['STRAIGHTLINE BUDGET'] || row['Straight-line Budget'] || row['STRAIGHT-LINE BUDGET'] || row.StraightlineBudget || row.straightLineBudget),
+        quality: num(row.Quality || row.quality || 80),
+        safety: num(row.Safety || row.safety || 0)
       }));
     }
     function normaliseInvoices(raw){
@@ -1100,11 +1100,13 @@
         id: row.id || `MB${index+1}`,
         manager: row.ProjectManager || row['PROJECT MANAGER'] || row.Manager || row.manager || row.pm || '',
         costCenter: normalizeCostCenterName(row.CostCenter || row['COST CENTER'] || row.Division || row.division || ''),
-        budget: num(row.Budget || row['BUDGET'] || row.MonthlyBudget || row['MONTHLY BUDGET']),
-        actual: num(row.Actual || row['ACTUAL'] || row.Amount || row['AMOUNT']),
+        budget: num(row.Budget || row['BUDGET'] || row.Projected || row.projected || row.MonthlyBudget || row['MONTHLY BUDGET']),
+        projected: num(row.Projected || row.projected || row.Budget || row['BUDGET']),
+        straightLineBudget: num(row['Straightline Budget'] || row['STRAIGHTLINE BUDGET'] || row['Straight-line Budget'] || row['STRAIGHT-LINE BUDGET'] || row.StraightlineBudget || row.straightLineBudget),
+        actual: num(row.Actual || row['ACTUAL'] || row.Actuals || row['ACTUALS'] || row.Amount || row['AMOUNT']),
         variance: num(row.Variance || row['VARIANCE']),
         performancePct: num(row['% PERFOMANCE'] || row['% PERFORMANCE'] || row.Performance || row.performance || row.PerformancePct || row.performancePct)
-      })).filter(row => row.manager || row.budget || row.actual);
+      })).filter(row => row.manager || row.budget || row.straightLineBudget || row.actual);
     }
 
     function getManagerBudgetRow(manager){
@@ -1145,17 +1147,47 @@
       }
       return options;
     }
+    function parseJsonBody(text){
+      const raw = String(text || '').trim();
+      if (!raw) return {};
+      const cleaned = raw.replace(/^\)\]\}'\s*/, '').trim();
+      try { return JSON.parse(cleaned); } catch {}
+      const start = cleaned.search(/[\[{]/);
+      const end = Math.max(cleaned.lastIndexOf('}'), cleaned.lastIndexOf(']'));
+      if (start >= 0 && end > start) {
+        const sliced = cleaned.slice(start, end + 1);
+        try { return JSON.parse(sliced); } catch {}
+      }
+      throw new Error('Response was not valid JSON.');
+    }
+    function extractRowsFromPayload(payload){
+      if (Array.isArray(payload)) return payload;
+      if (!payload || typeof payload !== 'object') return [];
+      const candidates = [payload.rows, payload.data, payload.result, payload.results, payload.items, payload.values];
+      for (const candidate of candidates) {
+        if (Array.isArray(candidate)) return candidate;
+      }
+      if (payload.data && typeof payload.data === 'object') {
+        const nestedCandidates = [payload.data.rows, payload.data.items, payload.data.values];
+        for (const candidate of nestedCandidates) {
+          if (Array.isArray(candidate)) return candidate;
+        }
+      }
+      return [];
+    }
     async function safeFetchJson(url, options={}){
       logDiagnostic(`Requesting ${url}`);
       const response = await fetch(url, options);
+      const bodyText = await response.text();
       if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText} for ${url}`);
-      return await response.json();
+      return parseJsonBody(bodyText);
     }
     async function loadEndpoint(scriptUrl, action){
       try {
         const payload = await safeFetchJson(`${scriptUrl}?action=${action}&_=${Date.now()}`, getFetchOptions('GET'));
-        const rows = Array.isArray(payload?.data) ? payload.data : [];
-        return { ok:true, rows };
+        const rows = extractRowsFromPayload(payload);
+        logDiagnostic(`${action} ok.`, `${rows.length} rows loaded.`);
+        return { ok:true, rows, payload };
       } catch (error) {
         logDiagnostic(`${action} failed.`, error.message);
         return { ok:false, error:error.message, rows:[] };
@@ -1163,14 +1195,21 @@
     }
 
     async function runConnectionTest(){
-      const scriptUrl = byId('scriptUrlInput').value.trim();
+      const scriptUrl = byId('scriptUrlInput').value.trim() || DEFAULT_SCRIPT_URL;
       if (!scriptUrl) return false;
       showLoading('Testing connection...');
       try {
-        const result = await loadEndpoint(scriptUrl, 'getProjects');
-        if (!result.ok) throw new Error(result.error);
-        setConnection('Live Connected', 'b-green');
-        setStatusSummary(`Connection test passed.<br><br>Projects endpoint returned ${result.rows.length} rows.`);
+        const [projectsResult, revenueResult, managerBudgetsResult] = await Promise.all([
+          loadEndpoint(scriptUrl, 'getProjects'),
+          loadEndpoint(scriptUrl, 'getRevenue'),
+          loadEndpoint(scriptUrl, 'getManagerBudgets')
+        ]);
+        if (!projectsResult.ok && !revenueResult.ok && !managerBudgetsResult.ok) {
+          throw new Error([projectsResult.error, revenueResult.error, managerBudgetsResult.error].filter(Boolean).join(' | ') || 'All endpoints failed.');
+        }
+        const allGood = projectsResult.ok && revenueResult.ok && managerBudgetsResult.ok;
+        setConnection(allGood ? 'Live Connected' : 'Partially Connected', allGood ? 'b-green' : 'b-amber');
+        setStatusSummary(`Connection test finished.<br><br>Projects: ${projectsResult.ok ? 'OK' : 'Failed'} (${projectsResult.rows.length} rows)<br>Revenue: ${revenueResult.ok ? 'OK' : 'Failed'} (${revenueResult.rows.length} rows)<br>Manager budgets: ${managerBudgetsResult.ok ? 'OK' : 'Failed'} (${managerBudgetsResult.rows.length} rows)<br>Actuals source: Revenue!Actuals<br>Straight-line source: Straightline!Straightline Budget`);
         return true;
       } catch (error) {
         setConnection('Connection Failed', 'b-red');
@@ -1203,7 +1242,7 @@
         if (!invoicesResult.ok) warnings.push('Invoices failed.');
         if (!managerBudgetsResult.ok) warnings.push('Manager budgets failed.');
         setConnection(warnings.length ? 'Partially Connected' : 'Live Connected', warnings.length ? 'b-amber' : 'b-green');
-        setStatusSummary(`Loaded live data.<br><br>Projects: ${projectsData.length}<br>Revenue rows: ${revenueData.length}<br>Invoice rows: ${invoiceData.length}<br>Manager budgets: ${managerBudgetData.length}<br>Last sync: ${new Date().toLocaleTimeString()}`);
+        setStatusSummary(`Loaded live data.<br><br>Projects: ${projectsData.length}<br>Revenue rows: ${revenueData.length}<br>Invoice rows: ${invoiceData.length}<br>Manager budgets: ${managerBudgetData.length}<br>Apps Script URL embedded: Yes<br>Actuals source: Revenue!Actuals<br>Projected source: Revenue!Budget and Straightline!Projected<br>Straight-line Budget source: Straightline!Straightline Budget<br>Last sync: ${new Date().toLocaleTimeString()}`);
         populateInputs(snapshot);
         render();
       } finally {
@@ -1502,6 +1541,10 @@
       );
     }
 
+    function revenueSheetActualForPeriod(periodLabel, filters = {}){
+      return periodRevenueRows(periodLabel, filters).reduce((sum, row) => sum + num(row.amount), 0);
+    }
+
     function renderConnectionProgressBars(){
       const container = byId('connectionProgressBars');
       const activePeriod = state.period || 'Daily';
@@ -1511,8 +1554,8 @@
         return;
       }
       container.innerHTML = costCenters.map(name => {
-        const filters = { costCenter:name, manager: 'All', project: 'All' };
-        const actual = actualRevenueForPeriod(activePeriod, filters);
+        const filters = { costCenter:name, manager: state.manager, project: 'All' };
+        const actual = revenueSheetActualForPeriod(activePeriod, filters);
         const projectedTarget = sumProjectTargets(activePeriod, filters);
         const straightLineBudget = straightLineBudgetForPeriod(activePeriod, filters);
         const projectedAchievementPct = projectedPct(actual, projectedTarget);
@@ -1870,7 +1913,7 @@
       if (!current?.values?.invDate) byId('invDate').value = todayISO();
       if (!current?.values?.payDate) byId('payDate').value = todayISO();
       if (!current?.values?.newProjCreatedAt) byId('newProjCreatedAt').value = todayISO();
-      byId('scriptUrlInput').value = localStorage.getItem(STORAGE_KEYS.scriptUrl) || DEFAULT_SCRIPT_URL;
+      byId('scriptUrlInput').value = DEFAULT_SCRIPT_URL;
       byId('fallbackMode').value = localStorage.getItem(STORAGE_KEYS.fallbackMode) || 'auto';
       populateAnalysisFilters();
       restoreDashboardInputs(current);
@@ -1923,19 +1966,17 @@
       try {
         await postJsonToScript({
           action:'addProject',
-          data:{
-            createdAt: byId('revDate').value || todayISO(),
-            division,
-            manager,
-            projectName,
-            location: '',
-            status: 'Forecast',
-            totalIncome,
-            margin,
-            startDate,
-            endDate,
-            remarks: 'Added from Daily Revenue section'
-          }
+          createdAt: byId('revDate').value || todayISO(),
+          division,
+          manager,
+          projectName,
+          location: '',
+          status: 'Forecast',
+          totalIncome,
+          margin,
+          startDate,
+          endDate,
+          remarks: 'Added from Daily Revenue section'
         });
         await loadLiveData();
         byId('revCostCenter').value = division;
@@ -1972,22 +2013,24 @@ ${error.message}`);
       }
       const dailyStraightLineBudget = monthlyStraightLineBudget / Math.max(daysInMonth(dateValue), 1);
       if (!num(byId('revBudget').value)) byId('revBudget').value = Math.round(dailyStraightLineBudget * 100) / 100;
-      const payload = { action:'addRevenue', data:{
+      const payload = {
+        action:'addRevenue',
         date:dateValue,
         manager:managerName,
         costCenter,
         projectName,
         amount:num(byId('revAmount').value),
+        actuals:num(byId('revAmount').value),
         budget:num(byId('revBudget').value),
         projectedBudget:selectedProjectProjectedBudget(),
         monthlyStraightLineBudget,
         dailyStraightLineBudget,
         quality:num(byId('revQuality').value),
         safety:num(byId('revSafety').value)
-      } };
+      };
       showLoading('Saving daily revenue...');
       try {
-        rememberBudgetValue(payload.data.projectName, payload.data.manager, payload.data.costCenter, payload.data.budget);
+        rememberBudgetValue(payload.projectName, payload.manager, payload.costCenter, payload.budget);
         await postJsonToScript(payload);
         byId('revAmount').value = '';
         byId('revAchievement').value = '';
@@ -1998,19 +2041,17 @@ ${error.message}`);
     async function saveInvoice(){
       const payload = {
         action:'addInvoice',
-        data:{
-          date:byId('invDate').value,
-          manager:byId('invManager').value,
-          projectName:byId('invProjectName').value,
-          invoiceNumber:byId('invInvoiceNumber').value.trim(),
-          amount:num(byId('invAmount').value),
-          paymentReceived:byId('paymentReceived').value === 'true',
-          paymentDate:byId('paymentDate').value,
-          costCenter: normalizeCostCenterName(getProjectRecord(byId('invProjectName').value, byId('invManager').value)?.division || ''),
-          entryType:'Invoice Issued'
-        }
+        date:byId('invDate').value,
+        manager:byId('invManager').value,
+        projectName:byId('invProjectName').value,
+        invoiceNumber:byId('invInvoiceNumber').value.trim(),
+        amount:num(byId('invAmount').value),
+        paymentReceived:byId('paymentReceived').value === 'true',
+        paymentDate:byId('paymentDate').value,
+        costCenter: normalizeCostCenterName(getProjectRecord(byId('invProjectName').value, byId('invManager').value)?.division || ''),
+        entryType:'Invoice Issued'
       };
-      if (!payload.data.date || !payload.data.projectName || payload.data.amount <= 0) return alert('Please complete the invoice fields.');
+      if (!payload.date || !payload.projectName || payload.amount <= 0) return alert('Please complete the invoice fields.');
       showLoading('Saving invoice...');
       try {
         await postJsonToScript(payload);
@@ -2022,21 +2063,19 @@ ${error.message}`);
 
     async function savePaymentReceived(){
       const payload = {
-        action:'addPaymentReceived',
-        data:{
-          date:byId('payDate').value,
-          manager:byId('payManager').value,
-          projectName:byId('payProjectName').value,
-          invoiceNumber:byId('payInvoiceNumber').value.trim(),
-          amount:num(byId('payAmount').value),
-          paymentReceived:true,
-          paymentDate:byId('payDate').value,
-          costCenter:normalizeCostCenterName(byId('payCostCenter').value),
-          notes:byId('payNotes').value.trim(),
-          entryType:'Payment Received'
-        }
+        action:'addPayment',
+        date:byId('payDate').value,
+        manager:byId('payManager').value,
+        projectName:byId('payProjectName').value,
+        invoiceNumber:byId('payInvoiceNumber').value.trim(),
+        amount:num(byId('payAmount').value),
+        paymentReceived:true,
+        paymentDate:byId('payDate').value,
+        costCenter:normalizeCostCenterName(byId('payCostCenter').value),
+        notes:byId('payNotes').value.trim(),
+        entryType:'Payment Received'
       };
-      if (!payload.data.date || !payload.data.projectName || payload.data.amount <= 0) return alert('Please complete the payment received fields.');
+      if (!payload.date || !payload.projectName || payload.amount <= 0) return alert('Please complete the payment received fields.');
       showLoading('Saving payment received...');
       try {
         await postJsonToScript(payload);
@@ -2050,24 +2089,22 @@ ${error.message}`);
     async function saveProject(){
       const payload = {
         action:'addProject',
-        data:{
-          createdAt: byId('newProjCreatedAt').value,
-          division: normalizeCostCenterName(byId('newProjDivision').value),
-          manager: byId('newProjManager').value,
-          projectName: byId('newProjName').value.trim(),
-          location: byId('newProjLocation').value.trim(),
-          status: byId('newProjStatus').value,
-          totalIncome: num(byId('newProjTotalIncome').value),
-          margin: num(byId('newProjMargin').value),
-          startDate: byId('newProjStartDate').value,
-          endDate: byId('newProjEndDate').value,
-          remarks: byId('newProjRemarks').value.trim()
-        }
+        createdAt: byId('newProjCreatedAt').value,
+        division: normalizeCostCenterName(byId('newProjDivision').value),
+        manager: byId('newProjManager').value,
+        projectName: byId('newProjName').value.trim(),
+        location: byId('newProjLocation').value.trim(),
+        status: byId('newProjStatus').value,
+        totalIncome: num(byId('newProjTotalIncome').value),
+        margin: num(byId('newProjMargin').value),
+        startDate: byId('newProjStartDate').value,
+        endDate: byId('newProjEndDate').value,
+        remarks: byId('newProjRemarks').value.trim()
       };
-      if (!payload.data.projectName) return alert('Enter the new project name.');
-      if (!payload.data.division) return alert('Select division.');
-      if (!payload.data.manager) return alert('Select manager.');
-      if (payload.data.totalIncome <= 0) return alert('Enter total income greater than zero.');
+      if (!payload.projectName) return alert('Enter the new project name.');
+      if (!payload.division) return alert('Select division.');
+      if (!payload.manager) return alert('Select manager.');
+      if (payload.totalIncome <= 0) return alert('Enter total income greater than zero.');
       showLoading('Saving new project...');
       try {
         await postJsonToScript(payload);
@@ -2139,5 +2176,6 @@ ${error.message}`);
     }
     init();
   </script>
-</body>
-</html>
+
+
+</body></html>
