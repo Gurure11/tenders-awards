@@ -207,7 +207,7 @@
   </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwhd19cGYAv_HtxXlQn4tYpCpZnHgLBi1IP-jnNYAVPw0zc-nVaPpdkD1Lo0mUapBKr/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdNgO5t6aoCrGaHE4HFToElhd_iyIV6BQUEkK7F7oRq6YFlO8NSa0y5ESLUAR4r5Kq9w/exec';
 const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
 const DEFAULT_COST_CENTERS = ['Onpoint Ontime','Aqua Telecoms','Nkanyezi','Distinct Hire'];
 const state = { projects:[], revenue:[], invoices:[], managerBudgets:[], orders:[], straightline:[], filters:{ period:'Monthly', division:'All', manager:'All', search:'' } }; let charts = {};
@@ -285,6 +285,40 @@ function straightlineRowsForPeriod(period){
   }
 
   return { rows: filtered, scaled: period === 'Daily' || period === 'Weekly' };
+}
+
+function straightlineRowLooksLikeSummary(r){
+  const project = text(r.ProjectName);
+  const costCenter = text(r.CostCenter || r.Division);
+  const manager = text(r.Manager);
+  if (!manager) return true;
+  if (/total/i.test(project) || /total/i.test(costCenter)) return true;
+  if (project && costCenter && lower(project) === lower(costCenter)) return true;
+  return false;
+}
+function cleanedStraightlineRowsForPeriod(period){
+  const info = straightlineRowsForPeriod(period);
+  const seen = new Set();
+  const rows = info.rows.filter(r => !straightlineRowLooksLikeSummary(r)).filter(r => {
+    const sig = JSON.stringify([text(r.Date), text(r.Manager), text(r.CostCenter || r.Division), text(r.ProjectName), num(r.Projected), num(r.StraightlineBudget)]);
+    if (seen.has(sig)) return false;
+    seen.add(sig);
+    return true;
+  });
+  return { rows, scaled: info.scaled };
+}
+function logProjectedBreakdownForManager(managerName, rows){
+  const normalized = lower(managerName);
+  const matches = rows.filter(r => lower(r.Manager) === normalized);
+  const breakdown = matches.map(r => ({
+    Manager: text(r.Manager),
+    ProjectName: text(r.ProjectName),
+    CostCenter: text(r.CostCenter || r.Division),
+    Date: text(r.Date),
+    Projected: num(r.Projected)
+  }));
+  const total = breakdown.reduce((s, r) => s + num(r.Projected), 0);
+  log(`Projected breakdown for ${managerName}`, { rows: breakdown, total });
 }
 
 function costCenterPeriodRows(period = state.filters.period){
@@ -449,7 +483,9 @@ function managerPerformanceSectionRows(period = state.filters.period){
     if (state.filters.search && !`${r.ProjectName} ${r.Manager} ${r.CostCenter}`.toLowerCase().includes(state.filters.search.toLowerCase())) return false;
     return true;
   });
-  const straightInfo = straightlineRowsForPeriod(period);
+  const straightInfo = cleanedStraightlineRowsForPeriod(period);
+  logProjectedBreakdownForManager('Timothy', straightInfo.rows);
+
   const map = {};
   const seedManagers = [...new Set([
     ...actualRows.map(r => text(r.Manager)),
@@ -458,17 +494,20 @@ function managerPerformanceSectionRows(period = state.filters.period){
     ...state.orders.map(r => text(r.Manager))
   ].filter(Boolean))];
   seedManagers.forEach(key => { map[key] = { Manager:key, Actual:0, Projected:0, Straightline:0 }; });
+
   actualRows.forEach(r => {
     const key = text(r.Manager) || 'Unassigned';
     if (!map[key]) map[key] = { Manager:key, Actual:0, Projected:0, Straightline:0 };
     map[key].Actual += num(r.Amount);
   });
+
   straightInfo.rows.forEach(r => {
     const key = text(r.Manager) || 'Unassigned';
     if (!map[key]) map[key] = { Manager:key, Actual:0, Projected:0, Straightline:0 };
-    map[key].Projected += straightInfo.scaled ? scalePeriodValue(r.Projected, period, r.Date) : num(r.Projected);
+    map[key].Projected += num(r.Projected);
     map[key].Straightline += straightInfo.scaled ? scalePeriodValue(r.StraightlineBudget, period, r.Date) : num(r.StraightlineBudget);
   });
+
   return Object.values(map).map(item => ({
     ...item,
     ActualVsProjectedPct: item.Projected ? Math.round((item.Actual / item.Projected) * 100) : 0,
@@ -828,7 +867,7 @@ async function loadData(){
       else { state[stateKey] = []; if (required) failures.push(`${action}: ${res.reason.message}`); }
     });
     state.managerBudgets = [];
-    log('Loaded rows', {
+    log('Loaded rows / failed endpoints', {
       revenue: state.revenue.length,
       straightline: state.straightline.length,
       orders: state.orders.length,
@@ -842,7 +881,7 @@ async function loadData(){
     renderAll();
     if (failures.length) {
       setConn('Partially Connected','warn');
-      showToast(`Some data failed to load: ${failures[0]}`,'info');
+      showToast(`Some data failed to load: ${failures.join(' | ')}`,'info');
     } else {
       setConn('Live Connected','ok');
     }
