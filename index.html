@@ -207,7 +207,7 @@
   </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdNgO5t6aoCrGaHE4HFToElhd_iyIV6BQUEkK7F7oRq6YFlO8NSa0y5ESLUAR4r5Kq9w/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-pmopiRH2Ao9C9nLNfG-N5Q_1YZir075kjIJIaBzpkdks6wq_hRGLSjV4kzPGcmP0/exec';
 const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
 const DEFAULT_COST_CENTERS = ['Onpoint Ontime','Aqua Telecoms','Nkanyezi','Distinct Hire'];
 const state = { projects:[], revenue:[], invoices:[], managerBudgets:[], orders:[], straightline:[], filters:{ period:'Monthly', division:'All', manager:'All', search:'' } }; let charts = {};
@@ -296,20 +296,36 @@ function straightlineRowLooksLikeSummary(r){
   if (project && costCenter && lower(project) === lower(costCenter)) return true;
   return false;
 }
+function managerAliasKey(name){
+  return lower(name).replace(/[^a-z]/g,'');
+}
 function cleanedStraightlineRowsForPeriod(period){
   const info = straightlineRowsForPeriod(period);
   const seen = new Set();
-  const rows = info.rows.filter(r => !straightlineRowLooksLikeSummary(r)).filter(r => {
-    const sig = JSON.stringify([text(r.Date), text(r.Manager), text(r.CostCenter || r.Division), text(r.ProjectName), num(r.Projected), num(r.StraightlineBudget)]);
-    if (seen.has(sig)) return false;
-    seen.add(sig);
-    return true;
-  });
+  const rows = info.rows
+    .filter(r => !straightlineRowLooksLikeSummary(r))
+    .filter(r => {
+      // keep only rows that contribute to Projected or Straightline
+      return num(r.Projected) !== 0 || num(r.StraightlineBudget) !== 0;
+    })
+    .filter(r => {
+      // stronger de-duplication to stop duplicated manager/project/projected rows from inflating totals
+      const sig = JSON.stringify([
+        managerAliasKey(r.Manager),
+        lower(text(r.ProjectName)),
+        lower(text(r.CostCenter || r.Division)),
+        num(r.Projected),
+        num(r.StraightlineBudget)
+      ]);
+      if (seen.has(sig)) return false;
+      seen.add(sig);
+      return true;
+    });
   return { rows, scaled: info.scaled };
 }
 function logProjectedBreakdownForManager(managerName, rows){
-  const normalized = lower(managerName);
-  const matches = rows.filter(r => lower(r.Manager) === normalized);
+  const alias = managerAliasKey(managerName);
+  const matches = rows.filter(r => managerAliasKey(r.Manager) === alias);
   const breakdown = matches.map(r => ({
     Manager: text(r.Manager),
     ProjectName: text(r.ProjectName),
@@ -483,27 +499,36 @@ function managerPerformanceSectionRows(period = state.filters.period){
     if (state.filters.search && !`${r.ProjectName} ${r.Manager} ${r.CostCenter}`.toLowerCase().includes(state.filters.search.toLowerCase())) return false;
     return true;
   });
+
   const straightInfo = cleanedStraightlineRowsForPeriod(period);
   logProjectedBreakdownForManager('Timothy', straightInfo.rows);
 
   const map = {};
-  const seedManagers = [...new Set([
+  const aliasToDisplay = {};
+  const ensureManager = (name) => {
+    const display = text(name) || 'Unassigned';
+    const alias = managerAliasKey(display);
+    if (!aliasToDisplay[alias]) aliasToDisplay[alias] = display;
+    const key = aliasToDisplay[alias];
+    if (!map[key]) map[key] = { Manager:key, Actual:0, Projected:0, Straightline:0 };
+    return key;
+  };
+
+  [
     ...actualRows.map(r => text(r.Manager)),
     ...straightInfo.rows.map(r => text(r.Manager)),
     ...state.projects.map(r => text(r.Manager)),
     ...state.orders.map(r => text(r.Manager))
-  ].filter(Boolean))];
-  seedManagers.forEach(key => { map[key] = { Manager:key, Actual:0, Projected:0, Straightline:0 }; });
+  ].filter(Boolean).forEach(ensureManager);
 
   actualRows.forEach(r => {
-    const key = text(r.Manager) || 'Unassigned';
-    if (!map[key]) map[key] = { Manager:key, Actual:0, Projected:0, Straightline:0 };
+    const key = ensureManager(r.Manager);
     map[key].Actual += num(r.Amount);
   });
 
   straightInfo.rows.forEach(r => {
-    const key = text(r.Manager) || 'Unassigned';
-    if (!map[key]) map[key] = { Manager:key, Actual:0, Projected:0, Straightline:0 };
+    const key = ensureManager(r.Manager);
+    // Projected Budget must come from Straightline sheet only
     map[key].Projected += num(r.Projected);
     map[key].Straightline += straightInfo.scaled ? scalePeriodValue(r.StraightlineBudget, period, r.Date) : num(r.StraightlineBudget);
   });
