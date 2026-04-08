@@ -65,6 +65,7 @@
     <div class="card topbar">
       <div><div class="muted">Onpoint Group</div><h1 style="margin:4px 0 0;font-size:28px">Dashboard</h1><div id="currentUserLine" class="muted" style="margin-top:6px;display:none">Logged in as <strong id="currentUserName"></strong></div></div>
       <div id="connBadge" class="badge warn">Connecting</div>
+      <button id="configBtn" type="button" class="secondary">Set Script URL</button>
       <button id="testBtn" type="button">Test connection</button>
       <button id="refreshBtn" type="button">Refresh</button>
     </div>
@@ -72,13 +73,23 @@
     <div class="card hero">
       <div>
         <h2 style="margin:0 0 8px">Live Google Sheets dashboard</h2>
-        <div class="muted">Actual, MTD, Group YTD, Group BTYD, Projected Budget and Straight-line Budget are read in real time from spreadsheet ID <strong>1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE</strong>, sheet tab <strong>Manager Dashboard</strong>. Daily Revenue uses <strong>Daily Revenue</strong>, Projected Budget is sourced from sheet tab <strong>Manager Dashboard</strong> using each project's <strong>Daily Budget</strong> multiplied by <strong>20</strong> for the monthly total, and Straight-line uses a fixed monthly Onpoint total of <strong>39,556,824</strong> scaled across the selected period. Group totals are fixed as requested and Onpoint filtered confirmed is overridden to the requested amount.</div>
+        <div class="muted">Actual, MTD, Group YTD, Group BTYD, Projected Budget and Straight-line Budget are read in real time from spreadsheet ID <strong>1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE</strong>. Monthly Projected and Monthly Straight-line now come from the <strong>Monthly</strong> tab by matching <strong>Month + Cost Center</strong>. Daily Projected is read from the same Monthly row when available, with revenue-row values used only as a fallback. Paste your deployed Apps Script web-app URL into the connection box below after deployment.</div>
       </div>
       <div class="toolbar">
         <select id="periodFilter"></select>
         <select id="divisionFilter"></select>
         <select id="managerFilter"></select>
         <input id="searchFilter" placeholder="Search project, manager, cost center" />
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3 style="margin-top:0">Apps Script connection</h3>
+      <div class="muted" style="margin-bottom:12px">Paste your deployed Apps Script <strong>/exec</strong> URL here once. It will be saved in your browser for future use.</div>
+      <div class="form-grid">
+        <div class="field span-12"><label>Apps Script Web App URL</label><input id="scriptUrlInput" placeholder="https://script.google.com/macros/s/AKfycbw4XdFNmicRESg3CzuW4gNU2RAsaUK8LFriBfkmUEXIJQBeCE_T7gQsWEvpogF6SH_m/exec"></div>
+        <div class="field span-3"><button id="saveScriptUrlBtn" type="button">Save URL</button></div>
+        <div class="field span-3"><button id="clearScriptUrlBtn" type="button" class="secondary">Clear URL</button></div>
       </div>
     </div>
 
@@ -232,8 +243,27 @@
   </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZom5gYJ_ziWPdzBkzf6FBzwmlYkiwW_hhnGJUM6thOw_9q8rAODIu0f4jyO0TMdctvA/exec';
-const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbyZom5gYJ_ziWPdzBkzf6FBzwmlYkiwW_hhnGJUM6thOw_9q8rAODIu0f4jyO0TMdctvA/exec';
+const SCRIPT_URL_PLACEHOLDER = 'PASTE_DEPLOYED_APPS_SCRIPT_URL_HERE';
+function getConfiguredScriptUrl(){
+  const params = new URLSearchParams(window.location.search);
+  const fromQuery = text(params.get('scriptUrl') || params.get('script_url'));
+  if (fromQuery) return fromQuery;
+  try {
+    const stored = text(localStorage.getItem('onpoint_manager_dashboard_script_url'));
+    if (stored) return stored;
+  } catch (e) {}
+  return SCRIPT_URL_PLACEHOLDER;
+}
+function setConfiguredScriptUrl(url){
+  try { localStorage.setItem('onpoint_manager_dashboard_script_url', text(url)); } catch (e) {}
+}
+function clearConfiguredScriptUrl(){
+  try { localStorage.removeItem('onpoint_manager_dashboard_script_url'); } catch (e) {}
+}
+function currentScriptUrl(){
+  return getConfiguredScriptUrl();
+}
+const REVENUE_SAVE_URL = null;
 const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
 const DEFAULT_COST_CENTERS = ["Onpoint Ontime", "Aqua Telecoms", "Nkanyezi", "Distinct Hire"];
 const DEFAULT_PROJECT_OPTIONS = ["DBSA Generators", "DBSA Rooiwal", "Joe Gqabi", "Temba", "Midvaal", "Coega","Osingisingin", "KZN General Buildings", "Tshwane", "Public Works Limpopo", "Limpopo Eskom Substation Ephraim Mogale", "Naizna", "Cape Town", "COT Streetlights", "COT Electrification", "COT Metering", "COE Streetlights", "Msunduzi E50", "Msunduzi Streetlights", "Msunduzi E33", "Msunduzi E47", "Moqhaka Streetlights", "Moqhaka Metering", "Centlec CD11", "Centlec Transformers CD32", "Centlec CD45", "Midvaal Mechanical", "Eskom SPU", "Eskom FSOU Substation", "Eskom ECOU", "Eskom LOU General Buildings", "Eskom KZN Minor Reticulation", "Randwest Electrical", "Randwest Roads & Stormwater", "Randwest Water rand sanitation", "Randwest Bulk", "RAL", "Stellenbosh", "Liquid ECPG", "Liquid ECSOD", "Liquid Gauteng SOD", "Telkom", "MTN", "Centlec", "Eskom Harvard", "City Power", "Umhlathuze Municipality", "Eskom WC", "COE Buildings", "Midvaal Water", "Midvaal Electricity", "Uthukela", "Kgetleng River", "Ray Nkonyeni Facility", "Ray Nkonyeni Electrical Material", "Ray Nkonyeni Mast", "Ray Nkonyeni Meter Reading", "Ramotshere Electrical Supplies", "Newcastle Substations", "Ubuntu", "IDT North West Buidlings", "Amajuba Generator", "uPhongolo", "Abaquilisi Battery Supplies", "Abaquilisi Streetlights"];
@@ -272,6 +302,31 @@ function getStoredUserName(){
   }
   return '';
 }
+function syncScriptUrlField(){
+  const input = $('scriptUrlInput');
+  if (!input) return;
+  const value = currentScriptUrl();
+  input.value = isPlaceholderUrl(value) ? '' : value;
+}
+function saveScriptUrlFromInput(){
+  const input = $('scriptUrlInput');
+  const value = text(input && input.value);
+  if (!value) {
+    showToast('Paste the full Apps Script /exec URL first.','error');
+    return;
+  }
+  setConfiguredScriptUrl(value);
+  syncScriptUrlField();
+  showToast('Apps Script URL saved. Testing connection now.','success');
+  quickConnectionTest().then(loadData).catch(()=>{});
+}
+function clearSavedScriptUrl(){
+  clearConfiguredScriptUrl();
+  syncScriptUrlField();
+  setConn('Set Script URL','warn');
+  showToast('Saved Apps Script URL cleared from this browser.','info');
+}
+
 function applyCurrentUserDefaults(){
   const currentUser = text(state.currentUser || getStoredUserName());
   state.currentUser = currentUser;
@@ -311,9 +366,37 @@ function mapMonthlyBudgetRow(r){
   return {
     Month: text((r && (r.Month || r.month || r.MONTH || rowVal(r,0))) || ''),
     CostCenter: normalizeCostCenterName((r && (r.CostCenter || r['Cost Center'] || r.Division || rowVal(r,1))) || ''),
+    MonthlyProjected: num((r && (r['Monthly Projected'] || r.MonthlyProjected || r['Monthly Projected Budget'] || r.MonthlyProjectedBudget || rowVal(r,2))) || 0),
     DailyProjected: num((r && (r['Daily Projected'] || r.DailyProjected || r['Daily Projected Budget'] || r.DailyProjectedBudget || rowVal(r,3))) || 0),
+    ActualMonthly: num((r && (r.ActualMonthly || r['Actual Monthly'] || r['ActualMonthly'] || rowVal(r,4))) || 0),
     MonthlyStraightline: num((r && (r['Monthly Straightline'] || r.MonthlyStraightline || r['Monthly Straightline Budget'] || r.MonthlyStraightlineBudget || rowVal(r,5))) || 0)
   };
+}
+function monthlyBudgetRowsForCostCenter(costCenter, dateValue=''){
+  const cc = normalizeCostCenterName(costCenter);
+  const targetMonth = compactMonthKey(currentMonthKey(dateValue ? new Date(`${normaliseDate(dateValue)}T00:00:00`) : new Date()));
+  return (state.monthlyBudgets || []).filter(r => compactMonthKey(r.Month) === targetMonth && normalizeCostCenterName(r.CostCenter) === cc);
+}
+function monthlyBudgetRowForCostCenter(costCenter, dateValue=''){
+  const rows = monthlyBudgetRowsForCostCenter(costCenter, dateValue);
+  if (!rows.length) return null;
+  return rows.reduce((best, row) => {
+    const bestScore = num(best?.MonthlyProjected) + num(best?.DailyProjected) + num(best?.MonthlyStraightline);
+    const rowScore = num(row?.MonthlyProjected) + num(row?.DailyProjected) + num(row?.MonthlyStraightline);
+    return rowScore >= bestScore ? row : best;
+  }, rows[0]);
+}
+function monthlyProjectedTotalForCostCenter(costCenter, dateValue=''){
+  const rows = monthlyBudgetRowsForCostCenter(costCenter, dateValue);
+  return rows.reduce((s, r) => s + num(r.MonthlyProjected), 0);
+}
+function monthlyStraightlineTotalForCostCenter(costCenter, dateValue=''){
+  const rows = monthlyBudgetRowsForCostCenter(costCenter, dateValue);
+  return rows.reduce((s, r) => s + num(r.MonthlyStraightline), 0);
+}
+function dailyProjectedFromMonthlyForCostCenter(costCenter, dateValue=''){
+  const rows = monthlyBudgetRowsForCostCenter(costCenter, dateValue);
+  return rows.reduce((s, r) => s + num(r.DailyProjected), 0);
 }
 function uniqueProjectedProjectRows(){
   const rows = state.revenue.filter(r => {
@@ -339,14 +422,28 @@ function uniqueProjectedProjectRows(){
 function projectDailyBudgetValue(r){
   return num(r.DailyBudget || r['Daily Budget'] || r['Daily Projected Budget'] || r.dailyBudget || r.Budget || r['Budget']);
 }
-function dailyProjectedForCostCenter(costCenter){
+function dailyProjectedForCostCenter(costCenter, dateValue=''){
   const cc = normalizeCostCenterName(costCenter);
+  const monthlyDaily = dailyProjectedFromMonthlyForCostCenter(cc, dateValue);
+  if (monthlyDaily) return monthlyDaily;
   return uniqueProjectedProjectRows()
     .filter(r => normalizeCostCenterName(r.CostCenter) === cc)
     .reduce((s,r)=>s + projectDailyBudgetValue(r), 0);
 }
-function projectedTargetForCostCenter(costCenter, period = state.filters.period){
-  const daily = dailyProjectedForCostCenter(costCenter);
+function projectedTargetForCostCenter(costCenter, period = state.filters.period, dateValue=''){
+  const monthly = monthlyProjectedTotalForCostCenter(costCenter, dateValue);
+  if (monthly) {
+    if (period === 'Daily') {
+      const dailyFromMonthly = dailyProjectedFromMonthlyForCostCenter(costCenter, dateValue);
+      return dailyFromMonthly || (monthly / PROJECTED_WORK_DAYS_PER_MONTH);
+    }
+    if (period === 'Weekly') return monthly / 4;
+    if (period === 'Monthly') return monthly;
+    if (period === 'Quarterly') return monthly * 3;
+    if (period === 'Yearly') return monthly * 12;
+    return monthly;
+  }
+  const daily = dailyProjectedForCostCenter(costCenter, dateValue);
   if (period === 'Daily') return daily;
   if (period === 'Weekly') return daily * 5;
   if (period === 'Monthly') return daily * PROJECTED_WORK_DAYS_PER_MONTH;
@@ -355,11 +452,13 @@ function projectedTargetForCostCenter(costCenter, period = state.filters.period)
   return daily * PROJECTED_WORK_DAYS_PER_MONTH;
 }
 const ONPOINT_FIXED_MONTHLY_STRAIGHTLINE_TOTAL = 39556824;
-function straightlineMonthlyTotalForCostCenter(costCenter){
+function straightlineMonthlyTotalForCostCenter(costCenter, dateValue=''){
+  const fromMonthlySheet = monthlyStraightlineTotalForCostCenter(costCenter, dateValue);
+  if (fromMonthlySheet) return fromMonthlySheet;
   return normalizeCostCenterName(costCenter) === OVERRIDE_COST_CENTER ? ONPOINT_FIXED_MONTHLY_STRAIGHTLINE_TOTAL : 0;
 }
 function straightlineTargetForCostCenter(costCenter, period = state.filters.period, dateValue=''){
-  const monthly = straightlineMonthlyTotalForCostCenter(costCenter);
+  const monthly = straightlineMonthlyTotalForCostCenter(costCenter, dateValue);
   const dim = Math.max(daysInMonth(dateValue || todayISO()), 1);
   if (period === 'Daily') return monthly / dim;
   if (period === 'Weekly') return monthly / 4;
@@ -458,8 +557,9 @@ function getFetchOptions(method='GET', payload, signal){ const opt = { method, h
 async function parseJsonResponse(resp){ const txt = await resp.text(); if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${txt.slice(0,200)}`); try { return JSON.parse(txt); } catch { throw new Error(`Non-JSON response: ${txt.slice(0,200)}`); } }
 async function withTimeoutFetch(url, options={}, timeoutMs=45000){ const controller = new AbortController(); const timer = setTimeout(()=>controller.abort(), timeoutMs); try { return await fetch(url, Object.assign({}, options, { signal: controller.signal })); } catch (e) { if (e.name === 'AbortError') throw new Error('Request timed out'); throw e; } finally { clearTimeout(timer); } }
 async function fetchAction(action){
-  if (isPlaceholderUrl(SCRIPT_URL)) throw new Error('Apps Script URL not configured');
-  const url = `${SCRIPT_URL}?action=${encodeURIComponent(action)}&_=${Date.now()}`;
+  const scriptUrl = currentScriptUrl();
+  if (isPlaceholderUrl(scriptUrl)) throw new Error('Apps Script URL not configured');
+  const url = `${scriptUrl}?action=${encodeURIComponent(action)}&_=${Date.now()}`;
   log('GET', url);
   const resp = await withTimeoutFetch(url, getFetchOptions('GET'), 12000);
   const payload = await parseJsonResponse(resp);
@@ -467,8 +567,9 @@ async function fetchAction(action){
   return Array.isArray(payload) ? payload : (payload.rows || payload.data || []);
 }
 async function postAction(payload){
-  if (isPlaceholderUrl(REVENUE_SAVE_URL) && isPlaceholderUrl(SCRIPT_URL)) throw new Error('Apps Script URL not configured');
-  const targetUrl = !isPlaceholderUrl(REVENUE_SAVE_URL) ? REVENUE_SAVE_URL : SCRIPT_URL;
+  const scriptUrl = currentScriptUrl();
+  if (isPlaceholderUrl(REVENUE_SAVE_URL) && isPlaceholderUrl(scriptUrl)) throw new Error('Apps Script URL not configured');
+  const targetUrl = !isPlaceholderUrl(REVENUE_SAVE_URL) ? REVENUE_SAVE_URL : scriptUrl;
   log('POST', payload.action, payload);
   const resp = await withTimeoutFetch(targetUrl, getFetchOptions('POST', payload), 12000);
   const data = await parseJsonResponse(resp);
@@ -569,7 +670,7 @@ function scaleStraightlineBudgetValue(value, period, dateValue=''){
 
 
 function revenueProjectedValue(r, period = state.filters.period){
-  return projectedTargetForCostCenter(r.CostCenter, period);
+  return projectedTargetForCostCenter(r.CostCenter, period, r.Date);
 }
 
 
@@ -594,7 +695,7 @@ function isOnpointCostCenter(value){
 }
 
 function onpointProjectedTarget(period, dateValue=''){
-  return projectedTargetForCostCenter(OVERRIDE_COST_CENTER, period);
+  return projectedTargetForCostCenter(OVERRIDE_COST_CENTER, period, dateValue);
 }
 
 
@@ -719,14 +820,14 @@ function costCenterPeriodRows(period = state.filters.period){
     map[key] = {
       CostCenter:key,
       Actual:0,
-      Projected: projectedTargetForCostCenter(key, period),
+      Projected: projectedTargetForCostCenter(key, period, todayISO()),
       Straightline: straightlineTargetForCostCenter(key, period)
     };
   });
   revenueRows.forEach(r => {
     const key = normalizeCostCenterName(r.CostCenter) || 'Unassigned';
     if (!map[key]) {
-      map[key] = { CostCenter:key, Actual:0, Projected: projectedTargetForCostCenter(key, period), Straightline: straightlineTargetForCostCenter(key, period) };
+      map[key] = { CostCenter:key, Actual:0, Projected: projectedTargetForCostCenter(key, period, todayISO()), Straightline: straightlineTargetForCostCenter(key, period) };
     }
     map[key].Actual += revenueActualValue(r);
   });
@@ -784,7 +885,7 @@ function managerPerformanceRows(period = state.filters.period){
     const totalActual = ccRows.reduce((s,r)=>s + revenueActualValue(r), 0);
     const managerSet = [...new Set(ccRows.map(r => text(r.Manager) || 'Unassigned').filter(Boolean))];
     if (!managerSet.length) return;
-    const projectedTotal = projectedTargetForCostCenter(center, period);
+    const projectedTotal = projectedTargetForCostCenter(center, period, todayISO());
     const straightlineTotal = straightlineTargetForCostCenter(center, period);
     managerSet.forEach((mgr, idx) => {
       if (!map[mgr]) map[mgr] = { Manager:mgr, Actual:0, Projected:0, Straightline:0 };
@@ -1281,7 +1382,7 @@ function applyMonthlyBudgetInputs(){
   const costCenter = $('revCostCenter') ? $('revCostCenter').value : '';
   if (!costCenter) return;
   const dailyProjected = dailyProjectedForCostCenter(costCenter);
-  const monthlyProjected = projectedTargetForCostCenter(costCenter, 'Monthly');
+  const monthlyProjected = projectedTargetForCostCenter(costCenter, 'Monthly', dateValue || todayISO());
   if ($('revBudget') && monthlyProjected) $('revBudget').value = String(monthlyProjected);
   if ($('revDailyBudget') && dailyProjected) $('revDailyBudget').value = String(dailyProjected);
   if ($('payCostCenter') && !$('payCostCenter').value && costCenter) $('payCostCenter').value = costCenter;
@@ -1340,7 +1441,7 @@ function renderSummary(){
   const mgr = managerPerformanceRows(state.filters.period);
   buildTable($('managerTable'), [{label:'Manager'},{label:'Actual',class:'right'},{label:'Projected',class:'right'},{label:'Straightline',class:'right'},{label:'Performance',class:'right'}], mgr.sort((a,b)=>num(b.Actual)-num(a.Actual)).map(r => [escapeHtml(r.Manager), money(r.Actual), money(r.Projected), money(r.Straightline), `${Math.round(num(r.ActualVsProjectedPct))}%`]));
   const rows = filteredRevenue().slice().sort((a,b)=>(a.Date < b.Date ? 1 : -1)).slice(0, 40);
-  buildTable($('revenueTable'), [{label:'Date'},{label:'Manager'},{label:'CostCenter'},{label:'ProjectName'},{label:'Actuals',class:'right'},{label:'Budget',class:'right'},{label:'Daily Budget',class:'right'}], rows.map(r => [escapeHtml(r.Date), escapeHtml(r.Manager), escapeHtml(r.CostCenter), escapeHtml(r.ProjectName), money(revenueActualValue(r)), money(projectedTargetForCostCenter(r.CostCenter, 'Monthly')), money(dailyProjectedForCostCenter(r.CostCenter))]));
+  buildTable($('revenueTable'), [{label:'Date'},{label:'Manager'},{label:'CostCenter'},{label:'ProjectName'},{label:'Actuals',class:'right'},{label:'Budget',class:'right'},{label:'Daily Budget',class:'right'}], rows.map(r => [escapeHtml(r.Date), escapeHtml(r.Manager), escapeHtml(r.CostCenter), escapeHtml(r.ProjectName), money(revenueActualValue(r)), money(projectedTargetForCostCenter(r.CostCenter, 'Monthly', r.Date)), money(dailyProjectedForCostCenter(r.CostCenter, r.Date))]));
   const revenueRows = filteredRevenue();
   const revActual = revenueRows.reduce((s,r)=>s+revenueActualValue(r),0);
   const revProjected = costCenterPeriodRows(state.filters.period).reduce((s,r)=>s+num(r.Projected),0);
@@ -1352,7 +1453,7 @@ function renderSummary(){
     ['Profitability', `${profitability}%`, 'From project margin']
   ].map(([a,b,c])=>`<div class="kpi"><div class="label">${a}</div><div class="value">${b}</div><div class="sub">${c}</div></div>`).join('');
   const dailyRows = state.revenue.slice().sort((a,b)=>(a.Date < b.Date ? 1 : -1)).slice(0,100);
-  if ($('dailyRevenueTransactionsTable')) buildTable($('dailyRevenueTransactionsTable'), [{label:'Date'},{label:'Manager'},{label:'CostCenter'},{label:'ProjectName'},{label:'Actuals',class:'right'},{label:'Budget',class:'right'},{label:'Daily Budget',class:'right'}], dailyRows.map(r => [escapeHtml(r.Date), escapeHtml(r.Manager), escapeHtml(r.CostCenter), escapeHtml(r.ProjectName), money(revenueActualValue(r)), money(projectedTargetForCostCenter(r.CostCenter, 'Monthly')), money(dailyProjectedForCostCenter(r.CostCenter))]));
+  if ($('dailyRevenueTransactionsTable')) buildTable($('dailyRevenueTransactionsTable'), [{label:'Date'},{label:'Manager'},{label:'CostCenter'},{label:'ProjectName'},{label:'Actuals',class:'right'},{label:'Budget',class:'right'},{label:'Daily Budget',class:'right'}], dailyRows.map(r => [escapeHtml(r.Date), escapeHtml(r.Manager), escapeHtml(r.CostCenter), escapeHtml(r.ProjectName), money(revenueActualValue(r)), money(projectedTargetForCostCenter(r.CostCenter, 'Monthly', r.Date)), money(dailyProjectedForCostCenter(r.CostCenter, r.Date))]));
   buildTable($('projectsTable'), [{label:'CreatedAt'},{label:'Division'},{label:'Manager'},{label:'ProjectName'},{label:'Status'},{label:'TotalIncome',class:'right'}], filteredProjects().slice(0,100).map(r => [escapeHtml(r.CreatedAt), escapeHtml(r.Division), escapeHtml(r.Manager), escapeHtml(r.ProjectName), escapeHtml(r.Status), money(r.TotalIncome)]));
   buildTable($('invoicesTable'), [{label:'Date'},{label:'Manager'},{label:'ProjectName'},{label:'InvoiceNumber'},{label:'Amount',class:'right'},{label:'Paid'}], filteredInvoices().slice(0,100).map(r => [escapeHtml(r.Date), escapeHtml(r.Manager), escapeHtml(r.ProjectName), escapeHtml(r.InvoiceNumber), money(r.Amount), escapeHtml(r.PaymentReceived ? 'Yes' : 'No')]));
 }
@@ -1372,33 +1473,40 @@ function bindTabs(){ document.querySelectorAll('.tab').forEach(tab => tab.onclic
 
 
 function mapRevenueRow(r){
-  const costCenter = normalizeCostCenterName(r.CostCenter || r.costCenter || r.Costcenter || r.Division || r['Cost Center'] || rowVal(r,1));
-  const actualValue = num(r['Daily Revenue'] || r.DailyRevenue || r.dailyRevenue || r.Actual || r.actual || r.Actuals || r.actuals || r['Actuals'] || r['Actual'] || r['E'] || r.E || rowVal(r,9) || r.Amount || r.amount);
-  const monthlyProjected = projectedTargetForCostCenter(costCenter, 'Monthly') || num(r['Monthly Projected Budget'] || r.MonthlyProjectedBudget || r.monthlyProjectedBudget || r.Budget || r.budget || r.Projected || r.projected || r['Projected Budget'] || r.ProjectedBudget || r.projectedBudget || r['F'] || r.F || rowVal(r,5));
-  const monthlyStraightline = straightlineTargetForCostCenter(costCenter, 'Monthly') || num(r['Monthly Straightline Budget'] || r.MonthlyStraightlineBudget || r.monthlyStraightlineBudget || r.StraightlineBudget || r['Straightline Budget'] || r['Straight-line Budget'] || rowVal(r,6));
-  const dailyProjected = dailyProjectedForCostCenter(costCenter) || num(r['Daily Projected Budget'] || r.DailyProjectedBudget || r.dailyProjectedBudget || r.DailyBudget || r['Daily Budget'] || r.dailyBudget || rowVal(r,7));
-  const dailyStraightline = straightlineTargetForCostCenter(costCenter, 'Daily', r.Date || todayISO()) || num(r['Daily Straightline Budget'] || r.DailyStraightlineBudget || r.dailyStraightlineBudget || rowVal(r,8));
+  const isArrayRow = Array.isArray(r);
+  const costCenter = normalizeCostCenterName(r.CostCenter || r.costCenter || r.Costcenter || r.Division || r['Cost Center'] || rowVal(r,0));
+  const category = text(r.Category || r.category || rowVal(r,1) || 'Daily Revenue');
+  const manager = text(r['Project Manager'] || r.ProjectManager || r.Manager || r.manager || rowVal(r,2));
+  const projectName = text(r['Project Name'] || r.ProjectName || r.projectName || r.ProjectsName || rowVal(r,3));
+  const monthlyProjected = num(r['Monthly Projected Budget'] || r.MonthlyProjectedBudget || r.monthlyProjectedBudget || r.Budget || r.budget || rowVal(r,4));
+  const monthlyStraightline = num(r['Monthly Straightline Budget'] || r.MonthlyStraightlineBudget || r.monthlyStraightlineBudget || r.StraightlineBudget || r['Straightline Budget'] || r['Straight-line Budget'] || rowVal(r,5));
+  const dailyProjected = num(r['Daily Projected Budget'] || r.DailyProjectedBudget || r.dailyProjectedBudget || r.DailyBudget || r['Daily Budget'] || r.dailyBudget || rowVal(r,6));
+  const dailyStraightline = num(r['Daily Straightline Budget'] || r.DailyStraightlineBudget || r.dailyStraightlineBudget || rowVal(r,7));
+  const actualValue = num(r['Daily Revenue'] || r.DailyRevenue || r.dailyRevenue || r.Actual || r.actual || r.Actuals || r.actuals || r['Actuals'] || r['Actual'] || r.Amount || r.amount || rowVal(r,8));
+  const fallbackDate = normaliseDate(r.Date || r.date || r.Timestamp || r.CreatedAt || r.createdAt) || todayISO();
   return repairRevenueShape({
-
-    Date: normaliseDate(r.Date || r.date || r.Timestamp || r.CreatedAt || rowVal(r,0)),
-    Manager: text(r.Manager || r.manager || r['Project Manager'] || r.ProjectManager || rowVal(r,3)),
+    Date: fallbackDate,
+    Manager: manager,
+    ProjectManager: manager,
     CostCenter: costCenter,
-    ProjectName: text(r.ProjectName || r.projectName || r['Project Name'] || r.ProjectsName || rowVal(r,4)),
+    ProjectName: projectName,
     Actual: actualValue,
     Actuals: actualValue,
     Amount: actualValue,
     Budget: monthlyProjected,
+    MonthlyProjectedBudget: monthlyProjected,
     DailyBudget: dailyProjected,
+    DailyProjectedBudget: dailyProjected,
     MonthlyStraightlineBudget: monthlyStraightline,
     DailyStraightlineBudget: dailyStraightline,
-    Confirmed: num(r.Confirmed || r.confirmed || rowVal(r,12)),
-    Forecast: num(r.Forecast || r.forecast || rowVal(r,13)),
-    Category: text(r.Category || r.category || rowVal(r,2) || 'Daily Revenue'),
-    InvoicesIssued: num(r['Invoices Issued'] || r.InvoicesIssued || r.invoicesIssued || rowVal(r,10)),
-    PaymentsReceived: num(r['Payments Received'] || r.PaymentsReceived || r.paymentsReceived || rowVal(r,11)),
+    Confirmed: num(r.Confirmed || r.confirmed || (!isArrayRow ? 0 : rowVal(r,12))),
+    Forecast: num(r.Forecast || r.forecast || (!isArrayRow ? 0 : rowVal(r,13))),
+    Category: category,
+    InvoicesIssued: num(r['Invoices Issued'] || r.InvoicesIssued || r.invoicesIssued || (!isArrayRow ? 0 : rowVal(r,10))),
+    PaymentsReceived: num(r['Payments Received'] || r.PaymentsReceived || r.paymentsReceived || (!isArrayRow ? 0 : rowVal(r,11))),
     Quality: num(r.Quality || r.quality || 80),
     Safety: num(r.Safety || r.safety || 0),
-    CreatedAt: normaliseDate(r.CreatedAt || r.createdAt || rowVal(r,0)),
+    CreatedAt: fallbackDate,
     Margin: 0
   });
 }
@@ -1417,35 +1525,40 @@ function bindTabs(){ document.querySelectorAll('.tab').forEach(tab => tab.onclic
 
 
 function mapRevenueRow(r){
-  const costCenter = normalizeCostCenterName(r.CostCenter || r.costCenter || r.Costcenter || r.Division || r['Cost Center'] || rowVal(r,1));
-  const actualValue = num(r['Daily Revenue'] || r.DailyRevenue || r.dailyRevenue || r.Actual || r.actual || r.Actuals || r.actuals || r['Actuals'] || r['Actual'] || r['E'] || r.E || rowVal(r,9) || r.Amount || r.amount);
-  const monthlyProjected = projectedTargetForCostCenter(costCenter, 'Monthly') || num(r['Monthly Projected Budget'] || r.MonthlyProjectedBudget || r.monthlyProjectedBudget || r.Budget || r.budget || r.Projected || r.projected || r['Projected Budget'] || r.ProjectedBudget || r.projectedBudget || r['F'] || r.F || rowVal(r,5));
-  const monthlyStraightline = straightlineTargetForCostCenter(costCenter, 'Monthly') || num(r['Monthly Straightline Budget'] || r.MonthlyStraightlineBudget || r.monthlyStraightlineBudget || r.StraightlineBudget || r['Straightline Budget'] || r['Straight-line Budget'] || rowVal(r,6));
-  const dailyProjected = dailyProjectedForCostCenter(costCenter) || num(r['Daily Projected Budget'] || r.DailyProjectedBudget || r.dailyProjectedBudget || r.DailyBudget || r['Daily Budget'] || r.dailyBudget || rowVal(r,7));
-  const dailyStraightline = straightlineTargetForCostCenter(costCenter, 'Daily', r.Date || todayISO()) || num(r['Daily Straightline Budget'] || r.DailyStraightlineBudget || r.dailyStraightlineBudget || rowVal(r,8));
+  const isArrayRow = Array.isArray(r);
+  const costCenter = normalizeCostCenterName(r.CostCenter || r.costCenter || r.Costcenter || r.Division || r['Cost Center'] || rowVal(r,0));
+  const category = text(r.Category || r.category || rowVal(r,1) || 'Daily Revenue');
+  const manager = text(r['Project Manager'] || r.ProjectManager || r.Manager || r.manager || rowVal(r,2));
+  const projectName = text(r['Project Name'] || r.ProjectName || r.projectName || r.ProjectsName || rowVal(r,3));
+  const monthlyProjected = num(r['Monthly Projected Budget'] || r.MonthlyProjectedBudget || r.monthlyProjectedBudget || r.Budget || r.budget || rowVal(r,4));
+  const monthlyStraightline = num(r['Monthly Straightline Budget'] || r.MonthlyStraightlineBudget || r.monthlyStraightlineBudget || r.StraightlineBudget || r['Straightline Budget'] || r['Straight-line Budget'] || rowVal(r,5));
+  const dailyProjected = num(r['Daily Projected Budget'] || r.DailyProjectedBudget || r.dailyProjectedBudget || r.DailyBudget || r['Daily Budget'] || r.dailyBudget || rowVal(r,6));
+  const dailyStraightline = num(r['Daily Straightline Budget'] || r.DailyStraightlineBudget || r.dailyStraightlineBudget || rowVal(r,7));
+  const actualValue = num(r['Daily Revenue'] || r.DailyRevenue || r.dailyRevenue || r.Actual || r.actual || r.Actuals || r.actuals || r['Actuals'] || r['Actual'] || r.Amount || r.amount || rowVal(r,8));
+  const fallbackDate = normaliseDate(r.Date || r.date || r.Timestamp || r.CreatedAt || r.createdAt) || todayISO();
   return repairRevenueShape({
-
-    Date: normaliseDate(r.Date || r.date || r.Timestamp || r.CreatedAt || rowVal(r,0)),
-    Manager: text(r.Manager || r.manager || r['Project Manager'] || r.ProjectManager || rowVal(r,3)),
+    Date: fallbackDate,
+    Manager: manager,
+    ProjectManager: manager,
     CostCenter: costCenter,
-    ProjectName: text(r.ProjectName || r.projectName || r['Project Name'] || r.ProjectsName || rowVal(r,4)),
+    ProjectName: projectName,
     Actual: actualValue,
     Actuals: actualValue,
     Amount: actualValue,
     Budget: monthlyProjected,
-    DailyBudget: dailyProjected,
     MonthlyProjectedBudget: monthlyProjected,
-    MonthlyStraightlineBudget: monthlyStraightline,
+    DailyBudget: dailyProjected,
     DailyProjectedBudget: dailyProjected,
+    MonthlyStraightlineBudget: monthlyStraightline,
     DailyStraightlineBudget: dailyStraightline,
-    Confirmed: num(r.Confirmed || r.confirmed || rowVal(r,12)),
-    Forecast: num(r.Forecast || r.forecast || rowVal(r,13)),
-    Category: text(r.Category || r.category || rowVal(r,2) || 'Daily Revenue'),
-    InvoicesIssued: num(r['Invoices Issued'] || r.InvoicesIssued || r.invoicesIssued || rowVal(r,10)),
-    PaymentsReceived: num(r['Payments Received'] || r.PaymentsReceived || r.paymentsReceived || rowVal(r,11)),
+    Confirmed: num(r.Confirmed || r.confirmed || (!isArrayRow ? 0 : rowVal(r,12))),
+    Forecast: num(r.Forecast || r.forecast || (!isArrayRow ? 0 : rowVal(r,13))),
+    Category: category,
+    InvoicesIssued: num(r['Invoices Issued'] || r.InvoicesIssued || r.invoicesIssued || (!isArrayRow ? 0 : rowVal(r,10))),
+    PaymentsReceived: num(r['Payments Received'] || r.PaymentsReceived || r.paymentsReceived || (!isArrayRow ? 0 : rowVal(r,11))),
     Quality: num(r.Quality || r.quality || 80),
     Safety: num(r.Safety || r.safety || 0),
-    CreatedAt: normaliseDate(r.CreatedAt || r.createdAt || rowVal(r,0)),
+    CreatedAt: fallbackDate,
     Margin: 0
   });
 }
@@ -1483,11 +1596,11 @@ async function quickConnectionTest(){
 async function loadData(){
   if (isLoadingData) return;
   isLoadingData = true;
-  if (isPlaceholderUrl(SCRIPT_URL)) {
+  if (isPlaceholderUrl(currentScriptUrl())) {
     setConn('Set Script URL','warn');
     populateFilters();
     renderAll();
-    showToast('Paste your deployed Apps Script URL into SCRIPT_URL and REVENUE_SAVE_URL to load live data.','info');
+    showToast('Paste your deployed Apps Script /exec URL into the Apps Script connection box to load live data.','info');
     isLoadingData = false;
     return;
   }
@@ -1561,8 +1674,9 @@ function monthlyStraightlineForRevenue(costCenter, manager, projectName, dateVal
 }
 
 async function postJsonToUrl(url, payload){
-  if (!url || /^PASTE_/i.test(url)) throw new Error('Paste the deployed Manager Dashboard Apps Script web app URL into REVENUE_SAVE_URL first.');
-  const resp = await withTimeoutFetch(url, getFetchOptions('POST', payload), 45000);
+  const targetUrl = text(url) || currentScriptUrl();
+  if (!targetUrl || /^PASTE_/i.test(targetUrl)) throw new Error('Paste the deployed Manager Dashboard Apps Script /exec URL into the Apps Script connection box first.');
+  const resp = await withTimeoutFetch(targetUrl, getFetchOptions('POST', payload), 45000);
   return await parseJsonResponse(resp);
 }
 async function saveRevenue(){
@@ -1570,8 +1684,8 @@ async function saveRevenue(){
   const manager = $('revManager').value;
   const costCenter = $('revCostCenter').value;
   const projectName = $('revProjectName').value;
-  const monthlyProjectedBudget = projectedTargetForCostCenter(costCenter, 'Monthly') || num($('revBudget').value);
-  const dailyProjectedBudget = dailyProjectedForCostCenter(costCenter) || num($('revDailyBudget').value);
+  const monthlyProjectedBudget = projectedTargetForCostCenter(costCenter, 'Monthly', date) || num($('revBudget').value);
+  const dailyProjectedBudget = dailyProjectedForCostCenter(costCenter, date) || num($('revDailyBudget').value);
   const dailyRevenue = num($('revAmount').value);
   const monthlyStraightlineBudget = monthlyStraightlineForRevenue(costCenter, manager, projectName, date);
   const dayCount = Math.max(daysInMonth(date), 1);
@@ -1714,7 +1828,7 @@ ${e.message}`);
     btn.textContent=old; btn.classList.remove('btn-loading');
   }
 }
-function init(){ state.currentUser = getStoredUserName(); bindTabs(); wireFilters(); wireProjectAdders(); $('testBtn').onclick = () => quickConnectionTest(); $('refreshBtn').onclick = () => loadData(); $('saveRevenueBtn').onclick = saveRevenue; $('saveProjectBtn').onclick = saveProject; $('saveInvoiceBtn').onclick = saveInvoice; $('savePaymentBtn').onclick = savePaymentReceived; $('revDate').value = $('projCreatedAt').value = $('invDate').value = $('payDate').value = todayISO(); $('periodFilter').innerHTML = PERIODS.map(p=>`<option ${p===state.filters.period?'selected':''}>${p}</option>`).join(''); $('diagnostics').textContent = 'Waiting for first load...'; if ($('revCostCenter')) $('revCostCenter').addEventListener('change', applyMonthlyBudgetInputs); applyCurrentUserDefaults(); loadData(); }
+function init(){ state.currentUser = getStoredUserName(); bindTabs(); wireFilters(); wireProjectAdders(); syncScriptUrlField(); $('configBtn').onclick = () => { const input = $('scriptUrlInput'); if (input) input.focus(); }; $('saveScriptUrlBtn').onclick = saveScriptUrlFromInput; $('clearScriptUrlBtn').onclick = clearSavedScriptUrl; $('testBtn').onclick = () => quickConnectionTest(); $('refreshBtn').onclick = () => loadData(); $('saveRevenueBtn').onclick = saveRevenue; $('saveProjectBtn').onclick = saveProject; $('saveInvoiceBtn').onclick = saveInvoice; $('savePaymentBtn').onclick = savePaymentReceived; $('revDate').value = $('projCreatedAt').value = $('invDate').value = $('payDate').value = todayISO(); $('periodFilter').innerHTML = PERIODS.map(p=>`<option ${p===state.filters.period?'selected':''}>${p}</option>`).join(''); $('diagnostics').textContent = 'Waiting for first load...'; if ($('revCostCenter')) $('revCostCenter').addEventListener('change', applyMonthlyBudgetInputs); applyCurrentUserDefaults(); loadData(); }
 document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
