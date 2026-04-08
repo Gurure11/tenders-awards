@@ -72,7 +72,7 @@
     <div class="card hero">
       <div>
         <h2 style="margin:0 0 8px">Live Google Sheets dashboard</h2>
-        <div class="muted">Actual, MTD, Group YTD, Group BTYD, Projected Budget and Straight-line Budget are read in real time from spreadsheet ID <strong>1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE</strong>, sheet tab <strong>Manager Dashboard</strong>. Daily Revenue uses <strong>Daily Revenue</strong>, Projected Budget uses <strong>Monthly Projected</strong> from the <strong>Monthly</strong> sheet for the current month and <strong>Daily Projected Budget</strong> for daily values, Straight-line uses <strong>Monthly Straightline Budget</strong> and <strong>Daily Straightline Budget</strong>. Group totals are fixed as requested and Onpoint filtered confirmed is overridden to the requested amount.</div>
+        <div class="muted">Actual, MTD, Group YTD, Group BTYD, Projected Budget and Straight-line Budget are read in real time from spreadsheet ID <strong>1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE</strong>, sheet tab <strong>Manager Dashboard</strong>. Daily Revenue uses <strong>Daily Revenue</strong>, Projected Budget and Straight-line Budget use the <strong>Monthly</strong> sheet by month and cost center. Daily Revenue is always mapped to Actual and Actuals, and MTD is summed directly from Daily Revenue. Group totals are fixed as requested and Onpoint filtered confirmed is overridden to the requested amount.</div>
       </div>
       <div class="toolbar">
         <select id="periodFilter"></select>
@@ -208,8 +208,8 @@
   </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwrRhEI2lJ-Zz_KYIkbxrhB8OcPBHRoDtJftV15_Sqjb5LWeldRcqcQpjEC7HMcY_egqw/exec';
-const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbwrRhEI2lJ-Zz_KYIkbxrhB8OcPBHRoDtJftV15_Sqjb5LWeldRcqcQpjEC7HMcY_egqw/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxR579nqi2BNhqOwfASy16zL-x-xLaKtZTJIEQrBanwuJyF0uaB8EWzaqBTGsdYU5PN1g/exec';
+const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbxR579nqi2BNhqOwfASy16zL-x-xLaKtZTJIEQrBanwuJyF0uaB8EWzaqBTGsdYU5PN1g/exec';
 const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
 const DEFAULT_COST_CENTERS = ["Onpoint Ontime", "Aqua Telecoms", "Nkanyezi", "Distinct Hire"];
 const DEFAULT_PROJECT_OPTIONS = ["DBSA Generators", "DBSA Rooiwal", "Joe Gqabi", "Temba", "Midvaal", "Coega", "KZN General Buildings", "Tshwane", "Public Works Limpopo", "Limpopo Eskom Substation Ephraim Mogale", "Naizna", "Cape Town", "COT Streetlights", "COT Electrification", "COT Metering", "COE Streetlights", "Msunduzi E50", "Msunduzi Streetlights", "Msunduzi E33", "Msunduzi E47", "Moqhaka Streetlights", "Moqhaka Metering", "Centlec CD11", "Centlec Transformers CD32", "Centlec CD45", "Midvaal Mechanical", "Eskom SPU", "Eskom FSOU Substation", "Eskom ECOU", "Eskom LOU General Buildings", "Eskom KZN Minor Reticulation", "Randwest Electrical", "Randwest Roads & Stormwater", "Randwest Water rand sanitation", "Randwest Bulk", "RAL", "Stellenbosh", "Liquid ECPG", "Liquid ECSOD", "Liquid Gauteng SOD", "Telkom", "MTN", "Centlec", "Eskom Harvard", "City Power", "Umhlathuze Municipality", "Eskom WC", "COE Buildings", "Midvaal Water", "Midvaal Electricity", "Uthukela", "Kgetleng River", "Ray Nkonyeni Facility", "Ray Nkonyeni Electrical Material", "Ray Nkonyeni Mast", "Ray Nkonyeni Meter Reading", "Ramotshere Electrical Supplies", "Newcastle Substations", "Ubuntu", "IDT North West Buidlings", "Amajuba Generator", "uPhongolo", "Abaquilisi Battery Supplies", "Abaquilisi Streetlights"];
@@ -401,7 +401,7 @@ function filteredStraightline(period = state.filters.period){
   });
 }
 function projectMargin(projectName, manager=''){ const match = state.projects.find(p => lower(p.ProjectName)===lower(projectName) && (!manager || lower(p.Manager)===lower(manager))) || state.projects.find(p => lower(p.ProjectName)===lower(projectName)); return num(match ? match.Margin : 0); }
-function revenueActualValue(r){ return num((r && (r.DailyRevenue ?? r['Daily Revenue'] ?? r.Actual ?? r['Actual'] ?? r.Actuals ?? r['Actuals'] ?? r.E ?? r['E'] ?? r.Amount ?? r['Amount'])) ?? 0); }
+function revenueActualValue(r){ return num((r && (r.DailyRevenue ?? r['Daily Revenue'] ?? r.Actual ?? r['Actual'] ?? r.Actuals ?? r['Actuals'] ?? r.Amount ?? r['Amount'] ?? r.E ?? r['E'])) ?? 0); }
 function revenueDailyBudgetValue(r){ return num((r && (r.DailyBudget ?? r['DailyBudget'] ?? r['Daily Budget'] ?? r.dailyBudget ?? r['I'] ?? r.I)) ?? 0); }
 function revenueActualForChart(r){ return revenueActualValue(r); }
 function revenueBudgetForChart(r, period = state.filters.period){ return scaleProjectedBudgetValue(num((r && (r.Budget ?? r['Budget'] ?? r['Projected Budget'] ?? r.ProjectedBudget)) ?? 0), period); }
@@ -1155,8 +1155,8 @@ function renderKPIs(){
     forecast = revenueRows.reduce((s,r)=>s+num(r.Forecast),0);
   }
   const totalOrders = confirmed + forecast;
-  const mtd = monthlyRows.reduce((s,r)=>s+num(r.DailyRevenue ?? r['Daily Revenue'] ?? r.Actual ?? r.Actuals ?? r.Amount),0);
-  const ytd = yearlyRows.reduce((s,r)=>s+num(r.DailyRevenue ?? r['Daily Revenue'] ?? r.Actual ?? r.Actuals ?? r.Amount),0);
+  const mtd = monthlyRows.reduce((s,r)=>s + revenueActualValue(r), 0);
+  const ytd = yearlyRows.reduce((s,r)=>s + revenueActualValue(r), 0);
   const btye = Math.max(0, confirmed - ytd);
   $('headlineKpis').innerHTML = [
     ['Total Confirmed', money(confirmed), `${state.filters.period} / Manager Dashboard`],
