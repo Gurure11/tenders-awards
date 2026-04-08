@@ -208,8 +208,8 @@
   </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzaHv9MLvEBswHJb35mHcpcsczYu6JSIX2pzDk2dAVxHK5vbS4Q7atGFJ99gITim46t1g/exec';
-const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbzaHv9MLvEBswHJb35mHcpcsczYu6JSIX2pzDk2dAVxHK5vbS4Q7atGFJ99gITim46t1g/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwrRhEI2lJ-Zz_KYIkbxrhB8OcPBHRoDtJftV15_Sqjb5LWeldRcqcQpjEC7HMcY_egqw/exec';
+const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbwrRhEI2lJ-Zz_KYIkbxrhB8OcPBHRoDtJftV15_Sqjb5LWeldRcqcQpjEC7HMcY_egqw/exec';
 const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
 const DEFAULT_COST_CENTERS = ["Onpoint Ontime", "Aqua Telecoms", "Nkanyezi", "Distinct Hire"];
 const DEFAULT_PROJECT_OPTIONS = ["DBSA Generators", "DBSA Rooiwal", "Joe Gqabi", "Temba", "Midvaal", "Coega", "KZN General Buildings", "Tshwane", "Public Works Limpopo", "Limpopo Eskom Substation Ephraim Mogale", "Naizna", "Cape Town", "COT Streetlights", "COT Electrification", "COT Metering", "COE Streetlights", "Msunduzi E50", "Msunduzi Streetlights", "Msunduzi E33", "Msunduzi E47", "Moqhaka Streetlights", "Moqhaka Metering", "Centlec CD11", "Centlec Transformers CD32", "Centlec CD45", "Midvaal Mechanical", "Eskom SPU", "Eskom FSOU Substation", "Eskom ECOU", "Eskom LOU General Buildings", "Eskom KZN Minor Reticulation", "Randwest Electrical", "Randwest Roads & Stormwater", "Randwest Water rand sanitation", "Randwest Bulk", "RAL", "Stellenbosh", "Liquid ECPG", "Liquid ECSOD", "Liquid Gauteng SOD", "Telkom", "MTN", "Centlec", "Eskom Harvard", "City Power", "Umhlathuze Municipality", "Eskom WC", "COE Buildings", "Midvaal Water", "Midvaal Electricity", "Uthukela", "Kgetleng River", "Ray Nkonyeni Facility", "Ray Nkonyeni Electrical Material", "Ray Nkonyeni Mast", "Ray Nkonyeni Meter Reading", "Ramotshere Electrical Supplies", "Newcastle Substations", "Ubuntu", "IDT North West Buidlings", "Amajuba Generator", "uPhongolo", "Abaquilisi Battery Supplies", "Abaquilisi Streetlights"];
@@ -401,7 +401,7 @@ function filteredStraightline(period = state.filters.period){
   });
 }
 function projectMargin(projectName, manager=''){ const match = state.projects.find(p => lower(p.ProjectName)===lower(projectName) && (!manager || lower(p.Manager)===lower(manager))) || state.projects.find(p => lower(p.ProjectName)===lower(projectName)); return num(match ? match.Margin : 0); }
-function revenueActualValue(r){ return num((r && (r.Actual ?? r['Actual'] ?? r.Actuals ?? r['Actuals'] ?? r.E ?? r['E'] ?? r.Amount ?? r['Amount'])) ?? 0); }
+function revenueActualValue(r){ return num((r && (r.DailyRevenue ?? r['Daily Revenue'] ?? r.Actual ?? r['Actual'] ?? r.Actuals ?? r['Actuals'] ?? r.E ?? r['E'] ?? r.Amount ?? r['Amount'])) ?? 0); }
 function revenueDailyBudgetValue(r){ return num((r && (r.DailyBudget ?? r['DailyBudget'] ?? r['Daily Budget'] ?? r.dailyBudget ?? r['I'] ?? r.I)) ?? 0); }
 function revenueActualForChart(r){ return revenueActualValue(r); }
 function revenueBudgetForChart(r, period = state.filters.period){ return scaleProjectedBudgetValue(num((r && (r.Budget ?? r['Budget'] ?? r['Projected Budget'] ?? r.ProjectedBudget)) ?? 0), period); }
@@ -1155,8 +1155,8 @@ function renderKPIs(){
     forecast = revenueRows.reduce((s,r)=>s+num(r.Forecast),0);
   }
   const totalOrders = confirmed + forecast;
-  const mtd = monthlyRows.reduce((s,r)=>s+revenueActualValue(r),0);
-  const ytd = yearlyRows.reduce((s,r)=>s+revenueActualValue(r),0);
+  const mtd = monthlyRows.reduce((s,r)=>s+num(r.DailyRevenue ?? r['Daily Revenue'] ?? r.Actual ?? r.Actuals ?? r.Amount),0);
+  const ytd = yearlyRows.reduce((s,r)=>s+num(r.DailyRevenue ?? r['Daily Revenue'] ?? r.Actual ?? r.Actuals ?? r.Amount),0);
   const btye = Math.max(0, confirmed - ytd);
   $('headlineKpis').innerHTML = [
     ['Total Confirmed', money(confirmed), `${state.filters.period} / Manager Dashboard`],
