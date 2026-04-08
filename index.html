@@ -72,7 +72,7 @@
     <div class="card hero">
       <div>
         <h2 style="margin:0 0 8px">Live Google Sheets dashboard</h2>
-        <div class="muted">Actual, MTD, Group YTD, Group BTYD, Projected Budget and Straight-line Budget are read in real time from spreadsheet ID <strong>1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE</strong>, sheet tab <strong>Manager Dashboard</strong>. Daily Revenue uses <strong>Daily Revenue</strong>, Projected Budget and Straight-line Budget use the <strong>Monthly</strong> sheet by month and cost center. Daily Revenue is always mapped to Actual and Actuals, and MTD is summed directly from Daily Revenue. Group totals are fixed as requested and Onpoint filtered confirmed is overridden to the requested amount.</div>
+        <div class="muted">Actual, MTD, Group YTD, Group BTYD, Projected Budget and Straight-line Budget are read in real time from spreadsheet ID <strong>1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE</strong>, sheet tab <strong>Manager Dashboard</strong>. Daily Revenue uses <strong>Daily Revenue</strong>, Projected Budget uses <strong>Monthly Projected Budget</strong> and <strong>Daily Projected Budget</strong>, Straight-line uses <strong>Monthly Straightline Budget</strong> and <strong>Daily Straightline Budget</strong>. Group totals are fixed as requested and Onpoint filtered confirmed is overridden to the requested amount.</div>
       </div>
       <div class="toolbar">
         <select id="periodFilter"></select>
@@ -162,6 +162,17 @@
       </div>
       <div class="card" style="margin-top:16px"><h3 style="margin-top:0">Revenue Summary</h3><div id="revenueStats" class="stats"></div></div>
       <div class="card" style="margin-top:16px"><h3 style="margin-top:0">Daily Revenue transactions</h3><div class="table-wrap"><table id="dailyRevenueTransactionsTable"></table></div></div>
+      <div class="card" style="margin-top:16px">
+        <h3 style="margin-top:0">Payments Received</h3>
+        <div class="form-grid">
+          <div class="field span-2"><label>Date</label><input id="payDate" type="date"></div>
+          <div class="field span-3"><label>Project Name</label><select id="payProjectName"></select></div>
+          <div class="field span-3"><label>Project Manager</label><select id="payManager"></select></div>
+          <div class="field span-2"><label>Invoice Number</label><input id="payInvoiceNumber"></div>
+          <div class="field span-2"><label>Amount Paid</label><input id="payAmount" type="number" min="0" step="0.01"></div>
+          <div class="field span-12"><button id="savePaymentBtn" type="button">Save Payment Received</button></div>
+        </div>
+      </div>
     </div>
 
     <div class="panel" id="projectsPanel">
@@ -208,12 +219,12 @@
   </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby3N6B6NCck11OlWctMeEt-H_H1R3FCprSg_QnpnTplbxfogAV1kZ8vBDBmOjxFYMGI/exec';
-const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycby3N6B6NCck11OlWctMeEt-H_H1R3FCprSg_QnpnTplbxfogAV1kZ8vBDBmOjxFYMGI/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZom5gYJ_ziWPdzBkzf6FBzwmlYkiwW_hhnGJUM6thOw_9q8rAODIu0f4jyO0TMdctvA/exec';
+const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbxxjKZ2sqX7yIkwPvmULif4wCNP8KEltoVNdvtgLnrN6HB-gjnEppY10045daUN0SwH/exec';
 const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
 const DEFAULT_COST_CENTERS = ["Onpoint Ontime", "Aqua Telecoms", "Nkanyezi", "Distinct Hire"];
-const DEFAULT_PROJECT_OPTIONS = ["DBSA Generators", "DBSA Rooiwal", "Joe Gqabi", "Temba", "Midvaal", "Coega", "KZN General Buildings", "Tshwane", "Public Works Limpopo", "Limpopo Eskom Substation Ephraim Mogale", "Naizna", "Cape Town", "COT Streetlights", "COT Electrification", "COT Metering", "COE Streetlights", "Msunduzi E50", "Msunduzi Streetlights", "Msunduzi E33", "Msunduzi E47", "Moqhaka Streetlights", "Moqhaka Metering", "Centlec CD11", "Centlec Transformers CD32", "Centlec CD45", "Midvaal Mechanical", "Eskom SPU", "Eskom FSOU Substation", "Eskom ECOU", "Eskom LOU General Buildings", "Eskom KZN Minor Reticulation", "Randwest Electrical", "Randwest Roads & Stormwater", "Randwest Water rand sanitation", "Randwest Bulk", "RAL", "Stellenbosh", "Liquid ECPG", "Liquid ECSOD", "Liquid Gauteng SOD", "Telkom", "MTN", "Centlec", "Eskom Harvard", "City Power", "Umhlathuze Municipality", "Eskom WC", "COE Buildings", "Midvaal Water", "Midvaal Electricity", "Uthukela", "Kgetleng River", "Ray Nkonyeni Facility", "Ray Nkonyeni Electrical Material", "Ray Nkonyeni Mast", "Ray Nkonyeni Meter Reading", "Ramotshere Electrical Supplies", "Newcastle Substations", "Ubuntu", "IDT North West Buidlings", "Amajuba Generator", "uPhongolo", "Abaquilisi Battery Supplies", "Abaquilisi Streetlights"];
-const DEFAULT_MANAGER_OPTIONS = ["Moses", "Johan", "Siyanda", "Dave", "James", "Rayman", "Timothy", "Roads Site Agent COT", "Stanley", "Civil Site Agent", "Roads Site Agent CPT", "Brian", "EL CM", "Tony", "Govern", "Graham", "Ronald", "Petros", "Elroy", "Mesh", "Vusi", "Tinotenda", "Sydney", "Andrew", "Phillip", "Moeti"];
+const DEFAULT_PROJECT_OPTIONS = ["DBSA Generators", "DBSA Rooiwal", "Joe Gqabi", "Temba", "Midvaal", "Coega","Osingisingin", "KZN General Buildings", "Tshwane", "Public Works Limpopo", "Limpopo Eskom Substation Ephraim Mogale", "Naizna", "Cape Town", "COT Streetlights", "COT Electrification", "COT Metering", "COE Streetlights", "Msunduzi E50", "Msunduzi Streetlights", "Msunduzi E33", "Msunduzi E47", "Moqhaka Streetlights", "Moqhaka Metering", "Centlec CD11", "Centlec Transformers CD32", "Centlec CD45", "Midvaal Mechanical", "Eskom SPU", "Eskom FSOU Substation", "Eskom ECOU", "Eskom LOU General Buildings", "Eskom KZN Minor Reticulation", "Randwest Electrical", "Randwest Roads & Stormwater", "Randwest Water rand sanitation", "Randwest Bulk", "RAL", "Stellenbosh", "Liquid ECPG", "Liquid ECSOD", "Liquid Gauteng SOD", "Telkom", "MTN", "Centlec", "Eskom Harvard", "City Power", "Umhlathuze Municipality", "Eskom WC", "COE Buildings", "Midvaal Water", "Midvaal Electricity", "Uthukela", "Kgetleng River", "Ray Nkonyeni Facility", "Ray Nkonyeni Electrical Material", "Ray Nkonyeni Mast", "Ray Nkonyeni Meter Reading", "Ramotshere Electrical Supplies", "Newcastle Substations", "Ubuntu", "IDT North West Buidlings", "Amajuba Generator", "uPhongolo", "Abaquilisi Battery Supplies", "Abaquilisi Streetlights"];
+const DEFAULT_MANAGER_OPTIONS = ["Moses", "Johan", "Siyanda", "Dave", "James", "Rayman", "Timothy", "Roads Site Agent COT", "Stanley", "Civil Site Agent", "Roads Site Agent CPT", "Brian", "EL CM", "Tony", "Govern","George ","Graham", "Ronald", "Petros", "Elroy", "Mesh", "Vusi", "Tinotenda", "Sydney", "Andrew", "Phillip", "Moeti"];
 const OVERRIDE_COST_CENTER = 'Onpoint Ontime';
 const ONPOINT_OVERRIDE_TOTAL_CONFIRMED = 388301184;
 const GROUP_OVERRIDE_TOTAL_CONFIRMED = 551035205;
@@ -356,39 +367,19 @@ function filteredOrders(period = state.filters.period){
   });
 }
 function filteredInvoices(period = state.filters.period){
-  const rows = revenueRowsForPeriod(period);
-  const out = [];
-  rows.forEach(r => {
-    const invoiceAmt = num(r.InvoicesIssued || r['Invoices Issued']);
-    const paymentAmt = num(r.PaymentsReceived || r['Payments Received']);
-    if (invoiceAmt > 0) {
-      out.push({
-        Date: normaliseDate(r.Date),
-        Manager: text(r.Manager),
-        ProjectName: text(r.ProjectName),
-        InvoiceNumber: text(r.InvoiceNumber || ''),
-        Amount: invoiceAmt,
-        PaymentReceived: false,
-        PaymentDate: '',
-        CostCenter: normalizeCostCenterName(r.CostCenter),
-        Notes: text(r.Notes || 'Manager Dashboard / Invoices Issued')
-      });
-    }
-    if (paymentAmt > 0) {
-      out.push({
-        Date: normaliseDate(r.Date),
-        Manager: text(r.Manager),
-        ProjectName: text(r.ProjectName),
-        InvoiceNumber: text(r.InvoiceNumber || ''),
-        Amount: paymentAmt,
-        PaymentReceived: true,
-        PaymentDate: normaliseDate(r.PaymentDate || r.Date),
-        CostCenter: normalizeCostCenterName(r.CostCenter),
-        Notes: text(r.Notes || 'Manager Dashboard / Payments Received')
-      });
-    }
-  });
-  return out;
+  return revenueRowsForPeriod(period)
+    .filter(r => num(r.InvoicesIssued || r['Invoices Issued']) > 0)
+    .map(r => ({
+      Date: normaliseDate(r.Date),
+      Manager: text(r.Manager),
+      ProjectName: text(r.ProjectName),
+      InvoiceNumber: text(r.InvoiceNumber || ''),
+      Amount: num(r.InvoicesIssued || r['Invoices Issued']),
+      PaymentReceived: false,
+      PaymentDate: '',
+      CostCenter: normalizeCostCenterName(r.CostCenter),
+      Notes: text(r.Notes || 'Manager Dashboard / Invoices Issued')
+    }));
 }
 function filteredStraightline(period = state.filters.period){
   return state.straightline.filter(r => {
@@ -401,7 +392,7 @@ function filteredStraightline(period = state.filters.period){
   });
 }
 function projectMargin(projectName, manager=''){ const match = state.projects.find(p => lower(p.ProjectName)===lower(projectName) && (!manager || lower(p.Manager)===lower(manager))) || state.projects.find(p => lower(p.ProjectName)===lower(projectName)); return num(match ? match.Margin : 0); }
-function revenueActualValue(r){ return num((r && (r.DailyRevenue ?? r['Daily Revenue'] ?? r.Actual ?? r['Actual'] ?? r.Actuals ?? r['Actuals'] ?? r.Amount ?? r['Amount'] ?? r.E ?? r['E'])) ?? 0); }
+function revenueActualValue(r){ return num((r && (r.Actual ?? r['Actual'] ?? r.Actuals ?? r['Actuals'] ?? r.E ?? r['E'] ?? r.Amount ?? r['Amount'])) ?? 0); }
 function revenueDailyBudgetValue(r){ return num((r && (r.DailyBudget ?? r['DailyBudget'] ?? r['Daily Budget'] ?? r.dailyBudget ?? r['I'] ?? r.I)) ?? 0); }
 function revenueActualForChart(r){ return revenueActualValue(r); }
 function revenueBudgetForChart(r, period = state.filters.period){ return scaleProjectedBudgetValue(num((r && (r.Budget ?? r['Budget'] ?? r['Projected Budget'] ?? r.ProjectedBudget)) ?? 0), period); }
@@ -1127,6 +1118,7 @@ function populateFilters(){
   fillSelect('revManager', allManagers);
   fillSelect('projManager', allManagers);
   fillSelect('invManager', allManagers);
+  fillSelect('payManager', allManagers);
 
   fillSelect('revCostCenter', allCostCenters);
   fillSelect('projDivision', allCostCenters);
@@ -1134,6 +1126,7 @@ function populateFilters(){
 
   fillSelect('revProjectName', allProjects);
   fillSelect('invProjectName', allProjects);
+  fillSelect('payProjectName', allProjects);
 
   applyRememberedDailyBudget();
   wireProjectAdders();
@@ -1155,8 +1148,8 @@ function renderKPIs(){
     forecast = revenueRows.reduce((s,r)=>s+num(r.Forecast),0);
   }
   const totalOrders = confirmed + forecast;
-  const mtd = monthlyRows.reduce((s,r)=>s + revenueActualValue(r), 0);
-  const ytd = yearlyRows.reduce((s,r)=>s + revenueActualValue(r), 0);
+  const mtd = monthlyRows.reduce((s,r)=>s+revenueActualValue(r),0);
+  const ytd = yearlyRows.reduce((s,r)=>s+revenueActualValue(r),0);
   const btye = Math.max(0, confirmed - ytd);
   $('headlineKpis').innerHTML = [
     ['Total Confirmed', money(confirmed), `${state.filters.period} / Manager Dashboard`],
@@ -1467,6 +1460,13 @@ async function saveInvoice(){
   const amount = num($('invAmount').value);
   const payload = {
     action:'addInvoiceToManagerDashboard',
+    targetSpreadsheetId:'1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE',
+    spreadsheetId:'1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE',
+    workbookName:'Manager Dashboard',
+    sheetName:'Manager Dashboard',
+    tabName:'Invoices',
+    targetTab:'Invoices',
+    entryType:'Invoice',
     date,
     manager,
     projectName,
@@ -1484,8 +1484,8 @@ async function saveInvoice(){
     const res = await postJsonToUrl(REVENUE_SAVE_URL, payload);
     await loadData();
     $('invNumber').value=''; $('invAmount').value=''; $('invPaymentDate').value=''; $('invNotes').value=''; $('invPaid').value='false';
-    showToast(res.message || 'Invoice amount has been saved to Manager Dashboard','success');
-    alert(res.message || 'Invoice amount has been saved to Manager Dashboard');
+    showToast(res.message || 'Invoice has been saved to Manager Dashboard / Invoices tab','success');
+    alert(res.message || 'Invoice has been saved to Manager Dashboard / Invoices tab');
   } catch (e) {
     showToast(`Invoice was not saved: ${e.message}`,'error');
     alert(`Invoice was not saved.
@@ -1495,7 +1495,55 @@ ${e.message}`);
     btn.textContent=old; btn.classList.remove('btn-loading');
   }
 }
-function init(){ bindTabs(); wireFilters(); wireProjectAdders(); $('testBtn').onclick = () => quickConnectionTest(); $('refreshBtn').onclick = () => loadData(); $('saveRevenueBtn').onclick = saveRevenue; $('saveProjectBtn').onclick = saveProject; $('saveInvoiceBtn').onclick = saveInvoice; $('revDate').value = $('projCreatedAt').value = $('invDate').value = todayISO(); $('periodFilter').innerHTML = PERIODS.map(p=>`<option ${p===state.filters.period?'selected':''}>${p}</option>`).join(''); $('diagnostics').textContent = 'Waiting for first load...'; loadData(); }
+async function savePaymentReceived(){
+  const date = $('payDate').value || todayISO();
+  const projectName = $('payProjectName').value;
+  const manager = $('payManager').value;
+  const invoiceNumber = $('payInvoiceNumber').value;
+  const amountPaid = num($('payAmount').value);
+  const costCenter = state.projects.find(p => text(p.ProjectName)===projectName && text(p.Manager)===manager)?.Division
+    || state.revenue.find(r => text(r.ProjectName)===projectName && text(r.Manager)===manager)?.CostCenter
+    || state.revenue.find(r => text(r.ProjectName)===projectName)?.CostCenter
+    || '';
+  const payload = {
+    action:'addPaymentReceivedToManagerDashboard',
+    targetSpreadsheetId:'1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE',
+    spreadsheetId:'1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE',
+    workbookName:'Manager Dashboard',
+    sheetName:'Manager Dashboard',
+    tabName:'Invoices',
+    targetTab:'Invoices',
+    entryType:'Payment Received',
+    date,
+    projectName,
+    manager,
+    invoiceNumber,
+    amount: amountPaid,
+    amountPaid,
+    paymentReceived: true,
+    paymentDate: date,
+    costCenter,
+    notes: 'Saved from Payments Received section'
+  };
+  if (!payload.date || !payload.projectName || !payload.manager || !payload.invoiceNumber || payload.amountPaid <= 0) return alert('Complete the payment received fields first.');
+  const btn=$('savePaymentBtn'); const old=btn.textContent;
+  btn.textContent='⟳ Synchronising...'; btn.classList.add('btn-loading');
+  try {
+    const res = await postJsonToUrl(REVENUE_SAVE_URL, payload);
+    await loadData();
+    $('payInvoiceNumber').value=''; $('payAmount').value='';
+    showToast(res.message || 'Payment received has been saved to Manager Dashboard / Invoices tab','success');
+    alert(res.message || 'Payment received has been saved to Manager Dashboard / Invoices tab');
+  } catch (e) {
+    showToast(`Payment received was not saved: ${e.message}`,'error');
+    alert(`Payment received was not saved.
+
+${e.message}`);
+  } finally {
+    btn.textContent=old; btn.classList.remove('btn-loading');
+  }
+}
+function init(){ bindTabs(); wireFilters(); wireProjectAdders(); $('testBtn').onclick = () => quickConnectionTest(); $('refreshBtn').onclick = () => loadData(); $('saveRevenueBtn').onclick = saveRevenue; $('saveProjectBtn').onclick = saveProject; $('saveInvoiceBtn').onclick = saveInvoice; $('savePaymentBtn').onclick = savePaymentReceived; $('revDate').value = $('projCreatedAt').value = $('invDate').value = $('payDate').value = todayISO(); $('periodFilter').innerHTML = PERIODS.map(p=>`<option ${p===state.filters.period?'selected':''}>${p}</option>`).join(''); $('diagnostics').textContent = 'Waiting for first load...'; loadData(); }
 document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
