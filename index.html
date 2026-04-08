@@ -63,7 +63,7 @@
   <div id="toastWrap" class="toast-wrap"></div>
   <div class="wrap">
     <div class="card topbar">
-      <div><div class="muted">Onpoint Group</div><h1 style="margin:4px 0 0;font-size:28px">Dashboard</h1></div>
+      <div><div class="muted">Onpoint Group</div><h1 style="margin:4px 0 0;font-size:28px">Dashboard</h1><div id="currentUserLine" class="muted" style="margin-top:6px;display:none">Logged in as <strong id="currentUserName"></strong></div></div>
       <div id="connBadge" class="badge warn">Connecting</div>
       <button id="testBtn" type="button">Test connection</button>
       <button id="refreshBtn" type="button">Refresh</button>
@@ -157,6 +157,17 @@
           <div class="field span-2"><label>Daily Budget</label><input id="revDailyBudget" type="number" min="0" step="0.01"></div>
           <div class="field span-2"><label>Quality</label><input id="revQuality" type="number" min="0" max="100" value="80"></div>
           <div class="field span-2"><label>Safety</label><input id="revSafety" type="number" min="0" value="0"></div>
+          <div class="field span-12">
+            <label>Failure to achieve target</label>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:#fff">
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;font-weight:400;color:var(--text)"><input type="checkbox" class="revReason" value="Bad weather" style="width:auto;padding:0"> Bad weather</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;font-weight:400;color:var(--text)"><input type="checkbox" class="revReason" value="Material delays" style="width:auto;padding:0"> Material delays</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;font-weight:400;color:var(--text)"><input type="checkbox" class="revReason" value="Fuel" style="width:auto;padding:0"> Fuel</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;font-weight:400;color:var(--text)"><input type="checkbox" class="revReason" value="Electricity shortage" style="width:auto;padding:0"> Electricity shortage</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;font-weight:400;color:var(--text)"><input type="checkbox" class="revReason" value="Shortage of labour" style="width:auto;padding:0"> Shortage of labour</label>
+            </div>
+          </div>
+          <div class="field span-12"><label>Comment</label><textarea id="revComment" rows="3" placeholder="Reason or comment for target shortfall"></textarea></div>
           <div class="field span-12"><button id="saveRevenueBtn" type="button">Save Daily Revenue</button></div>
         </div>
       </div>
@@ -167,9 +178,11 @@
         <div class="form-grid">
           <div class="field span-2"><label>Date</label><input id="payDate" type="date"></div>
           <div class="field span-3"><label>Project Name</label><select id="payProjectName"></select></div>
-          <div class="field span-3"><label>Project Manager</label><select id="payManager"></select></div>
+          <div class="field span-2"><label>Project Manager</label><select id="payManager"></select></div>
+          <div class="field span-2"><label>Cost Center</label><select id="payCostCenter"></select></div>
           <div class="field span-2"><label>Invoice Number</label><input id="payInvoiceNumber"></div>
-          <div class="field span-2"><label>Amount Paid</label><input id="payAmount" type="number" min="0" step="0.01"></div>
+          <div class="field span-1"><label>Amount Paid</label><input id="payAmount" type="number" min="0" step="0.01"></div>
+          <div class="field span-2"><label>Balance Outstanding</label><input id="payBalanceOutstanding" type="number" min="0" step="0.01"></div>
           <div class="field span-12"><button id="savePaymentBtn" type="button">Save Payment Received</button></div>
         </div>
       </div>
@@ -219,8 +232,8 @@
   </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZom5gYJ_ziWPdzBkzf6FBzwmlYkiwW_hhnGJUM6thOw_9q8rAODIu0f4jyO0TMdctvA/exec';
-const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbxxjKZ2sqX7yIkwPvmULif4wCNP8KEltoVNdvtgLnrN6HB-gjnEppY10045daUN0SwH/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby7UWKJAhT3l6tXNV0_6x2fleRHnq33Ga1JAtDrXO4xlAgEEFo5EvlHrD_mXXS0rayZ/exec';
+const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycby7UWKJAhT3l6tXNV0_6x2fleRHnq33Ga1JAtDrXO4xlAgEEFo5EvlHrD_mXXS0rayZ/exec';
 const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
 const DEFAULT_COST_CENTERS = ["Onpoint Ontime", "Aqua Telecoms", "Nkanyezi", "Distinct Hire"];
 const DEFAULT_PROJECT_OPTIONS = ["DBSA Generators", "DBSA Rooiwal", "Joe Gqabi", "Temba", "Midvaal", "Coega","Osingisingin", "KZN General Buildings", "Tshwane", "Public Works Limpopo", "Limpopo Eskom Substation Ephraim Mogale", "Naizna", "Cape Town", "COT Streetlights", "COT Electrification", "COT Metering", "COE Streetlights", "Msunduzi E50", "Msunduzi Streetlights", "Msunduzi E33", "Msunduzi E47", "Moqhaka Streetlights", "Moqhaka Metering", "Centlec CD11", "Centlec Transformers CD32", "Centlec CD45", "Midvaal Mechanical", "Eskom SPU", "Eskom FSOU Substation", "Eskom ECOU", "Eskom LOU General Buildings", "Eskom KZN Minor Reticulation", "Randwest Electrical", "Randwest Roads & Stormwater", "Randwest Water rand sanitation", "Randwest Bulk", "RAL", "Stellenbosh", "Liquid ECPG", "Liquid ECSOD", "Liquid Gauteng SOD", "Telkom", "MTN", "Centlec", "Eskom Harvard", "City Power", "Umhlathuze Municipality", "Eskom WC", "COE Buildings", "Midvaal Water", "Midvaal Electricity", "Uthukela", "Kgetleng River", "Ray Nkonyeni Facility", "Ray Nkonyeni Electrical Material", "Ray Nkonyeni Mast", "Ray Nkonyeni Meter Reading", "Ramotshere Electrical Supplies", "Newcastle Substations", "Ubuntu", "IDT North West Buidlings", "Amajuba Generator", "uPhongolo", "Abaquilisi Battery Supplies", "Abaquilisi Streetlights"];
@@ -231,7 +244,7 @@ const GROUP_OVERRIDE_TOTAL_CONFIRMED = 551035205;
 const GROUP_OVERRIDE_TOTAL_FORECAST = 416065217;
 const ONPOINT_OVERRIDE_MONTHLY_PROJECTED = 34220381;
 const ONPOINT_OVERRIDE_MONTHLY_STRAIGHTLINE = 39556824;
-const state = { projects:[], revenue:[], invoices:[], managerBudgets:[], orders:[], straightline:[], filters:{ period:'Monthly', division:'All', manager:'All', search:'' } }; let charts = {};
+const state = { projects:[], revenue:[], invoices:[], payments:[], managerBudgets:[], orders:[], straightline:[], currentUser:'', filters:{ period:'Monthly', division:'All', manager:'All', search:'' } }; let charts = {};
 const $ = id => document.getElementById(id);
 const log = (...args) => { const msg = args.map(v => typeof v === 'string' ? v : JSON.stringify(v,null,2)).join(' '); $('diagnostics').textContent = `${new Date().toLocaleString()}\n${msg}\n\n` + $('diagnostics').textContent; };
 const num = v => Number(String(v ?? '').replace(/[^0-9.-]/g,'')) || 0;
@@ -240,6 +253,53 @@ const text = v => String(v ?? '').trim();
 const lower = v => text(v).toLowerCase();
 const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+function getStoredUserName(){
+  const params = new URLSearchParams(window.location.search);
+  const keys = ['user','name','manager','username','currentUser'];
+  for (const key of keys) {
+    const value = text(params.get(key));
+    if (value) return value;
+  }
+  const stores = [window.localStorage, window.sessionStorage];
+  const storageKeys = ['onpointCurrentUser','currentUser','loggedInUser','userName','managerName','loginName'];
+  for (const store of stores) {
+    try {
+      for (const key of storageKeys) {
+        const value = text(store.getItem(key));
+        if (value) return value;
+      }
+    } catch (e) {}
+  }
+  return '';
+}
+function applyCurrentUserDefaults(){
+  const currentUser = text(state.currentUser || getStoredUserName());
+  state.currentUser = currentUser;
+  if ($('currentUserLine')) $('currentUserLine').style.display = currentUser ? 'block' : 'none';
+  if ($('currentUserName')) $('currentUserName').textContent = currentUser;
+  if (!currentUser) return;
+  ['revManager','projManager','invManager','payManager'].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    const options = Array.from(el.options || []);
+    const exact = options.find(o => text(o.value) === currentUser);
+    const loose = options.find(o => lower(o.value) === lower(currentUser));
+    if (exact) el.value = exact.value;
+    else if (loose) el.value = loose.value;
+  });
+  const mgrFilter = $('managerFilter');
+  if (mgrFilter) {
+    const match = Array.from(mgrFilter.options || []).find(o => lower(o.value) === lower(currentUser));
+    if (match) {
+      state.filters.manager = match.value;
+      mgrFilter.value = match.value;
+    }
+  }
+}
+function selectedRevenueReasons(){
+  return Array.from(document.querySelectorAll('.revReason:checked')).map(el => text(el.value)).filter(Boolean);
+}
+
 const isPlaceholderUrl = url => !text(url) || /PASTE_.*_HERE/.test(String(url)) || !/^https:\/\/script\.google\.com\/macros\/s\//.test(String(url));
 const CUSTOM_PROJECTS_KEY = 'onpoint_custom_project_names';
 function getCustomProjects(){
@@ -367,19 +427,22 @@ function filteredOrders(period = state.filters.period){
   });
 }
 function filteredInvoices(period = state.filters.period){
-  return revenueRowsForPeriod(period)
-    .filter(r => num(r.InvoicesIssued || r['Invoices Issued']) > 0)
-    .map(r => ({
-      Date: normaliseDate(r.Date),
-      Manager: text(r.Manager),
-      ProjectName: text(r.ProjectName),
-      InvoiceNumber: text(r.InvoiceNumber || ''),
-      Amount: num(r.InvoicesIssued || r['Invoices Issued']),
-      PaymentReceived: false,
-      PaymentDate: '',
-      CostCenter: normalizeCostCenterName(r.CostCenter),
-      Notes: text(r.Notes || 'Manager Dashboard / Invoices Issued')
-    }));
+  return state.invoices.filter(r => {
+    if (normaliseDate(r.Date) && !inPeriod(r.Date, period)) return false;
+    if (state.filters.division !== 'All' && normalizeCostCenterName(r.CostCenter) !== state.filters.division) return false;
+    if (state.filters.manager !== 'All' && text(r.Manager) !== state.filters.manager) return false;
+    if (state.filters.search && !`${r.ProjectName} ${r.Manager} ${r.CostCenter} ${r.InvoiceNumber}`.toLowerCase().includes(state.filters.search.toLowerCase())) return false;
+    return true;
+  });
+}
+function filteredPayments(period = state.filters.period){
+  return state.payments.filter(r => {
+    if (normaliseDate(r.Date) && !inPeriod(r.Date, period)) return false;
+    if (state.filters.division !== 'All' && normalizeCostCenterName(r.CostCenter) !== state.filters.division) return false;
+    if (state.filters.manager !== 'All' && text(r.ProjectManager || r.Manager) !== state.filters.manager) return false;
+    if (state.filters.search && !`${r.ProjectName} ${r.ProjectManager || r.Manager} ${r.CostCenter} ${r.InvoiceNumber}`.toLowerCase().includes(state.filters.search.toLowerCase())) return false;
+    return true;
+  });
 }
 function filteredStraightline(period = state.filters.period){
   return state.straightline.filter(r => {
@@ -610,6 +673,7 @@ function ordersConfirmedRowsBase(){
 function performanceSnapshot(period){
   const revenueRows = revenueRowsForPeriod(period);
   const invoiceRows = filteredInvoices(period);
+  const paymentRows = filteredPayments(period);
   const actual = revenueRows.reduce((s,r)=>s+revenueActualValue(r),0);
   const costCenterRows = costCenterPeriodRows(period);
   const projected = costCenterRows.reduce((s,r)=>s+num(r.Projected),0);
@@ -617,8 +681,8 @@ function performanceSnapshot(period){
   const grossProfit = revenueRows.reduce((s,r)=>s + (revenueActualValue(r) * revenueMarginValue(r) / 100), 0);
   const profitability = actual ? Math.round((grossProfit / actual) * 100) : 0;
   const invoicesIssued = invoiceRows.reduce((s,r)=>s+num(r.Amount),0);
-  const paymentsReceived = invoiceRows.filter(r => r.PaymentReceived).reduce((s,r)=>s+num(r.Amount),0);
-  return { revenueRows, invoiceRows, straightRows: [], actual, projected, straight, grossProfit, profitability, invoicesIssued, paymentsReceived, actualVsProjectedPct: projected ? Math.round((actual/projected)*100) : 0, actualVsStraightPct: straight ? Math.round((actual/straight)*100) : 0 };
+  const paymentsReceived = paymentRows.reduce((s,r)=>s+num(r.AmountPaid || r.Amount),0);
+  return { revenueRows, invoiceRows, paymentRows, straightRows: [], actual, projected, straight, grossProfit, profitability, invoicesIssued, paymentsReceived, actualVsProjectedPct: projected ? Math.round((actual/projected)*100) : 0, actualVsStraightPct: straight ? Math.round((actual/straight)*100) : 0 };
 }
 
 
@@ -1123,6 +1187,7 @@ function populateFilters(){
   fillSelect('revCostCenter', allCostCenters);
   fillSelect('projDivision', allCostCenters);
   fillSelect('invCostCenter', allCostCenters);
+  fillSelect('payCostCenter', allCostCenters);
 
   fillSelect('revProjectName', allProjects);
   fillSelect('invProjectName', allProjects);
@@ -1130,6 +1195,7 @@ function populateFilters(){
 
   applyRememberedDailyBudget();
   wireProjectAdders();
+  applyCurrentUserDefaults();
 }
 function renderKPIs(){
   const revenueRows = revenueRowsForPeriod(state.filters.period);
@@ -1204,6 +1270,7 @@ function renderSummary(){
 
 function mapProjectRow(r){ return Object.assign({}, r, { CreatedAt: normaliseDate(r.CreatedAt || r.createdAt || r.Date), Division: normalizeCostCenterName(r.Division || r.division || r.CostCenter || r['Cost Center']), Manager: text(r.Manager || r.manager || r['Project Manager'] || r['Project manager'] || r.ProjectManager || r['Manager Name'] || r.PM), ProjectName: text(r.ProjectName || r.projectName || r['Project Name']), Location: text(r.Location || r.location), Status: text(r.Status || r.status || 'Confirmed'), TotalIncome: num(r.TotalIncome || r.totalIncome || r['Total Income'] || r.Amount), Margin: num(r.Margin || r.margin || r['Margin %']), StartDate: normaliseDate(r.StartDate || r.startDate), EndDate: normaliseDate(r.EndDate || r.endDate), Remarks: text(r.Remarks || r.remarks) }); }
 function mapInvoiceRow(r){ return { Date: normaliseDate(r.Date || r.date), Manager: text(r.Manager || r.manager), ProjectName: text(r.ProjectName || r.projectName), InvoiceNumber: text(r.InvoiceNumber || r.invoiceNumber || r['Invoice No']), Amount: num(r.Amount || r.amount), PaymentReceived: String(r.PaymentReceived || r.paymentReceived).toLowerCase()==='true' || r.PaymentReceived===true, PaymentDate: normaliseDate(r.PaymentDate || r.paymentDate), CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Division), Notes: text(r.Notes || r.notes) }; }
+function mapPaymentRow(r){ return { Date: normaliseDate(r.Date || r.date), ProjectName: text(r.ProjectName || r.projectName), ProjectManager: text(r.ProjectManager || r.Manager || r.manager), Manager: text(r.ProjectManager || r.Manager || r.manager), CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Division), InvoiceNumber: text(r.InvoiceNumber || r.invoiceNumber || r['Invoice No']), AmountPaid: num(r.AmountPaid || r.amountPaid || r.Amount || r.amount), Amount: num(r.AmountPaid || r.amountPaid || r.Amount || r.amount), BalanceOutstanding: num(r.BalanceOutstanding || r.balanceOutstanding), Notes: text(r.Notes || r.notes) }; }
 function mapManagerBudgetRow(r){ return { ProjectManager: text(r.ProjectManager || r.Manager || r.manager), CostCenter: normalizeCostCenterName(r.CostCenter || r.Division), Actual: num(r.Actual || r.Actuals || r.Amount), Budget: num(r.Budget || r.Projected || r.projected), StraightlineBudget: num(r.StraightlineBudget || r['Straightline Budget'] || r['Straight-line Budget']), PerformancePct: num(r.PerformancePct || r['% PERFORMANCE'] || r['% PERFOMANCE']) }; }
 function mapStraightlineRow(r){ return { Date: normaliseDate(r.Date || r.date || r.CreatedAt), Manager: text(r.Manager || r.manager || r.ProjectManager || r['Project Manager'] || r['Project manager'] || r['Manager Name'] || r.PM), CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Division || r['Cost Center']), ProjectName: text(r.ProjectName || r.projectName || r['Project Name']), Projected: num(r.Projected || r['Projected Budget'] || r['Projected Amount'] || r.Budget || r.projected || r.Target), StraightlineBudget: num(r.StraightlineBudget || r['Straightline Budget'] || r['Straight-line Budget'] || r['Straight Line Budget'] || r.Straightline || r['Straight Line']) }; }
 function mapOrderRow(r){ return Object.assign({}, r, { Date: normaliseDate(r.Date || r.CreatedAt), Division: normalizeCostCenterName(r.Division || r.CostCenter || r['Cost Center']), Manager: text(r.Manager || r.manager || r['Project Manager']), ProjectName: text(r.ProjectName || r.projectName || r['Project Name']), Status: text(r.Status || r.status), TotalIncome: num(r.TotalIncome || r['Total Income'] || r.Amount || r.OrderValue || r.ConfirmedValue || r.ForecastValue) }); }
@@ -1245,6 +1312,7 @@ function mapRevenueRow(r){
 
 function mapProjectRow(r){ return Object.assign({}, r, { CreatedAt: normaliseDate(r.CreatedAt || r.createdAt || r.Date), Division: normalizeCostCenterName(r.Division || r.division || r.CostCenter || r['Cost Center']), Manager: text(r.Manager || r.manager || r['Project Manager'] || r['Project manager'] || r.ProjectManager || r['Manager Name'] || r.PM), ProjectName: text(r.ProjectName || r.projectName || r['Project Name']), Location: text(r.Location || r.location), Status: text(r.Status || r.status || 'Confirmed'), TotalIncome: num(r.TotalIncome || r.totalIncome || r['Total Income'] || r.Amount), Margin: num(r.Margin || r.margin || r['Margin %']), StartDate: normaliseDate(r.StartDate || r.startDate), EndDate: normaliseDate(r.EndDate || r.endDate), Remarks: text(r.Remarks || r.remarks) }); }
 function mapInvoiceRow(r){ return { Date: normaliseDate(r.Date || r.date), Manager: text(r.Manager || r.manager), ProjectName: text(r.ProjectName || r.projectName), InvoiceNumber: text(r.InvoiceNumber || r.invoiceNumber || r['Invoice No']), Amount: num(r.Amount || r.amount), PaymentReceived: String(r.PaymentReceived || r.paymentReceived).toLowerCase()==='true' || r.PaymentReceived===true, PaymentDate: normaliseDate(r.PaymentDate || r.paymentDate), CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Division), Notes: text(r.Notes || r.notes) }; }
+function mapPaymentRow(r){ return { Date: normaliseDate(r.Date || r.date), ProjectName: text(r.ProjectName || r.projectName), ProjectManager: text(r.ProjectManager || r.Manager || r.manager), Manager: text(r.ProjectManager || r.Manager || r.manager), CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Division), InvoiceNumber: text(r.InvoiceNumber || r.invoiceNumber || r['Invoice No']), AmountPaid: num(r.AmountPaid || r.amountPaid || r.Amount || r.amount), Amount: num(r.AmountPaid || r.amountPaid || r.Amount || r.amount), BalanceOutstanding: num(r.BalanceOutstanding || r.balanceOutstanding), Notes: text(r.Notes || r.notes) }; }
 function mapManagerBudgetRow(r){ return { ProjectManager: text(r.ProjectManager || r.Manager || r.manager), CostCenter: normalizeCostCenterName(r.CostCenter || r.Division), Actual: num(r.Actual || r.Actuals || r.Amount), Budget: num(r.Budget || r.Projected || r.projected), StraightlineBudget: num(r.StraightlineBudget || r['Straightline Budget'] || r['Straight-line Budget']), PerformancePct: num(r.PerformancePct || r['% PERFORMANCE'] || r['% PERFOMANCE']) }; }
 function mapStraightlineRow(r){ return { Date: normaliseDate(r.Date || r.date || r.CreatedAt), Manager: text(r.Manager || r.manager || r.ProjectManager || r['Project Manager'] || r['Project manager'] || r['Manager Name'] || r.PM), CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Division || r['Cost Center']), ProjectName: text(r.ProjectName || r.projectName || r['Project Name']), Projected: num(r.Projected || r['Projected Budget'] || r['Projected Amount'] || r.Budget || r.projected || r.Target), StraightlineBudget: num(r.StraightlineBudget || r['Straightline Budget'] || r['Straight-line Budget'] || r['Straight Line Budget'] || r.Straightline || r['Straight Line']) }; }
 function mapOrderRow(r){ return Object.assign({}, r, { Date: normaliseDate(r.Date || r.CreatedAt), Division: normalizeCostCenterName(r.Division || r.CostCenter || r['Cost Center']), Manager: text(r.Manager || r.manager || r['Project Manager']), ProjectName: text(r.ProjectName || r.projectName || r['Project Name']), Status: text(r.Status || r.status), TotalIncome: num(r.TotalIncome || r['Total Income'] || r.Amount || r.OrderValue || r.ConfirmedValue || r.ForecastValue) }); }
@@ -1339,6 +1407,7 @@ async function loadData(){
       ['revenue','getRevenue',mapRevenueRow,true],
       ['orders','getOrders',mapOrderRow,true],
       ['invoices','getInvoices',mapInvoiceRow,false],
+      ['payments','getPayments',mapPaymentRow,false],
       ['straightline','getStraightline',mapStraightlineRow,false],
     ];
     const results = await Promise.allSettled(endpointMap.map(([,action]) => fetchAction(action)));
@@ -1353,6 +1422,7 @@ async function loadData(){
       straightline: state.straightline.length,
       orders: state.orders.length,
       invoices: state.invoices.length,
+      payments: state.payments.length,
       failures,
       straightlineProjectedTotal: state.straightline.reduce((s,r)=>s+num(r.Projected),0),
       straightlineBudgetTotal: state.straightline.reduce((s,r)=>s+num(r.StraightlineBudget),0),
@@ -1426,7 +1496,9 @@ async function saveRevenue(){
     invoicesIssued: 0,
     paymentsReceived: 0,
     confirmed: meta.confirmed,
-    forecast: meta.forecast
+    forecast: meta.forecast,
+    failureReasons: selectedRevenueReasons(),
+    comment: $('revComment') ? $('revComment').value : ''
   };
 
   if (!payload.date || !payload.manager || !payload.costCenter || !payload.projectName || payload.dailyRevenue <= 0) {
@@ -1438,7 +1510,7 @@ async function saveRevenue(){
   try {
     const res = await postJsonToUrl(REVENUE_SAVE_URL, payload);
     await loadData();
-    $('revAmount').value=''; $('revBudget').value=''; $('revDailyBudget').value=''; $('revQuality').value='80'; $('revSafety').value='0';
+    $('revAmount').value=''; $('revBudget').value=''; $('revDailyBudget').value=''; $('revQuality').value='80'; $('revSafety').value='0'; if ($('revComment')) $('revComment').value=''; document.querySelectorAll('.revReason').forEach(el => el.checked = false);
     renderSummary();
     showToast(res.message || 'Daily revenue has been successfully saved to Manager Dashboard','success');
     alert(res.message || 'Daily revenue has been successfully saved to Manager Dashboard');
@@ -1501,7 +1573,8 @@ async function savePaymentReceived(){
   const manager = $('payManager').value;
   const invoiceNumber = $('payInvoiceNumber').value;
   const amountPaid = num($('payAmount').value);
-  const costCenter = state.projects.find(p => text(p.ProjectName)===projectName && text(p.Manager)===manager)?.Division
+  const balanceOutstanding = num($('payBalanceOutstanding').value);
+  const costCenter = $('payCostCenter').value || state.projects.find(p => text(p.ProjectName)===projectName && text(p.Manager)===manager)?.Division
     || state.revenue.find(r => text(r.ProjectName)===projectName && text(r.Manager)===manager)?.CostCenter
     || state.revenue.find(r => text(r.ProjectName)===projectName)?.CostCenter
     || '';
@@ -1511,8 +1584,8 @@ async function savePaymentReceived(){
     spreadsheetId:'1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE',
     workbookName:'Manager Dashboard',
     sheetName:'Manager Dashboard',
-    tabName:'Invoices',
-    targetTab:'Invoices',
+    tabName:'Payments',
+    targetTab:'Payments',
     entryType:'Payment Received',
     date,
     projectName,
@@ -1520,20 +1593,21 @@ async function savePaymentReceived(){
     invoiceNumber,
     amount: amountPaid,
     amountPaid,
+    balanceOutstanding,
     paymentReceived: true,
     paymentDate: date,
     costCenter,
     notes: 'Saved from Payments Received section'
   };
-  if (!payload.date || !payload.projectName || !payload.manager || !payload.invoiceNumber || payload.amountPaid <= 0) return alert('Complete the payment received fields first.');
+  if (!payload.date || !payload.projectName || !payload.manager || !payload.costCenter || !payload.invoiceNumber || payload.amountPaid <= 0) return alert('Complete the payment received fields first.');
   const btn=$('savePaymentBtn'); const old=btn.textContent;
   btn.textContent='⟳ Synchronising...'; btn.classList.add('btn-loading');
   try {
     const res = await postJsonToUrl(REVENUE_SAVE_URL, payload);
     await loadData();
-    $('payInvoiceNumber').value=''; $('payAmount').value='';
-    showToast(res.message || 'Payment received has been saved to Manager Dashboard / Invoices tab','success');
-    alert(res.message || 'Payment received has been saved to Manager Dashboard / Invoices tab');
+    $('payInvoiceNumber').value=''; $('payAmount').value=''; $('payBalanceOutstanding').value='';
+    showToast(res.message || 'Payment received has been saved to Manager Dashboard / Payments tab','success');
+    alert(res.message || 'Payment received has been saved to Manager Dashboard / Payments tab');
   } catch (e) {
     showToast(`Payment received was not saved: ${e.message}`,'error');
     alert(`Payment received was not saved.
@@ -1543,7 +1617,7 @@ ${e.message}`);
     btn.textContent=old; btn.classList.remove('btn-loading');
   }
 }
-function init(){ bindTabs(); wireFilters(); wireProjectAdders(); $('testBtn').onclick = () => quickConnectionTest(); $('refreshBtn').onclick = () => loadData(); $('saveRevenueBtn').onclick = saveRevenue; $('saveProjectBtn').onclick = saveProject; $('saveInvoiceBtn').onclick = saveInvoice; $('savePaymentBtn').onclick = savePaymentReceived; $('revDate').value = $('projCreatedAt').value = $('invDate').value = $('payDate').value = todayISO(); $('periodFilter').innerHTML = PERIODS.map(p=>`<option ${p===state.filters.period?'selected':''}>${p}</option>`).join(''); $('diagnostics').textContent = 'Waiting for first load...'; loadData(); }
+function init(){ state.currentUser = getStoredUserName(); bindTabs(); wireFilters(); wireProjectAdders(); $('testBtn').onclick = () => quickConnectionTest(); $('refreshBtn').onclick = () => loadData(); $('saveRevenueBtn').onclick = saveRevenue; $('saveProjectBtn').onclick = saveProject; $('saveInvoiceBtn').onclick = saveInvoice; $('savePaymentBtn').onclick = savePaymentReceived; $('revDate').value = $('projCreatedAt').value = $('invDate').value = $('payDate').value = todayISO(); $('periodFilter').innerHTML = PERIODS.map(p=>`<option ${p===state.filters.period?'selected':''}>${p}</option>`).join(''); $('diagnostics').textContent = 'Waiting for first load...'; applyCurrentUserDefaults(); loadData(); }
 document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
