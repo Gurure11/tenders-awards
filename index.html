@@ -72,7 +72,7 @@
     <div class="card hero">
       <div>
         <h2 style="margin:0 0 8px">Live Google Sheets dashboard</h2>
-        <div class="muted">Actual, MTD, Group YTD, Group BTYD, Projected Budget and Straight-line Budget are read in real time from spreadsheet ID <strong>1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE</strong>, sheet tab <strong>Manager Dashboard</strong>. Daily Revenue uses <strong>Daily Revenue</strong>, Projected Budget uses <strong>Monthly Projected Budget</strong> and <strong>Daily Projected Budget</strong>, Straight-line uses <strong>Monthly Straightline Budget</strong> and <strong>Daily Straightline Budget</strong>. Group totals are fixed as requested and Onpoint filtered confirmed is overridden to the requested amount.</div>
+        <div class="muted">Actual, MTD, Group YTD, Group BTYD, Projected Budget and Straight-line Budget are read in real time from spreadsheet ID <strong>1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE</strong>, sheet tab <strong>Manager Dashboard</strong>. Daily Revenue uses <strong>Daily Revenue</strong>, Projected Budget uses <strong>Monthly Projected</strong> from the <strong>Monthly</strong> sheet for the current month and <strong>Daily Projected Budget</strong> for daily values, Straight-line uses <strong>Monthly Straightline Budget</strong> and <strong>Daily Straightline Budget</strong>. Group totals are fixed as requested and Onpoint filtered confirmed is overridden to the requested amount.</div>
       </div>
       <div class="toolbar">
         <select id="periodFilter"></select>
@@ -208,8 +208,8 @@
   </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzbVY71T-jsbg2lWLZbH0mVcarOi87oUjefHzPOM9Gq3fuRzamb5Pe_7T4RRm-XiffV/exec';
-const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbzbVY71T-jsbg2lWLZbH0mVcarOi87oUjefHzPOM9Gq3fuRzamb5Pe_7T4RRm-XiffV/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzaHv9MLvEBswHJb35mHcpcsczYu6JSIX2pzDk2dAVxHK5vbS4Q7atGFJ99gITim46t1g/exec';
+const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbzaHv9MLvEBswHJb35mHcpcsczYu6JSIX2pzDk2dAVxHK5vbS4Q7atGFJ99gITim46t1g/exec';
 const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
 const DEFAULT_COST_CENTERS = ["Onpoint Ontime", "Aqua Telecoms", "Nkanyezi", "Distinct Hire"];
 const DEFAULT_PROJECT_OPTIONS = ["DBSA Generators", "DBSA Rooiwal", "Joe Gqabi", "Temba", "Midvaal", "Coega", "KZN General Buildings", "Tshwane", "Public Works Limpopo", "Limpopo Eskom Substation Ephraim Mogale", "Naizna", "Cape Town", "COT Streetlights", "COT Electrification", "COT Metering", "COE Streetlights", "Msunduzi E50", "Msunduzi Streetlights", "Msunduzi E33", "Msunduzi E47", "Moqhaka Streetlights", "Moqhaka Metering", "Centlec CD11", "Centlec Transformers CD32", "Centlec CD45", "Midvaal Mechanical", "Eskom SPU", "Eskom FSOU Substation", "Eskom ECOU", "Eskom LOU General Buildings", "Eskom KZN Minor Reticulation", "Randwest Electrical", "Randwest Roads & Stormwater", "Randwest Water rand sanitation", "Randwest Bulk", "RAL", "Stellenbosh", "Liquid ECPG", "Liquid ECSOD", "Liquid Gauteng SOD", "Telkom", "MTN", "Centlec", "Eskom Harvard", "City Power", "Umhlathuze Municipality", "Eskom WC", "COE Buildings", "Midvaal Water", "Midvaal Electricity", "Uthukela", "Kgetleng River", "Ray Nkonyeni Facility", "Ray Nkonyeni Electrical Material", "Ray Nkonyeni Mast", "Ray Nkonyeni Meter Reading", "Ramotshere Electrical Supplies", "Newcastle Substations", "Ubuntu", "IDT North West Buidlings", "Amajuba Generator", "uPhongolo", "Abaquilisi Battery Supplies", "Abaquilisi Streetlights"];
