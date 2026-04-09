@@ -736,65 +736,45 @@
 
 
   async function loadFuelLogTransactions() {
-  const tbody = $('fuelLogTableBody');
-  if (!tbody) return;
-  if (!appsScriptReady()) {
-    setConnectionStatus('bad', 'Set Apps Script URL');
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Set your deployed Apps Script URL to load daily fuel transactions.</td></tr>';
-    return;
-  }
-  setConnectionStatus('warn', 'Loading transactions');
-  try {
-    const url = `${SHEET_CONFIG.appsScriptUrl}?action=getFuelLog&spreadsheetId=${encodeURIComponent(SHEET_CONFIG.spreadsheetId)}&sheetTab=${encodeURIComponent('Fuel Log')}&_=${Date.now()}`;
-    const resp = await fetch(url);
-    const data = await resp.json();
-    const rows = Array.isArray(data.rows) ? data.rows : [];
-    const today = new Date().toISOString().slice(0, 10);
-    const dailyRows = rows.filter(r => {
-      const d = normalizeFetchedDate(r.Date || r.TransactionDate || r.Timestamp || '');
-      return d === today;
-    });
-    tbody.innerHTML = dailyRows.length ? dailyRows.map(r => `
-      <tr>
-        <td>${escapeHtml(String(r.Date || r.TransactionDate || r.Timestamp || ''))}</td>
-        <td>${escapeHtml(String(r.AuthorisationNo || r.AuthorizationNo || r.AuthNo || r.ERNo || r['ER No'] || ''))}</td>
-        <td>${escapeHtml(String(r.DriverName || r.Driver || r['Driver Name'] || ''))}</td>
-        <td>${escapeHtml(String(r.VehicleRegistration || r.VehicleReg || r.Vehicle || r['Vehicle Registration'] || ''))}</td>
-        <td>${escapeHtml(String(r.Department || r.Dept || ''))}</td>
-        <td>${escapeHtml(String(r.CostCenter || r['Cost Center'] || r.CostCentre || ''))}</td>
-        <td>${money(r.SwipeAmount || r.Amount || r.SwipedAmount || 0)}</td>
-        <td>${num(r.Litres || r.Liters || r.LitersFilled || 0).toFixed(2)}</td>
-      </tr>
-    `).join('') : '<tr><td colspan="8" class="text-center py-4">No fuel transactions for today.</td></tr>';
-    setConnectionStatus('ok', 'Connected');
-  } catch (err) {
-    setConnectionStatus('bad', 'Connection failed');
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Failed to load daily fuel transactions.</td></tr>';
-  }
-}
+    const tbody = $('fuelLogTableBody');
+    if (!tbody) return;
+
+    if (!appsScriptReady()) {
+      setConnectionStatus('bad', 'Set Apps Script URL');
+      tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Set your deployed Apps Script URL to load daily fuel transactions.</td></tr>';
+      return;
+    }
+
+    setConnectionStatus('warn', 'Loading transactions');
+
     try {
       const url = `${SHEET_CONFIG.appsScriptUrl}?action=getFuelLog&spreadsheetId=${encodeURIComponent(SHEET_CONFIG.spreadsheetId)}&sheetTab=${encodeURIComponent('Fuel Log')}&_=${Date.now()}`;
       const resp = await fetch(url);
       const data = await resp.json();
       const rows = Array.isArray(data.rows) ? data.rows : [];
       const today = new Date().toISOString().slice(0, 10);
+
       const dailyRows = rows.filter(r => {
-        const d = String(r.Date || r.TransactionDate || '').slice(0, 10);
+        const d = normalizeFetchedDate(r.Date || r.TransactionDate || r.Timestamp || '');
         return d === today;
       });
+
       tbody.innerHTML = dailyRows.length ? dailyRows.map(r => `
         <tr>
-          <td>${escapeHtml(String(r.Date || r.TransactionDate || ''))}</td>
-          <td>${escapeHtml(String(r.AuthorisationNo || r.AuthNo || r.ERNo || ''))}</td>
-          <td>${escapeHtml(String(r.DriverName || r.Driver || ''))}</td>
-          <td>${escapeHtml(String(r.VehicleRegistration || r.Vehicle || ''))}</td>
-          <td>${escapeHtml(String(r.Department || ''))}</td>
-          <td>${escapeHtml(String(r.CostCenter || r['Cost Center'] || ''))}</td>
-          <td>${money(r.SwipeAmount || r.Amount || 0)}</td>
-          <td>${num(r.Litres || r.Liters || 0).toFixed(2)}</td>
+          <td>${escapeHtml(String(r.Date || r.TransactionDate || r.Timestamp || ''))}</td>
+          <td>${escapeHtml(String(r.AuthorisationNo || r.AuthorizationNo || r.AuthNo || r.ERNo || r['ER No'] || ''))}</td>
+          <td>${escapeHtml(String(r.DriverName || r.Driver || r['Driver Name'] || ''))}</td>
+          <td>${escapeHtml(String(r.VehicleRegistration || r.VehicleReg || r.Vehicle || r['Vehicle Registration'] || ''))}</td>
+          <td>${escapeHtml(String(r.Department || r.Dept || ''))}</td>
+          <td>${escapeHtml(String(r.CostCenter || r['Cost Center'] || r.CostCentre || ''))}</td>
+          <td>${money(r.SwipeAmount || r.Amount || r.SwipedAmount || 0)}</td>
+          <td>${num(r.Litres || r.Liters || r.LitersFilled || 0).toFixed(2)}</td>
         </tr>
       `).join('') : '<tr><td colspan="8" class="text-center py-4">No fuel transactions for today.</td></tr>';
+
+      setConnectionStatus('ok', 'Connected');
     } catch (err) {
+      setConnectionStatus('bad', 'Connection failed');
       tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Failed to load daily fuel transactions.</td></tr>';
     }
   }
