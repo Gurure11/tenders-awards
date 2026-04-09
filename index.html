@@ -1161,19 +1161,18 @@ function renderKPIs(){
   const revenueRows = revenueRowsForPeriod(state.filters.period);
   const monthlyRows = revenueRowsForPeriod('Monthly');
   const yearlyRows = revenueRowsForPeriod('Yearly');
-  const projectRows = filteredProjects();
-  const confirmed = projectRows
-    .filter(r => {
-      const status = lower(r.Status);
-      return status === 'confirmed';
-    })
-    .reduce((s,r)=>s + num(r.TotalIncome), 0);
-  const forecast = projectRows
-    .filter(r => {
-      const status = lower(r.Status);
-      return status === 'forecast' || status === 'forecash';
-    })
-    .reduce((s,r)=>s + num(r.TotalIncome), 0);
+  let confirmed;
+  let forecast;
+  if (state.filters.division === OVERRIDE_COST_CENTER) {
+    confirmed = ONPOINT_OVERRIDE_TOTAL_CONFIRMED;
+    forecast = revenueRows.reduce((s,r)=>s+num(r.Forecast),0);
+  } else if (state.filters.division === 'All' && state.filters.manager === 'All' && !state.filters.search) {
+    confirmed = GROUP_OVERRIDE_TOTAL_CONFIRMED;
+    forecast = GROUP_OVERRIDE_TOTAL_FORECAST;
+  } else {
+    confirmed = revenueRows.reduce((s,r)=>s+num(r.Confirmed),0);
+    forecast = revenueRows.reduce((s,r)=>s+num(r.Forecast),0);
+  }
   const totalOrders = confirmed + forecast;
   const mtd = monthlyRows.reduce((s,r)=>s+revenueActualValue(r),0);
   const ytd = yearlyRows.reduce((s,r)=>s+revenueActualValue(r),0);
@@ -1704,6 +1703,51 @@ function populateFilters(){
 }
 function wireFilters(){ $('periodFilter').onchange = e => { state.filters.period = e.target.value; renderAll(); }; $('divisionFilter').onchange = e => { state.filters.division = e.target.value; renderAll(); }; $('managerFilter').onchange = e => { state.filters.manager = e.target.value; renderAll(); }; if ($('projectFilter')) $('projectFilter').onchange = e => { state.filters.project = e.target.value; renderAll(); }; $('searchFilter').oninput = e => { state.filters.search = e.target.value; renderAll(); }; }
 function monthlyStraightlineForRevenue(costCenter, manager, projectName, dateValue){ return monthlyStraightlineBudgetFor(costCenter, manager, projectName); }
+
+function mapProjectRow(r){
+  return repairProjectShape({
+    CreatedAt: normaliseDate(r.CreatedAt || r.createdAt || r.Date || r.Timestamp || rowVal(r,0)),
+    Division: normalizeCostCenterName(r.Division || r.division || r.CostCenter || r['Cost Center'] || rowVal(r,1)),
+    Manager: text(r.Manager || r.manager || r['Project Manager'] || r.ProjectManager || rowVal(r,2)),
+    ProjectName: text(r.ProjectName || r.projectName || r['Project Name'] || rowVal(r,3)),
+    Location: text(r.Location || r.location || rowVal(r,6) || ''),
+    Status: text(r.Status || r.status || rowVal(r,3) || rowVal(r,4) || 'Confirmed'),
+    TotalIncome: num(r.TotalIncome || r.totalIncome || r['Total Income'] || r.Amount || r.amount || rowVal(r,4) || rowVal(r,5)),
+    Margin: num(r.Margin || r.margin || r['Margin %'] || rowVal(r,7)),
+    StartDate: normaliseDate(r.StartDate || r.startDate || rowVal(r,8)),
+    EndDate: normaliseDate(r.EndDate || r.endDate || rowVal(r,9)),
+    Remarks: text(r.Remarks || r.remarks || rowVal(r,10))
+  });
+}
+function projectOrderRowsFiltered(){
+  return state.projects.filter(r => {
+    if (state.filters.division !== 'All' && normalizeCostCenterName(r.Division || r.CostCenter) !== state.filters.division) return false;
+    if (state.filters.manager !== 'All' && text(r.Manager) !== state.filters.manager) return false;
+    if (state.filters.project !== 'All' && text(r.ProjectName) !== state.filters.project) return false;
+    if (state.filters.search && !`${r.ProjectName} ${r.Manager} ${r.Division || r.CostCenter} ${r.Status}`.toLowerCase().includes(state.filters.search.toLowerCase())) return false;
+    return true;
+  });
+}
+function renderKPIs(){
+  const projectRows = projectOrderRowsFiltered();
+  const monthlyRows = revenueRowsForPeriod('Monthly');
+  const yearlyRows = revenueRowsForPeriod('Yearly');
+  const confirmed = projectRows.filter(r => ['confirmed'].includes(lower(r.Status))).reduce((s,r)=>s + num(r.TotalIncome || r.Amount), 0);
+  const forecast = projectRows.filter(r => ['forecast','forecash'].includes(lower(r.Status))).reduce((s,r)=>s + num(r.TotalIncome || r.Amount), 0);
+  const totalOrders = confirmed + forecast;
+  const mtd = monthlyRows.reduce((s,r)=>s+revenueActualValue(r),0);
+  const ytd = yearlyRows.reduce((s,r)=>s+revenueActualValue(r),0);
+  const btye = Math.max(0, confirmed - ytd);
+  $('headlineKpis').innerHTML = [
+    ['Total Confirmed', money(confirmed), `Monthly / Manager Dashboard`],
+    ['Total Forecast', money(forecast), `Monthly / Manager Dashboard`],
+    ['Total Orders', money(totalOrders), `Monthly / Manager Dashboard`],
+    ['MTD', money(mtd), 'Manager Dashboard / Daily Revenue'],
+    ['Group YTD', money(ytd), 'Manager Dashboard / Daily Revenue'],
+    ['Group BTYD', money(btye), 'Confirmed minus YTD']
+  ].map(([a,b,c])=>`<div class="kpi"><div class="label">${a}</div><div class="value">${b}</div><div class="sub">${c}</div></div>`).join('');
+}
+
 function init(){ bindTabs(); wireFilters(); wireProjectAdders(); $('testBtn').onclick = () => quickConnectionTest(); $('refreshBtn').onclick = () => loadData(); $('saveRevenueBtn').onclick = saveRevenue; $('saveProjectBtn').onclick = saveProject; $('saveInvoiceBtn').onclick = saveInvoice; $('savePaymentBtn').onclick = savePaymentReceived; $('revDate').value = $('projCreatedAt').value = $('invDate').value = $('payDate').value = todayISO(); $('periodFilter').innerHTML = PERIODS.map(p=>`<option ${p===state.filters.period?'selected':''}>${p}</option>`).join(''); if ($('revProjectName')) $('revProjectName').addEventListener('change', applyRememberedRevenueBudgets); if ($('revManager')) $('revManager').addEventListener('change', applyRememberedRevenueBudgets); if ($('revCostCenter')) $('revCostCenter').addEventListener('change', applyRememberedRevenueBudgets); $('diagnostics').textContent = 'Waiting for first load...'; loadData(); }
 document.addEventListener('DOMContentLoaded', init);
 </script>
