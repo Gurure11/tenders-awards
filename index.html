@@ -33,6 +33,7 @@
     .connection-pill.ok { background:#dff5e3; color:#1d6b2f; border-color:#bfe6c8; }
     .connection-pill.warn { background:#fff0d8; color:#8a5808; border-color:#f1d39f; }
     .connection-pill.bad { background:#fce3e3; color:#a33636; border-color:#f1bcbc; }
+    #varianceChart { max-height: 180px !important; }
 
   </style>
 </head>
@@ -136,7 +137,7 @@
   </div>
 
   <div class="row g-4 mb-4">
-    <div class="col-lg-7">
+    <div class="col-lg-8">
       <div class="glass-card">
         <h5 class="mb-3"><i class="fas fa-scale-balanced me-2"></i>Reconciliation detail</h5>
         <div class="scroll-table">
@@ -162,10 +163,10 @@
         </div>
       </div>
     </div>
-    <div class="col-lg-5">
+    <div class="col-lg-4">
       <div class="glass-card">
         <h5 class="mb-3"><i class="fas fa-chart-column me-2"></i>Variance by category</h5>
-        <canvas id="varianceChart" height="220"></canvas>
+        <canvas id="varianceChart" height="140"></canvas>
       </div>
     </div>
   </div>
@@ -758,8 +759,9 @@
         const d = normalizeFetchedDate(r.Date || r.TransactionDate || r.Timestamp || '');
         return d === today;
       });
+      const displayRows = dailyRows.length ? dailyRows : rows;
 
-      tbody.innerHTML = dailyRows.length ? dailyRows.map(r => `
+      tbody.innerHTML = displayRows.length ? displayRows.map(r => `
         <tr>
           <td>${escapeHtml(String(r.Date || r.TransactionDate || r.Timestamp || ''))}</td>
           <td>${escapeHtml(String(r.AuthorisationNo || r.AuthorizationNo || r.AuthNo || r.ERNo || r['ER No'] || ''))}</td>
@@ -770,9 +772,9 @@
           <td>${money(r.SwipeAmount || r.Amount || r.SwipedAmount || 0)}</td>
           <td>${num(r.Litres || r.Liters || r.LitersFilled || 0).toFixed(2)}</td>
         </tr>
-      `).join('') : '<tr><td colspan="8" class="text-center py-4">No fuel transactions for today.</td></tr>';
+      `).join('') : '<tr><td colspan="8" class="text-center py-4">No fuel transactions found in sheet tab Fuel Log.</td></tr>';
 
-      setConnectionStatus('ok', 'Connected');
+      setConnectionStatus('ok', dailyRows.length ? 'Connected' : 'Connected · showing all rows');
     } catch (err) {
       setConnectionStatus('bad', 'Connection failed');
       tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Failed to load daily fuel transactions.</td></tr>';
@@ -859,6 +861,7 @@
   renderAll();
   testAppsScriptConnection();
   loadFuelLogTransactions();
+  $('loadStatus').textContent = `Target sheet for transactions: ${SHEET_CONFIG.spreadsheetId} / Fuel Log`;
 })();
 </script>
 </body>
