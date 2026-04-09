@@ -215,6 +215,30 @@
     </div>
   </div>
 
+
+  <div class="glass-card mb-4">
+    <h5 class="mb-3"><i class="fas fa-list me-2"></i>Daily Drivers Fuel Transactions</h5>
+    <div class="scroll-table">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Auth No</th>
+            <th>Driver</th>
+            <th>Vehicle</th>
+            <th>Department</th>
+            <th>Cost Center</th>
+            <th>Amount</th>
+            <th>Litres</th>
+          </tr>
+        </thead>
+        <tbody id="fuelLogTableBody">
+          <tr><td colspan="8" class="text-center py-4">No fuel transactions loaded yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <div id="pdfReportRoot" class="report-block">
     <h4 class="mb-3" style="color:#0b2b4a;">Fuel Reconciliation Report</h4>
     <div class="small-note mb-3" id="reportMeta"></div>
@@ -663,6 +687,41 @@
     });
   }
 
+
+  async function loadFuelLogTransactions() {
+    const tbody = $('fuelLogTableBody');
+    if (!tbody) return;
+    if (!appsScriptReady()) {
+      tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Set your deployed Apps Script URL to load daily fuel transactions.</td></tr>';
+      return;
+    }
+    try {
+      const url = `${SHEET_CONFIG.appsScriptUrl}?action=getFuelLog&spreadsheetId=${encodeURIComponent(SHEET_CONFIG.spreadsheetId)}&sheetTab=${encodeURIComponent('Fuel Log')}&_=${Date.now()}`;
+      const resp = await fetch(url);
+      const data = await resp.json();
+      const rows = Array.isArray(data.rows) ? data.rows : [];
+      const today = new Date().toISOString().slice(0, 10);
+      const dailyRows = rows.filter(r => {
+        const d = String(r.Date || r.TransactionDate || '').slice(0, 10);
+        return d === today;
+      });
+      tbody.innerHTML = dailyRows.length ? dailyRows.map(r => `
+        <tr>
+          <td>${escapeHtml(String(r.Date || r.TransactionDate || ''))}</td>
+          <td>${escapeHtml(String(r.AuthorisationNo || r.AuthNo || r.ERNo || ''))}</td>
+          <td>${escapeHtml(String(r.DriverName || r.Driver || ''))}</td>
+          <td>${escapeHtml(String(r.VehicleRegistration || r.Vehicle || ''))}</td>
+          <td>${escapeHtml(String(r.Department || ''))}</td>
+          <td>${escapeHtml(String(r.CostCenter || r['Cost Center'] || ''))}</td>
+          <td>${money(r.SwipeAmount || r.Amount || 0)}</td>
+          <td>${num(r.Litres || r.Liters || 0).toFixed(2)}</td>
+        </tr>
+      `).join('') : '<tr><td colspan="8" class="text-center py-4">No fuel transactions for today.</td></tr>';
+    } catch (err) {
+      tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Failed to load daily fuel transactions.</td></tr>';
+    }
+  }
+
   function renderAll() {
     const rows = filteredRows();
     renderKpis(rows);
@@ -741,6 +800,7 @@
 
   updateTopSummary();
   renderAll();
+  loadFuelLogTransactions();
 })();
 </script>
 </body>
