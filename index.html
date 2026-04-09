@@ -16,7 +16,7 @@
     .form-grid{grid-template-columns:repeat(12,1fr)} .field{display:flex;flex-direction:column;gap:6px}.field label{font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700}
     input,select,button,textarea{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:14px;background:#fff;font:inherit;color:var(--text)} button{background:var(--primary);color:#fff;cursor:pointer}.secondary{background:#fff;color:var(--text)}
     .span-2{grid-column:span 2}.span-3{grid-column:span 3}.span-4{grid-column:span 4}.span-6{grid-column:span 6}.span-12{grid-column:span 12}
-    table{width:100%;border-collapse:collapse}th,td{padding:12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;background:#f8fafc}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:16px;background:#fff}.badge{display:inline-block;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700}.ok{background:var(--green-bg);color:var(--green)}.warn{background:var(--amber-bg);color:var(--amber)}.bad{background:var(--red-bg);color:var(--red)}.muted{color:var(--muted)}.right{text-align:right}
+    table{width:100%;border-collapse:collapse}th,td{padding:12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;background:#f8fafc}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:16px;background:#fff}.badge{display:inline-block;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700}.ok{background:var(--green-bg);color:var(--green)}.warn{background:var(--amber-bg);color:var(--amber)}.bad{background:var(--red-bg);color:var(--red)}.perf-red{background:#fee2e2;color:#b91c1c}.perf-yellow{background:#fef3c7;color:#b45309}.perf-green{background:#dcfce7;color:#15803d}.perf-blue{background:#dbeafe;color:#1d4ed8}.muted{color:var(--muted)}.right{text-align:right}
     .progress{height:12px;background:#e5e7eb;border-radius:999px;overflow:hidden}.progress>div{height:100%;background:#0f172a}.progress.alt>div{background:#94a3b8}.progress.good>div{background:#15803d}.progress.warnbar>div{background:#b45309}.progress.badbar>div{background:#b91c1c}
     .progress-card{border:1px solid var(--line);border-radius:18px;padding:16px;background:#fff}.progress-row{margin-top:12px}.progress-head{display:flex;justify-content:space-between;gap:10px;margin-bottom:6px}.mini{font-size:12px;color:var(--muted)}
     pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#e2e8f0;padding:14px;border-radius:14px;min-height:180px}
@@ -163,17 +163,6 @@
       </div>
       <div class="card" style="margin-top:16px"><h3 style="margin-top:0">Revenue Summary</h3><div id="revenueStats" class="stats"></div></div>
       <div class="card" style="margin-top:16px"><h3 style="margin-top:0">Daily Revenue transactions</h3><div class="table-wrap"><table id="dailyRevenueTransactionsTable"></table></div></div>
-      <div class="card" style="margin-top:16px">
-        <h3 style="margin-top:0">Payments Received</h3>
-        <div class="form-grid">
-          <div class="field span-2"><label>Date</label><input id="payDate" type="date"></div>
-          <div class="field span-3"><label>Project Name</label><select id="payProjectName"></select></div>
-          <div class="field span-3"><label>Project Manager</label><select id="payManager"></select></div>
-          <div class="field span-2"><label>Invoice Number</label><input id="payInvoiceNumber"></div>
-          <div class="field span-2"><label>Amount Paid</label><input id="payAmount" type="number" min="0" step="0.01"></div>
-          <div class="field span-12"><button id="savePaymentBtn" type="button">Save Payment Received</button></div>
-        </div>
-      </div>
     </div>
 
     <div class="panel" id="projectsPanel">
@@ -211,6 +200,20 @@
           <div class="field span-12"><button id="saveInvoiceBtn" type="button">Save Invoice</button></div>
         </div>
       </div>
+      <div class="card" style="margin-top:16px">
+        <h3 style="margin-top:0">Payments Received</h3>
+        <div class="form-grid">
+          <div class="field span-2"><label>Date</label><input id="payDate" type="date"></div>
+          <div class="field span-3"><label>Project Name</label><select id="payProjectName"></select></div>
+          <div class="field span-3"><label>Project Manager</label><select id="payManager"></select></div>
+          <div class="field span-2"><label>CostCenter</label><select id="payCostCenter"></select></div>
+          <div class="field span-2"><label>Invoice Number</label><input id="payInvoiceNumber"></div>
+          <div class="field span-2"><label>Amount Paid</label><input id="payAmount" type="number" min="0" step="0.01"></div>
+          <div class="field span-2"><label>Balance Outstanding</label><input id="payBalanceOutstanding" type="number" min="0" step="0.01"></div>
+          <div class="field span-6"><label>Notes</label><input id="payNotes"></div>
+          <div class="field span-12"><button id="savePaymentBtn" type="button">Save Payment Received</button></div>
+        </div>
+      </div>
       <div class="card" style="margin-top:16px"><h3 style="margin-top:0">Invoices</h3><div class="table-wrap"><table id="invoicesTable"></table></div></div>
     </div>
 
@@ -218,8 +221,8 @@
   </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbylKQvOrxrFXFsM-4eUBt-xEvBAl3kHxiAn95yiIjbxeUqWmTZnQI6pWmj7tYZVLBwE/exec';
-const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbylKQvOrxrFXFsM-4eUBt-xEvBAl3kHxiAn95yiIjbxeUqWmTZnQI6pWmj7tYZVLBwE/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzybrrmTwrD2QyeLkmcANL2j4r92eqoDruV_aIAmTqqrDuSHo-ilSfOyQzg-7nn54/exec';
+const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbxzybrrmTwrD2QyeLkmcANL2j4r92eqoDruV_aIAmTqqrDuSHo-ilSfOyQzg-7nn54/exec';
 const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
 const DEFAULT_COST_CENTERS = ["Onpoint Ontime", "Aqua Telecoms", "Nkanyezi", "Distinct Hire"];
 const DEFAULT_PROJECT_OPTIONS = ["DBSA Generators", "DBSA Rooiwal", "Joe Gqabi", "Temba", "Midvaal", "Coega","Osingisingin", "KZN General Buildings", "Tshwane", "Public Works Limpopo", "Limpopo Eskom Substation Ephraim Mogale", "Naizna", "Cape Town", "COT Streetlights", "COT Electrification", "COT Metering", "COE Streetlights", "Msunduzi E50", "Msunduzi Streetlights", "Msunduzi E33", "Msunduzi E47", "Moqhaka Streetlights", "Moqhaka Metering", "Centlec CD11", "Centlec Transformers CD32", "Centlec CD45", "Midvaal Mechanical", "Eskom SPU", "Eskom FSOU Substation", "Eskom ECOU", "Eskom LOU General Buildings", "Eskom KZN Minor Reticulation", "Randwest Electrical", "Randwest Roads & Stormwater", "Randwest Water rand sanitation", "Randwest Bulk", "RAL", "Stellenbosh", "Liquid ECPG", "Liquid ECSOD", "Liquid Gauteng SOD", "Telkom", "MTN", "Centlec", "Eskom Harvard", "City Power", "Umhlathuze Municipality", "Eskom WC", "COE Buildings", "Midvaal Water", "Midvaal Electricity", "Uthukela", "Kgetleng River", "Ray Nkonyeni Facility", "Ray Nkonyeni Electrical Material", "Ray Nkonyeni Mast", "Ray Nkonyeni Meter Reading", "Ramotshere Electrical Supplies", "Newcastle Substations", "Ubuntu", "IDT North West Buidlings", "Amajuba Generator", "uPhongolo", "Abaquilisi Battery Supplies", "Abaquilisi Streetlights"];
@@ -232,7 +235,7 @@ const ONPOINT_OVERRIDE_MONTHLY_PROJECTED = 34220381;
 const ONPOINT_OVERRIDE_MONTHLY_STRAIGHTLINE = 39556824;
 const GROUP_FIXED_MONTHLY_PROJECTED = 34220381;
 const GROUP_FIXED_MONTHLY_STRAIGHTLINE = 39556824;
-const state = { projects:[], revenue:[], invoices:[], managerBudgets:[], orders:[], straightline:[], filters:{ period:'Monthly', division:'All', manager:'All', project:'All', search:'' } }; let charts = {};
+const state = { projects:[], revenue:[], invoices:[], payments:[], managerBudgets:[], orders:[], straightline:[], filters:{ period:'Monthly', division:'All', manager:'All', project:'All', search:'' } }; let charts = {};
 const $ = id => document.getElementById(id);
 const log = (...args) => { const msg = args.map(v => typeof v === 'string' ? v : JSON.stringify(v,null,2)).join(' '); $('diagnostics').textContent = `${new Date().toLocaleString()}\n${msg}\n\n` + $('diagnostics').textContent; };
 const num = v => Number(String(v ?? '').replace(/[^0-9.-]/g,'')) || 0;
@@ -374,19 +377,24 @@ function filteredOrders(period = state.filters.period){
   });
 }
 function filteredInvoices(period = state.filters.period){
-  return revenueRowsForPeriod(period)
-    .filter(r => num(r.InvoicesIssued || r['Invoices Issued']) > 0)
-    .map(r => ({
-      Date: normaliseDate(r.Date),
-      Manager: text(r.Manager),
-      ProjectName: text(r.ProjectName),
-      InvoiceNumber: text(r.InvoiceNumber || ''),
-      Amount: num(r.InvoicesIssued || r['Invoices Issued']),
-      PaymentReceived: false,
-      PaymentDate: '',
-      CostCenter: normalizeCostCenterName(r.CostCenter),
-      Notes: text(r.Notes || 'Manager Dashboard / Invoices Issued')
-    }));
+  return state.invoices.filter(r => {
+    if (!inPeriod(r.Date, period)) return false;
+    if (state.filters.division !== 'All' && normalizeCostCenterName(r.CostCenter) !== state.filters.division) return false;
+    if (state.filters.manager !== 'All' && text(r.Manager) !== state.filters.manager) return false;
+    if (state.filters.project !== 'All' && text(r.ProjectName) !== state.filters.project) return false;
+    if (state.filters.search && !`${r.ProjectName} ${r.Manager} ${r.CostCenter} ${r.InvoiceNumber}`.toLowerCase().includes(state.filters.search.toLowerCase())) return false;
+    return true;
+  });
+}
+function filteredPayments(period = state.filters.period){
+  return state.payments.filter(r => {
+    if (!inPeriod(r.Date, period)) return false;
+    if (state.filters.division !== 'All' && normalizeCostCenterName(r.CostCenter) !== state.filters.division) return false;
+    if (state.filters.manager !== 'All' && text(r.ProjectManager || r.Manager) !== state.filters.manager) return false;
+    if (state.filters.project !== 'All' && text(r.ProjectName) !== state.filters.project) return false;
+    if (state.filters.search && !`${r.ProjectName} ${r.ProjectManager || r.Manager} ${r.CostCenter} ${r.InvoiceNumber}`.toLowerCase().includes(state.filters.search.toLowerCase())) return false;
+    return true;
+  });
 }
 function filteredStraightline(period = state.filters.period){
   return state.straightline.filter(r => {
@@ -627,6 +635,7 @@ function ordersConfirmedRowsBase(){
 function performanceSnapshot(period){
   const revenueRows = revenueRowsForPeriod(period);
   const invoiceRows = filteredInvoices(period);
+  const paymentRows = filteredPayments(period);
   const actual = revenueRows.reduce((s,r)=>s+revenueActualValue(r),0);
   const costCenterRows = costCenterPeriodRows(period);
   const projected = useGroupFixedBudgetOverride() ? groupProjectedTarget(period) : costCenterRows.reduce((s,r)=>s+num(r.Projected),0);
@@ -634,8 +643,8 @@ function performanceSnapshot(period){
   const grossProfit = revenueRows.reduce((s,r)=>s + (revenueActualValue(r) * revenueMarginValue(r) / 100), 0);
   const profitability = actual ? Math.round((grossProfit / actual) * 100) : 0;
   const invoicesIssued = invoiceRows.reduce((s,r)=>s+num(r.Amount),0);
-  const paymentsReceived = invoiceRows.filter(r => r.PaymentReceived).reduce((s,r)=>s+num(r.Amount),0);
-  return { revenueRows, invoiceRows, straightRows: [], actual, projected, straight, grossProfit, profitability, invoicesIssued, paymentsReceived, actualVsProjectedPct: projected ? Math.round((actual/projected)*100) : 0, actualVsStraightPct: straight ? Math.round((actual/straight)*100) : 0 };
+  const paymentsReceived = paymentRows.reduce((s,r)=>s+num(r.AmountPaid || r.Amount),0);
+  return { revenueRows, invoiceRows, paymentRows, straightRows: [], actual, projected, straight, grossProfit, profitability, invoicesIssued, paymentsReceived, actualVsProjectedPct: projected ? Math.round((actual/projected)*100) : 0, actualVsStraightPct: straight ? Math.round((actual/straight)*100) : 0 };
 }
 
 
@@ -785,7 +794,7 @@ function costCenterPerformanceRows(period = state.filters.period){
 
 
 
-function perfBadgeClass(value){ return value >= 100 ? 'ok' : value >= 80 ? 'warn' : 'bad'; }
+function perfBadgeClass(value){ const v=num(value); if (v >= 95) return 'perf-blue'; if (v >= 75) return 'perf-green'; if (v >= 50) return 'perf-yellow'; return 'perf-red'; }
 function summaryPanelActive(){ return $('summaryPanel') && $('summaryPanel').classList.contains('active'); }
 function destroyCharts(){ ['periodChart','managerChart','performanceTotalsChart','pmActualProjectedChart','pmActualStraightlineChart','costCenterVarianceChart','costCenterComparisonChart'].forEach(k => { if (charts[k]) { charts[k].destroy(); charts[k]=null; } }); }
 function periodCardHtml(label, snap){ const projPct = snap.actualVsProjectedPct; const straightPct = snap.actualVsStraightPct; return `<div class="exec-card"><h4>${escapeHtml(label)}</h4><div class="exec-lines"><div class="rowline"><span>Actual</span><strong>${money(snap.actual)}</strong></div><div class="rowline"><span>Projected</span><strong>${money(snap.projected)}</strong></div><div class="rowline"><span>Straight-line</span><strong>${money(snap.straight)}</strong></div><div class="rowline"><span>Actual vs Projected</span><span class="badge ${perfBadgeClass(projPct)}">${projPct}%</span></div><div class="rowline"><span>Actual vs Straight-line</span><span class="badge ${perfBadgeClass(straightPct)}">${straightPct}%</span></div></div></div>`; }
@@ -1199,7 +1208,7 @@ function renderSummary(){
     return [escapeHtml(item.CostCenter), money(item.Actual), money(item.Projected), money(item.Straightline), `${p}%`];
   }));
   const mgr = managerPerformanceRows(state.filters.period);
-  buildTable($('managerTable'), [{label:'Manager'},{label:'Actual',class:'right'},{label:'Projected',class:'right'},{label:'Straightline',class:'right'},{label:'Performance',class:'right'}], mgr.sort((a,b)=>num(b.Actual)-num(a.Actual)).map(r => [escapeHtml(r.Manager), money(r.Actual), money(r.Projected), money(r.Straightline), `${Math.round(num(r.ActualVsProjectedPct))}%`]));
+  buildTable($('managerTable'), [{label:'Manager'},{label:'Actual',class:'right'},{label:'Projected',class:'right'},{label:'Straightline',class:'right'},{label:'Performance',class:'right'}], mgr.sort((a,b)=>num(a.ActualVsProjectedPct)-num(b.ActualVsProjectedPct) || a.Manager.localeCompare(b.Manager)).map(r => [escapeHtml(r.Manager), money(r.Actual), money(r.Projected), money(r.Straightline), `<span class="badge ${perfBadgeClass(r.ActualVsProjectedPct)}">★ ${Math.round(num(r.ActualVsProjectedPct))}%</span>`]));
   const rows = filteredRevenue().slice().sort((a,b)=>(a.Date < b.Date ? 1 : -1)).slice(0, 40);
   buildTable($('revenueTable'), [{label:'Date'},{label:'Manager'},{label:'CostCenter'},{label:'ProjectName'},{label:'Actuals',class:'right'},{label:'Budget',class:'right'},{label:'Daily Budget',class:'right'}], rows.map(r => [escapeHtml(r.Date), escapeHtml(r.Manager), escapeHtml(r.CostCenter), escapeHtml(r.ProjectName), money(revenueActualValue(r)), money(revenueProjectedValue(r,'Monthly')), money(revenueProjectedValue(r,'Daily'))]));
   const revenueRows = filteredRevenue();
@@ -1320,6 +1329,7 @@ function mapProjectRow(r){
 }
 
 function mapInvoiceRow(r){ return { Date: normaliseDate(r.Date || r.date || rowVal(r,0)), Manager: text(r.Manager || r.manager || rowVal(r,1)), ProjectName: text(r.ProjectName || r.projectName || rowVal(r,2)), InvoiceNumber: text(r.InvoiceNumber || r.invoiceNumber || r['Invoice No'] || rowVal(r,3)), Amount: num(r.Amount || r.amount || rowVal(r,4)), PaymentReceived: String(r.PaymentReceived || r.paymentReceived || rowVal(r,5)).toLowerCase()==='true' || r.PaymentReceived===true, PaymentDate: normaliseDate(r.PaymentDate || r.paymentDate || rowVal(r,6)), CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Division || rowVal(r,7)), Notes: text(r.Notes || r.notes || rowVal(r,8)) }; }
+function mapPaymentRow(r){ return { Date: normaliseDate(r.Date || r.date || rowVal(r,0)), ProjectName: text(r.ProjectName || r.projectName || rowVal(r,1)), ProjectManager: text(r.ProjectManager || r.projectManager || r.Manager || r.manager || rowVal(r,2)), CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Division || rowVal(r,3)), InvoiceNumber: text(r.InvoiceNumber || r.invoiceNumber || rowVal(r,4)), AmountPaid: num(r.AmountPaid || r.amountPaid || r.Amount || r.amount || rowVal(r,5)), BalanceOutstanding: num(r.BalanceOutstanding || r.balanceOutstanding || rowVal(r,6)), Notes: text(r.Notes || r.notes || rowVal(r,7)), Timestamp: r.Timestamp || r.timestamp || rowVal(r,8) || '' }; }
 function mapManagerBudgetRow(r){ return { ProjectManager: text(r.ProjectManager || r.Manager || r.manager || rowVal(r,0)), CostCenter: normalizeCostCenterName(r.CostCenter || r.Division || rowVal(r,1)), Actual: num(r.Actual || r.Actuals || r.Amount || rowVal(r,2)), Budget: num(r.Budget || r.Projected || r.projected || rowVal(r,3)), StraightlineBudget: num(r.StraightlineBudget || r['Straightline Budget'] || r['Straight-line Budget'] || rowVal(r,4)), PerformancePct: num(r.PerformancePct || r['% PERFORMANCE'] || r['% PERFOMANCE'] || rowVal(r,5)) }; }
 
 function mapStraightlineRow(r){ return { Date: normaliseDate(r.Date || r.date || r.CreatedAt || r.Timestamp || rowVal(r,5)), Manager: text(r.Manager || r.manager || r.ProjectManager || r['Project Manager'] || rowVal(r,1)), CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Division || r['Cost Center'] || rowVal(r,0)), ProjectName: text(r.ProjectName || r.projectName || r['Project Name'] || rowVal(r,2)), ProjectedBudget: num(r.ProjectedBudget || r['Projected Budget'] || r.Projected || r.Budget || r.projected || rowVal(r,3)), StraightlineBudget: num(r.StraightlineBudget || r['Straightline Budget'] || r['Straight-line Budget'] || r['Straight Line Budget'] || r.Straightline || r['Straight Line'] || rowVal(r,4)) }; }
@@ -1356,6 +1366,7 @@ async function loadData(){
       ['revenue','getRevenue',mapRevenueRow,true],
       ['orders','getOrders',mapOrderRow,true],
       ['invoices','getInvoices',mapInvoiceRow,false],
+      ['payments','getPayments',mapPaymentRow,false],
       ['straightline','getStraightline',mapStraightlineRow,false],
     ];
     const results = await Promise.allSettled(endpointMap.map(([,action]) => fetchAction(action)));
@@ -1370,6 +1381,7 @@ async function loadData(){
       straightline: state.straightline.length,
       orders: state.orders.length,
       invoices: state.invoices.length,
+      payments: state.payments.length,
       failures,
       straightlineProjectedTotal: state.straightline.reduce((s,r)=>s+num(r.Projected),0),
       straightlineBudgetTotal: state.straightline.reduce((s,r)=>s+num(r.StraightlineBudget),0),
@@ -1519,10 +1531,12 @@ async function savePaymentReceived(){
   const manager = $('payManager').value;
   const invoiceNumber = $('payInvoiceNumber').value;
   const amountPaid = num($('payAmount').value);
-  const costCenter = state.projects.find(p => text(p.ProjectName)===projectName && text(p.Manager)===manager)?.Division
+  const balanceOutstanding = num($('payBalanceOutstanding') ? $('payBalanceOutstanding').value : 0);
+  const costCenter = ($('payCostCenter') && $('payCostCenter').value) || state.projects.find(p => text(p.ProjectName)===projectName && text(p.Manager)===manager)?.Division
     || state.revenue.find(r => text(r.ProjectName)===projectName && text(r.Manager)===manager)?.CostCenter
     || state.revenue.find(r => text(r.ProjectName)===projectName)?.CostCenter
     || '';
+  const notes = $('payNotes') ? $('payNotes').value : '';
   const payload = {
     action:'addPaymentReceivedToManagerDashboard',
     targetSpreadsheetId:'1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE',
@@ -1535,13 +1549,15 @@ async function savePaymentReceived(){
     date,
     projectName,
     manager,
+    projectManager: manager,
     invoiceNumber,
     amount: amountPaid,
     amountPaid,
+    balanceOutstanding,
     paymentReceived: true,
     paymentDate: date,
     costCenter,
-    notes: 'Saved from Payments Received section'
+    notes,
   };
   if (!payload.date || !payload.projectName || !payload.manager || !payload.invoiceNumber || payload.amountPaid <= 0) return alert('Complete the payment received fields first.');
   const btn=$('savePaymentBtn'); const old=btn.textContent;
@@ -1549,7 +1565,7 @@ async function savePaymentReceived(){
   try {
     const res = await postJsonToUrl(REVENUE_SAVE_URL, payload);
     await loadData();
-    $('payInvoiceNumber').value=''; $('payAmount').value='';
+    $('payInvoiceNumber').value=''; $('payAmount').value=''; if ($('payBalanceOutstanding')) $('payBalanceOutstanding').value=''; if ($('payNotes')) $('payNotes').value='';
     showToast(res.message || 'Payment received has been saved to Manager Dashboard / Payments tab','success');
     alert(res.message || 'Payment received has been saved to Manager Dashboard / Payments tab');
   } catch (e) {
@@ -1681,7 +1697,7 @@ function populateFilters(){
   if (!managers.includes(state.filters.manager)) state.filters.manager = 'All';
   fillSelect('managerFilter', managers, state.filters.manager);
   fillSelect('revManager', allManagers); fillSelect('projManager', allManagers); fillSelect('invManager', allManagers); fillSelect('payManager', allManagers);
-  fillSelect('revCostCenter', allCostCenters); fillSelect('projDivision', allCostCenters); fillSelect('invCostCenter', allCostCenters);
+  fillSelect('revCostCenter', allCostCenters); fillSelect('projDivision', allCostCenters); fillSelect('invCostCenter', allCostCenters); fillSelect('payCostCenter', allCostCenters);
   fillSelect('revProjectName', allProjects); fillSelect('invProjectName', allProjects); fillSelect('payProjectName', allProjects);
   applyRememberedRevenueBudgets(); wireProjectAdders();
 }
