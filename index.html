@@ -230,18 +230,34 @@
       <table class="table table-sm align-middle">
         <thead>
           <tr>
+            <th>Timestamp</th>
             <th>Date</th>
-            <th>Auth No</th>
             <th>Driver</th>
             <th>Vehicle</th>
-            <th>Department</th>
+            <th>ER Number</th>
+            <th>Merchant</th>
+            <th>Odo Start</th>
+            <th>Odo Finish</th>
+            <th>Fuel Type</th>
+            <th>Price/L</th>
+            <th>Liters</th>
+            <th>Fuel Total</th>
+            <th>Lubrication</th>
+            <th>Lube Cost</th>
+            <th>Tolls</th>
+            <th>Toll Total</th>
+            <th>Grand Total</th>
             <th>Cost Center</th>
-            <th>Amount</th>
-            <th>Litres</th>
+            <th>Department</th>
+            <th>Notes</th>
+            <th>KM Traveled</th>
+            <th>KM/Liter</th>
+            <th>Submission ID</th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody id="fuelLogTableBody">
-          <tr><td colspan="8" class="text-center py-4">No fuel transactions loaded yet.</td></tr>
+          <tr><td colspan="24" class="text-center py-4">No fuel transactions loaded yet.</td></tr>
         </tbody>
       </table>
     </div>
@@ -742,12 +758,12 @@
 
     if (!appsScriptReady()) {
       setConnectionStatus('bad', 'Set Apps Script URL');
-      tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Set your deployed Apps Script URL to load fuel log transactions.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="24" class="text-center py-4">Set your deployed Apps Script URL to load fuel log transactions.</td></tr>';
       return;
     }
 
     setConnectionStatus('warn', 'Loading transactions');
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Loading fuel transactions...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="24" class="text-center py-4">Loading fuel transactions...</td></tr>';
 
     try {
       const url = `${SHEET_CONFIG.appsScriptUrl}?action=getFuelLog&spreadsheetId=${encodeURIComponent(SHEET_CONFIG.spreadsheetId)}&sheetTab=${encodeURIComponent(SHEET_CONFIG.sheetTab)}&_=${Date.now()}`;
@@ -759,42 +775,87 @@
       else if (Array.isArray(data.rows)) rows = data.rows;
       else if (Array.isArray(data.data)) rows = data.data;
 
-      // Support array-of-arrays responses where first row contains headers.
       if (rows.length && Array.isArray(rows[0])) {
         const headers = rows[0].map(h => String(h || '').trim());
         rows = rows.slice(1).map(r => Object.fromEntries(headers.map((h, i) => [h, r[i]])));
       }
 
+      const field = (r, names) => {
+        for (const name of names) {
+          if (r[name] !== undefined && r[name] !== null && String(r[name]).trim() !== '') return r[name];
+        }
+        return '';
+      };
+
       const normalizedRows = rows.map(r => ({
-        date: r.Date || r.TransactionDate || r.Timestamp || r['Transaction Date'] || '',
-        authNo: r.AuthorisationNo || r.AuthorizationNo || r.AuthNo || r['ER Number'] || r.ERNo || r['ER No'] || r['Authorization No'] || r['Authorisation No'] || '',
-        driver: r.DriverName || r.Driver || r['Driver Name'] || '',
-        vehicle: r.VehicleRegistration || r.VehicleReg || r.Vehicle || r['Vehicle Registration'] || r['Vehicle Reg No'] || '',
-        department: r.Department || r.Dept || '',
-        costCenter: r.CostCenter || r['Cost Center'] || r.CostCentre || '',
-        amount: r.GrandTotal || r['Grand Total'] || r.FuelTotal || r['Fuel Total'] || r.SwipeAmount || r.Amount || r.SwipedAmount || 0,
-        litres: r.Litres || r.Liters || r['Liters Filled'] || r.LitersFilled || 0
-      })).filter(r => r.date || r.authNo || r.driver || r.vehicle || num(r.amount) || num(r.litres));
+        timestamp: field(r, ['Timestamp']),
+        date: field(r, ['Date', 'Transaction Date']),
+        driver: field(r, ['Driver', 'Driver Name']),
+        vehicle: field(r, ['Vehicle', 'Vehicle Reg No', 'Vehicle Registration']),
+        erNumber: field(r, ['ER Number', 'ER No', 'Auth No', 'Authorization No', 'Authorisation No']),
+        merchant: field(r, ['Merchant']),
+        odoStart: field(r, ['Odo Start']),
+        odoFinish: field(r, ['Odo Finish']),
+        fuelType: field(r, ['Fuel Type']),
+        pricePerL: field(r, ['Price/L', 'Price per L', 'Price Per L']),
+        liters: field(r, ['Liters', 'Litres']),
+        fuelTotal: field(r, ['Fuel Total']),
+        lubrication: field(r, ['Lubrication']),
+        lubeCost: field(r, ['Lube Cost']),
+        tolls: field(r, ['Tolls']),
+        tollTotal: field(r, ['Toll Total']),
+        grandTotal: field(r, ['Grand Total']),
+        costCenter: field(r, ['Cost Center', 'CostCenter', 'Cost Centre']),
+        department: field(r, ['Department']),
+        notes: field(r, ['Notes']),
+        kmTraveled: field(r, ['KM Traveled', 'Km Traveled']),
+        kmPerLiter: field(r, ['KM/Liter', 'KM/Litre', 'Km/Liter', 'Km/Litre']),
+        submissionId: field(r, ['Submission ID']),
+        status: field(r, ['Status'])
+      })).filter(r => Object.values(r).some(v => String(v).trim() !== ''));
+
+      const cell = (v) => escapeHtml(String(v ?? ''));
+      const moneyCell = (v) => money(num(v || 0));
+      const numCell = (v) => {
+        if (v === '' || v === null || v === undefined) return '';
+        return num(v).toFixed(2);
+      };
 
       tbody.innerHTML = normalizedRows.length ? normalizedRows.map(r => `
         <tr>
-          <td>${escapeHtml(String(r.date || ''))}</td>
-          <td>${escapeHtml(String(r.authNo || ''))}</td>
-          <td>${escapeHtml(String(r.driver || ''))}</td>
-          <td>${escapeHtml(String(r.vehicle || ''))}</td>
-          <td>${escapeHtml(String(r.department || ''))}</td>
-          <td>${escapeHtml(String(r.costCenter || ''))}</td>
-          <td>${money(r.amount || 0)}</td>
-          <td>${num(r.litres || 0).toFixed(2)}</td>
+          <td>${cell(r.timestamp)}</td>
+          <td>${cell(r.date)}</td>
+          <td>${cell(r.driver)}</td>
+          <td>${cell(r.vehicle)}</td>
+          <td>${cell(r.erNumber)}</td>
+          <td>${cell(r.merchant)}</td>
+          <td>${numCell(r.odoStart)}</td>
+          <td>${numCell(r.odoFinish)}</td>
+          <td>${cell(r.fuelType)}</td>
+          <td>${moneyCell(r.pricePerL)}</td>
+          <td>${numCell(r.liters)}</td>
+          <td>${moneyCell(r.fuelTotal)}</td>
+          <td>${cell(r.lubrication)}</td>
+          <td>${moneyCell(r.lubeCost)}</td>
+          <td>${cell(r.tolls)}</td>
+          <td>${moneyCell(r.tollTotal)}</td>
+          <td>${moneyCell(r.grandTotal)}</td>
+          <td>${cell(r.costCenter)}</td>
+          <td>${cell(r.department)}</td>
+          <td>${cell(r.notes)}</td>
+          <td>${numCell(r.kmTraveled)}</td>
+          <td>${numCell(r.kmPerLiter)}</td>
+          <td>${cell(r.submissionId)}</td>
+          <td>${cell(r.status)}</td>
         </tr>
-      `).join('') : '<tr><td colspan="8" class="text-center py-4">No fuel transactions returned from the Fuel Log tab.</td></tr>';
+      `).join('') : '<tr><td colspan="24" class="text-center py-4">No fuel transactions returned from the Fuel Log tab.</td></tr>';
 
       setConnectionStatus('ok', normalizedRows.length ? `Connected · ${normalizedRows.length} rows` : 'Connected · 0 rows');
       $('loadStatus').textContent = `Loaded ${normalizedRows.length} fuel log transactions from ${SHEET_CONFIG.spreadsheetId} / ${SHEET_CONFIG.sheetTab}`;
     } catch (err) {
       console.error(err);
       setConnectionStatus('bad', 'Connection failed');
-      tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4">Failed to load fuel transactions: ${escapeHtml(err.message || 'Unknown error')}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="24" class="text-center py-4">Failed to load fuel transactions: ${escapeHtml(err.message || 'Unknown error')}</td></tr>`;
     }
   }
 
