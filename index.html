@@ -266,7 +266,7 @@
   const SHEET_CONFIG = {
     spreadsheetId: '1SnhLTWgzJfkKNmIvtj8uwa-8x7TsnRtqkfX3deEuHIQ',
     spreadsheetName: 'Fuel Log',
-    sheetTab: 'Fuel Recon',
+    sheetTab: 'Fuel Log',
     appsScriptUrl: 'https://script.google.com/macros/s/AKfycbxrzuEIczrh80XmMsM_ix_mkSpPn7cSPlE6i7ITfgqACAAxtledMYEvEG_qW30bmhf6/exec'
   };
 
@@ -742,42 +742,59 @@
 
     if (!appsScriptReady()) {
       setConnectionStatus('bad', 'Set Apps Script URL');
-      tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Set your deployed Apps Script URL to load daily fuel transactions.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Set your deployed Apps Script URL to load fuel log transactions.</td></tr>';
       return;
     }
 
     setConnectionStatus('warn', 'Loading transactions');
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Loading fuel transactions...</td></tr>';
 
     try {
-      const url = `${SHEET_CONFIG.appsScriptUrl}?action=getFuelLog&spreadsheetId=${encodeURIComponent(SHEET_CONFIG.spreadsheetId)}&sheetTab=${encodeURIComponent('Fuel Log')}&_=${Date.now()}`;
-      const resp = await fetch(url);
+      const url = `${SHEET_CONFIG.appsScriptUrl}?action=getFuelLog&spreadsheetId=${encodeURIComponent(SHEET_CONFIG.spreadsheetId)}&sheetTab=${encodeURIComponent(SHEET_CONFIG.sheetTab)}&_=${Date.now()}`;
+      const resp = await fetch(url, { cache: 'no-store' });
       const data = await resp.json();
-      const rows = Array.isArray(data.rows) ? data.rows : [];
-      const today = new Date().toISOString().slice(0, 10);
 
-      const dailyRows = rows.filter(r => {
-        const d = normalizeFetchedDate(r.Date || r.TransactionDate || r.Timestamp || '');
-        return d === today;
-      });
-      const displayRows = dailyRows.length ? dailyRows : rows;
+      let rows = [];
+      if (Array.isArray(data)) rows = data;
+      else if (Array.isArray(data.rows)) rows = data.rows;
+      else if (Array.isArray(data.data)) rows = data.data;
 
-      tbody.innerHTML = displayRows.length ? displayRows.map(r => `
+      // Support array-of-arrays responses where first row contains headers.
+      if (rows.length && Array.isArray(rows[0])) {
+        const headers = rows[0].map(h => String(h || '').trim());
+        rows = rows.slice(1).map(r => Object.fromEntries(headers.map((h, i) => [h, r[i]])));
+      }
+
+      const normalizedRows = rows.map(r => ({
+        date: r.Date || r.TransactionDate || r.Timestamp || r['Transaction Date'] || '',
+        authNo: r.AuthorisationNo || r.AuthorizationNo || r.AuthNo || r['ER Number'] || r.ERNo || r['ER No'] || r['Authorization No'] || r['Authorisation No'] || '',
+        driver: r.DriverName || r.Driver || r['Driver Name'] || '',
+        vehicle: r.VehicleRegistration || r.VehicleReg || r.Vehicle || r['Vehicle Registration'] || r['Vehicle Reg No'] || '',
+        department: r.Department || r.Dept || '',
+        costCenter: r.CostCenter || r['Cost Center'] || r.CostCentre || '',
+        amount: r.GrandTotal || r['Grand Total'] || r.FuelTotal || r['Fuel Total'] || r.SwipeAmount || r.Amount || r.SwipedAmount || 0,
+        litres: r.Litres || r.Liters || r['Liters Filled'] || r.LitersFilled || 0
+      })).filter(r => r.date || r.authNo || r.driver || r.vehicle || num(r.amount) || num(r.litres));
+
+      tbody.innerHTML = normalizedRows.length ? normalizedRows.map(r => `
         <tr>
-          <td>${escapeHtml(String(r.Date || r.TransactionDate || r.Timestamp || ''))}</td>
-          <td>${escapeHtml(String(r.AuthorisationNo || r.AuthorizationNo || r.AuthNo || r.ERNo || r['ER No'] || ''))}</td>
-          <td>${escapeHtml(String(r.DriverName || r.Driver || r['Driver Name'] || ''))}</td>
-          <td>${escapeHtml(String(r.VehicleRegistration || r.VehicleReg || r.Vehicle || r['Vehicle Registration'] || ''))}</td>
-          <td>${escapeHtml(String(r.Department || r.Dept || ''))}</td>
-          <td>${escapeHtml(String(r.CostCenter || r['Cost Center'] || r.CostCentre || ''))}</td>
-          <td>${money(r.SwipeAmount || r.Amount || r.SwipedAmount || 0)}</td>
-          <td>${num(r.Litres || r.Liters || r.LitersFilled || 0).toFixed(2)}</td>
+          <td>${escapeHtml(String(r.date || ''))}</td>
+          <td>${escapeHtml(String(r.authNo || ''))}</td>
+          <td>${escapeHtml(String(r.driver || ''))}</td>
+          <td>${escapeHtml(String(r.vehicle || ''))}</td>
+          <td>${escapeHtml(String(r.department || ''))}</td>
+          <td>${escapeHtml(String(r.costCenter || ''))}</td>
+          <td>${money(r.amount || 0)}</td>
+          <td>${num(r.litres || 0).toFixed(2)}</td>
         </tr>
-      `).join('') : '<tr><td colspan="8" class="text-center py-4">No fuel transactions found in sheet tab Fuel Log.</td></tr>';
+      `).join('') : '<tr><td colspan="8" class="text-center py-4">No fuel transactions returned from the Fuel Log tab.</td></tr>';
 
-      setConnectionStatus('ok', dailyRows.length ? 'Connected' : 'Connected · showing all rows');
+      setConnectionStatus('ok', normalizedRows.length ? `Connected · ${normalizedRows.length} rows` : 'Connected · 0 rows');
+      $('loadStatus').textContent = `Loaded ${normalizedRows.length} fuel log transactions from ${SHEET_CONFIG.spreadsheetId} / ${SHEET_CONFIG.sheetTab}`;
     } catch (err) {
+      console.error(err);
       setConnectionStatus('bad', 'Connection failed');
-      tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Failed to load daily fuel transactions.</td></tr>';
+      tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4">Failed to load fuel transactions: ${escapeHtml(err.message || 'Unknown error')}</td></tr>`;
     }
   }
 
@@ -861,7 +878,7 @@
   renderAll();
   testAppsScriptConnection();
   loadFuelLogTransactions();
-  $('loadStatus').textContent = `Target sheet for transactions: ${SHEET_CONFIG.spreadsheetId} / Fuel Log`;
+  $('loadStatus').textContent = `Target sheet for transactions: ${SHEET_CONFIG.spreadsheetId} / ${SHEET_CONFIG.sheetTab}`;
 })();
 </script>
 </body>
