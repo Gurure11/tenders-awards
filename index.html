@@ -28,6 +28,12 @@
     .report-block { background:#fff; padding:18px; border-radius:20px; }
     .small-note { color:#6c7b8a; font-size:.9rem; }
     .drop-note { font-size:.9rem; color:#56677a; }
+
+    .connection-pill { display:inline-flex; align-items:center; gap:.45rem; border-radius:999px; padding:.45rem .9rem; font-size:.9rem; border:1px solid #d7e1eb; background:#fff; color:#56677a; }
+    .connection-pill.ok { background:#dff5e3; color:#1d6b2f; border-color:#bfe6c8; }
+    .connection-pill.warn { background:#fff0d8; color:#8a5808; border-color:#f1d39f; }
+    .connection-pill.bad { background:#fce3e3; color:#a33636; border-color:#f1bcbc; }
+
   </style>
 </head>
 <body>
@@ -40,7 +46,8 @@
         <div class="small-note">Upload Zoho export and bank statement, reconcile by ER / authorisation number, analyse variance and fuel efficiency.</div>
       </div>
     </div>
-    <div class="d-flex gap-2 flex-wrap">
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+      <span id="connectionStatus" class="connection-pill warn"><i class="fas fa-circle-notch fa-spin"></i><span>Checking connection</span></span>
       <button class="btn btn-onpoint" id="downloadExcelBtn"><i class="fas fa-file-excel me-2"></i>Download Excel</button>
       <button class="btn btn-outline-secondary btn-soft" id="downloadPdfBtn"><i class="fas fa-file-pdf me-2"></i>Download PDF</button>
     </div>
@@ -259,20 +266,10 @@
     spreadsheetId: '1SnhLTWgzJfkKNmIvtj8uwa-8x7TsnRtqkfX3deEuHIQ',
     spreadsheetName: 'Fuel Log',
     sheetTab: 'Fuel Recon',
-    fuelLogTab: 'Fuel Log',
-    appsScriptUrl: 'https://script.google.com/macros/s/AKfycbwh8WeNjEkdNd8xmZE4Eg2HlRMsNiTUKEwqv1CngcwjlSWjt0Lzno0fwkXHpRN-SKjh/exec'
+    appsScriptUrl: 'https://script.google.com/macros/s/AKfycbxrzuEIczrh80XmMsM_ix_mkSpPn7cSPlE6i7ITfgqACAAxtledMYEvEG_qW30bmhf6/exec'
   };
 
   const state = {
-    zohoRaw: [],
-    bankRaw: [],
-    zohoRows: [],
-    bankRows: [],
-    reconciled: [],
-    currentStatus: 'all',
-    chart: null
-  };
-
     zohoRaw: [],
     bankRaw: [],
     zohoRows: [],
@@ -311,8 +308,57 @@
     const txt = await resp.text();
     try { return JSON.parse(txt); } catch { return { ok: resp.ok, raw: txt }; }
   }
+
   function sheetInfoText() {
     return `${SHEET_CONFIG.spreadsheetName} / ${SHEET_CONFIG.sheetTab} / ${SHEET_CONFIG.spreadsheetId}`;
+  }
+
+  function setConnectionStatus(mode, message) {
+    const el = $('connectionStatus');
+    if (!el) return;
+    const icon = mode === 'ok' ? 'fa-check-circle' : (mode === 'bad' ? 'fa-triangle-exclamation' : 'fa-circle-notch fa-spin');
+    el.className = `connection-pill ${mode === 'ok' ? 'ok' : mode === 'bad' ? 'bad' : 'warn'}`;
+    el.innerHTML = `<i class="fas ${icon}"></i><span>${message}</span>`;
+  }
+
+  function normalizeFetchedDate(v) {
+    if (v === null || v === undefined || v === '') return '';
+    if (typeof v === 'number') {
+      const d = new Date(Math.round((v - 25569) * 86400 * 1000));
+      if (!isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+    const s = String(v).trim();
+    const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (iso) return `${iso[1]}-${String(iso[2]).padStart(2,'0')}-${String(iso[3]).padStart(2,'0')}`;
+    const dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+    if (dmy) {
+      const year = dmy[3].length === 2 ? `20${dmy[3]}` : dmy[3];
+      return `${year}-${String(dmy[2]).padStart(2,'0')}-${String(dmy[1]).padStart(2,'0')}`;
+    }
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    return '';
+  }
+
+  async function testAppsScriptConnection() {
+    if (!appsScriptReady()) {
+      setConnectionStatus('bad', 'Set Apps Script URL');
+      return false;
+    }
+    try {
+      const url = `${SHEET_CONFIG.appsScriptUrl}?action=health&spreadsheetId=${encodeURIComponent(SHEET_CONFIG.spreadsheetId)}&_=${Date.now()}`;
+      const resp = await fetch(url);
+      const data = await resp.json();
+      if (data && (data.ok === true || data.success === true)) {
+        setConnectionStatus('ok', 'Connected');
+        return true;
+      }
+      setConnectionStatus('bad', 'Connection failed');
+      return false;
+    } catch (err) {
+      setConnectionStatus('bad', 'Connection failed');
+      return false;
+    }
   }
   const money = (v) => 'R' + (Number(v || 0)).toFixed(2);
   const num = (v) => {
@@ -690,60 +736,70 @@
 
 
   async function loadFuelLogTransactions() {
-    const tbody = $('fuelLogTableBody');
-    if (!tbody) return;
-    if (!appsScriptReady()) {
-      tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Set your deployed Apps Script URL to load daily fuel transactions.</td></tr>';
-      return;
-    }
-
-    const pick = (row, keys) => {
-      for (const key of keys) {
-        if (row && row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== '') return row[key];
-      }
-      return '';
-    };
-
+  const tbody = $('fuelLogTableBody');
+  if (!tbody) return;
+  if (!appsScriptReady()) {
+    setConnectionStatus('bad', 'Set Apps Script URL');
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Set your deployed Apps Script URL to load daily fuel transactions.</td></tr>';
+    return;
+  }
+  setConnectionStatus('warn', 'Loading transactions');
+  try {
+    const url = `${SHEET_CONFIG.appsScriptUrl}?action=getFuelLog&spreadsheetId=${encodeURIComponent(SHEET_CONFIG.spreadsheetId)}&sheetTab=${encodeURIComponent('Fuel Log')}&_=${Date.now()}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    const rows = Array.isArray(data.rows) ? data.rows : [];
+    const today = new Date().toISOString().slice(0, 10);
+    const dailyRows = rows.filter(r => {
+      const d = normalizeFetchedDate(r.Date || r.TransactionDate || r.Timestamp || '');
+      return d === today;
+    });
+    tbody.innerHTML = dailyRows.length ? dailyRows.map(r => `
+      <tr>
+        <td>${escapeHtml(String(r.Date || r.TransactionDate || r.Timestamp || ''))}</td>
+        <td>${escapeHtml(String(r.AuthorisationNo || r.AuthorizationNo || r.AuthNo || r.ERNo || r['ER No'] || ''))}</td>
+        <td>${escapeHtml(String(r.DriverName || r.Driver || r['Driver Name'] || ''))}</td>
+        <td>${escapeHtml(String(r.VehicleRegistration || r.VehicleReg || r.Vehicle || r['Vehicle Registration'] || ''))}</td>
+        <td>${escapeHtml(String(r.Department || r.Dept || ''))}</td>
+        <td>${escapeHtml(String(r.CostCenter || r['Cost Center'] || r.CostCentre || ''))}</td>
+        <td>${money(r.SwipeAmount || r.Amount || r.SwipedAmount || 0)}</td>
+        <td>${num(r.Litres || r.Liters || r.LitersFilled || 0).toFixed(2)}</td>
+      </tr>
+    `).join('') : '<tr><td colspan="8" class="text-center py-4">No fuel transactions for today.</td></tr>';
+    setConnectionStatus('ok', 'Connected');
+  } catch (err) {
+    setConnectionStatus('bad', 'Connection failed');
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Failed to load daily fuel transactions.</td></tr>';
+  }
+}
     try {
-      const url = `${SHEET_CONFIG.appsScriptUrl}?action=getFuelLog&spreadsheetId=${encodeURIComponent(SHEET_CONFIG.spreadsheetId)}&sheetTab=${encodeURIComponent(SHEET_CONFIG.fuelLogTab || 'Fuel Log')}&_=${Date.now()}`;
+      const url = `${SHEET_CONFIG.appsScriptUrl}?action=getFuelLog&spreadsheetId=${encodeURIComponent(SHEET_CONFIG.spreadsheetId)}&sheetTab=${encodeURIComponent('Fuel Log')}&_=${Date.now()}`;
       const resp = await fetch(url);
       const data = await resp.json();
       const rows = Array.isArray(data.rows) ? data.rows : [];
       const today = new Date().toISOString().slice(0, 10);
-
       const dailyRows = rows.filter(r => {
-        const rawDate = pick(r, ['Date','TransactionDate','SwipeDate','FuelDate','Timestamp']);
-        const d = dateText(rawDate);
+        const d = String(r.Date || r.TransactionDate || '').slice(0, 10);
         return d === today;
       });
-
-      tbody.innerHTML = dailyRows.length ? dailyRows.map(r => {
-        const txDate = pick(r, ['Date','TransactionDate','SwipeDate','FuelDate','Timestamp']);
-        const authNo = pick(r, ['AuthorisationNo','AuthorizationNo','AuthNo','ERNo','ER No','Authorisation No']);
-        const driver = pick(r, ['DriverName','Driver','Driver Name']);
-        const vehicle = pick(r, ['VehicleRegistration','VehicleReg','Vehicle','Registration','RegNo','Vehicle Registration']);
-        const department = pick(r, ['Department','Dept']);
-        const costCenter = pick(r, ['CostCenter','Cost Centre','CostCenterName','Cost Center']);
-        const amount = pick(r, ['SwipeAmount','Amount','SwipedAmount','TransactionAmount']);
-        const litres = pick(r, ['Litres','Liters','FuelLitres','FuelLiters']);
-        return `
+      tbody.innerHTML = dailyRows.length ? dailyRows.map(r => `
         <tr>
-          <td>${escapeHtml(dateText(txDate) || String(txDate || ''))}</td>
-          <td>${escapeHtml(String(authNo || ''))}</td>
-          <td>${escapeHtml(String(driver || ''))}</td>
-          <td>${escapeHtml(String(vehicle || ''))}</td>
-          <td>${escapeHtml(String(department || ''))}</td>
-          <td>${escapeHtml(String(costCenter || ''))}</td>
-          <td>${money(amount || 0)}</td>
-          <td>${num(litres || 0).toFixed(2)}</td>
-        </tr>`;
-      }).join('') : '<tr><td colspan="8" class="text-center py-4">No fuel transactions for today.</td></tr>';
+          <td>${escapeHtml(String(r.Date || r.TransactionDate || ''))}</td>
+          <td>${escapeHtml(String(r.AuthorisationNo || r.AuthNo || r.ERNo || ''))}</td>
+          <td>${escapeHtml(String(r.DriverName || r.Driver || ''))}</td>
+          <td>${escapeHtml(String(r.VehicleRegistration || r.Vehicle || ''))}</td>
+          <td>${escapeHtml(String(r.Department || ''))}</td>
+          <td>${escapeHtml(String(r.CostCenter || r['Cost Center'] || ''))}</td>
+          <td>${money(r.SwipeAmount || r.Amount || 0)}</td>
+          <td>${num(r.Litres || r.Liters || 0).toFixed(2)}</td>
+        </tr>
+      `).join('') : '<tr><td colspan="8" class="text-center py-4">No fuel transactions for today.</td></tr>';
     } catch (err) {
       tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Failed to load daily fuel transactions.</td></tr>';
     }
   }
 
-  function renderAll() { {
+  function renderAll() {
     const rows = filteredRows();
     renderKpis(rows);
     renderReconTable(rows);
@@ -821,6 +877,7 @@
 
   updateTopSummary();
   renderAll();
+  testAppsScriptConnection();
   loadFuelLogTransactions();
 })();
 </script>
