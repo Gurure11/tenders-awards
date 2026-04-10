@@ -227,8 +227,8 @@
   </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxM_8-_xrUyr4e5Fk01zTD_gqM1ObPtOF9P5iLlUNAiidoeHacUjq8cH8RVK-bndCsk/exec';
-const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbxzybrrmTwrD2QyeLkmcANL2j4r92eqoDruV_aIAmTqqrDuSHo-ilSfOyQzg-7nn54/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwczU5OT7hCYMsO6UDMEVjKdSO3U7cnpZ-NXLqxfB2EyQ6JjK8B7z6aj2I9Ynw-IT6b/exec';
+const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbwczU5OT7hCYMsO6UDMEVjKdSO3U7cnpZ-NXLqxfB2EyQ6JjK8B7z6aj2I9Ynw-IT6b/exec';
 const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
 const EXECUTIVE_AVG_GROSS_MARGIN_PCT = 31.66;
 const EXECUTIVE_PIE_COLORS = ['#0f172a','#1d4ed8','#15803d','#b45309','#b91c1c','#7c3aed','#0891b2','#ea580c','#16a34a','#be185d'];
@@ -424,7 +424,7 @@ function filteredStraightline(period = state.filters.period){
   });
 }
 function projectMargin(projectName, manager=''){ const match = state.projects.find(p => lower(p.ProjectName)===lower(projectName) && (!manager || lower(p.Manager)===lower(manager))) || state.projects.find(p => lower(p.ProjectName)===lower(projectName)); return num(match ? match.Margin : 0); }
-function revenueActualValue(r){ return num((r && (r['Daily Revenue'] ?? r.DailyRevenue ?? r.dailyRevenue ?? r.Actual ?? r['Actual'] ?? r.Actuals ?? r['Actuals'] ?? r.Amount ?? r['Amount'] ?? r.J ?? r['J'])) ?? 0); }
+function revenueActualValue(r){ return num((r && (r['Daily Revenue'] ?? r.DailyRevenue ?? r.dailyRevenue ?? r.Actual ?? r['Actual'] ?? r.Actuals ?? r['Actuals'] ?? r.E ?? r['E'] ?? r.Amount ?? r['Amount'])) ?? 0); }
 function revenueDailyBudgetValue(r){ return num((r && (r.DailyBudget ?? r['DailyBudget'] ?? r['Daily Budget'] ?? r.dailyBudget ?? r['I'] ?? r.I)) ?? 0); }
 function revenueActualForChart(r){ return revenueActualValue(r); }
 function revenueBudgetForChart(r, period = state.filters.period){ return scaleProjectedBudgetValue(num((r && (r.Budget ?? r['Budget'] ?? r['Projected Budget'] ?? r.ProjectedBudget)) ?? 0), period); }
@@ -1382,48 +1382,17 @@ function wireFilters(){ $('periodFilter').onchange = e => { state.filters.period
 function bindTabs(){ document.querySelectorAll('.tab').forEach(tab => tab.onclick = () => { document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active')); tab.classList.add('active'); $(tab.dataset.panel).classList.add('active'); if (tab.dataset.panel === 'summaryPanel') { renderSummary(); } else if (tab.dataset.panel === 'performancePanel') { renderPerformanceSection(); } else { destroyCharts(); } }); }
 
 
-function normalizeDashboardDateValue(v){
-  if (!v && v !== 0) return '';
-  if (Object.prototype.toString.call(v) === '[object Date]' && !isNaN(v)) return `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`;
-  const s = String(v).trim();
-  if (!s) return '';
-  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
-  const dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-  if (dmy) return `${dmy[3]}-${String(Number(dmy[2])).padStart(2,'0')}-${String(Number(dmy[1])).padStart(2,'0')}`;
-  const parsed = new Date(s);
-  if (!isNaN(parsed)) return `${parsed.getFullYear()}-${String(parsed.getMonth()+1).padStart(2,'0')}-${String(parsed.getDate()).padStart(2,'0')}`;
-  return '';
-}
-
 function mapRevenueRow(r){
-  const actualValue = num(
-    r['Daily Revenue'] ?? r['DailyRevenue'] ?? r.DailyRevenue ?? r.dailyRevenue ??
-    r.Actual ?? r['Actual'] ?? r.Actuals ?? r['Actuals'] ??
-    r.Amount ?? r['Amount'] ?? r['J'] ?? r.J ?? rowVal(r,9)
-  );
-  const monthlyProjected = num(
-    r['Monthly Projected Budget'] ?? r.MonthlyProjectedBudget ?? r.monthlyProjectedBudget ??
-    r['Projected Budget'] ?? r.ProjectedBudget ?? r.Projected ?? r.Budget ??
-    r['H'] ?? r.H ?? rowVal(r,5)
-  );
-  const monthlyStraightline = num(
-    r['Monthly Straightline Budget'] ?? r.MonthlyStraightlineBudget ?? r.monthlyStraightlineBudget ??
-    r['Straightline Budget'] ?? r['Straight-line Budget'] ?? r.StraightlineBudget ??
-    r['I'] ?? r.I ?? rowVal(r,6)
-  );
-  const dailyProjected = num(
-    r['Daily Projected Budget'] ?? r.DailyProjectedBudget ?? r.dailyProjectedBudget ??
-    r.DailyBudget ?? r['Daily Budget'] ?? rowVal(r,7)
-  );
-  const dailyStraightline = num(
-    r['Daily Straightline Budget'] ?? r.DailyStraightlineBudget ?? r.dailyStraightlineBudget ?? rowVal(r,8)
-  );
+  const actualValue = num(r['Daily Revenue'] || r.DailyRevenue || r.dailyRevenue || r.Actual || r.actual || r.Actuals || r.actuals || r['Actuals'] || r['Actual'] || r['E'] || r.E || rowVal(r,9) || r.Amount || r.amount);
+  const monthlyProjected = num(r['Monthly Projected Budget'] || r.MonthlyProjectedBudget || r.monthlyProjectedBudget || r.Budget || r.budget || r.Projected || r.projected || r['Projected Budget'] || r.ProjectedBudget || r.projectedBudget || r['F'] || r.F || rowVal(r,5));
+  const monthlyStraightline = num(r['Monthly Straightline Budget'] || r.MonthlyStraightlineBudget || r.monthlyStraightlineBudget || r.StraightlineBudget || r['Straightline Budget'] || r['Straight-line Budget'] || rowVal(r,6));
+  const dailyProjected = num(r['Daily Projected Budget'] || r.DailyProjectedBudget || r.dailyProjectedBudget || r.DailyBudget || r['Daily Budget'] || r.dailyBudget || rowVal(r,7));
+  const dailyStraightline = num(r['Daily Straightline Budget'] || r.DailyStraightlineBudget || r.dailyStraightlineBudget || rowVal(r,8));
   return repairRevenueShape({
-    Date: normalizeDashboardDateValue(r.Date ?? r.date ?? r['Entry Date'] ?? r.Timestamp ?? r.CreatedAt ?? rowVal(r,0)),
-    Manager: text(r.Manager ?? r.manager ?? r['Project Manager'] ?? r.ProjectManager ?? rowVal(r,3)),
-    CostCenter: normalizeCostCenterName(r.CostCenter ?? r.costCenter ?? r.Costcenter ?? r.Division ?? r['Cost Center'] ?? rowVal(r,1)),
-    ProjectName: text(r.ProjectName ?? r.projectName ?? r['Project Name'] ?? r.ProjectsName ?? rowVal(r,4)),
+    Date: normaliseDate(r.Date || r.date || r.Timestamp || r.CreatedAt || rowVal(r,0)),
+    Manager: text(r.Manager || r.manager || r['Project Manager'] || r.ProjectManager || rowVal(r,3)),
+    CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Costcenter || r.Division || r['Cost Center'] || rowVal(r,1)),
+    ProjectName: text(r.ProjectName || r.projectName || r['Project Name'] || r.ProjectsName || rowVal(r,4)),
     Actual: actualValue,
     Actuals: actualValue,
     Amount: actualValue,
@@ -1433,14 +1402,14 @@ function mapRevenueRow(r){
     MonthlyStraightlineBudget: monthlyStraightline,
     DailyProjectedBudget: dailyProjected,
     DailyStraightlineBudget: dailyStraightline,
-    Confirmed: num(r.Confirmed ?? r.confirmed ?? rowVal(r,12)),
-    Forecast: num(r.Forecast ?? r.forecast ?? rowVal(r,13)),
-    Category: text(r.Category ?? r.category ?? rowVal(r,2) ?? 'Daily Revenue'),
-    InvoicesIssued: num(r['Invoices Issued'] ?? r.InvoicesIssued ?? r.invoicesIssued ?? rowVal(r,10)),
-    PaymentsReceived: num(r['Payments Received'] ?? r.PaymentsReceived ?? r.paymentsReceived ?? rowVal(r,11)),
-    Quality: num(r.Quality ?? r.quality ?? 80),
-    Safety: num(r.Safety ?? r.safety ?? 0),
-    CreatedAt: normalizeDashboardDateValue(r.CreatedAt ?? r.createdAt ?? rowVal(r,0)),
+    Confirmed: num(r.Confirmed || r.confirmed || rowVal(r,12)),
+    Forecast: num(r.Forecast || r.forecast || rowVal(r,13)),
+    Category: text(r.Category || r.category || rowVal(r,2) || 'Daily Revenue'),
+    InvoicesIssued: num(r['Invoices Issued'] || r.InvoicesIssued || r.invoicesIssued || rowVal(r,10)),
+    PaymentsReceived: num(r['Payments Received'] || r.PaymentsReceived || r.paymentsReceived || rowVal(r,11)),
+    Quality: num(r.Quality || r.quality || 80),
+    Safety: num(r.Safety || r.safety || 0),
+    CreatedAt: normaliseDate(r.CreatedAt || r.createdAt || rowVal(r,0)),
     Margin: 0
   });
 }
@@ -1495,9 +1464,9 @@ async function loadData(){
   const failures=[];
   try {
     const endpointMap = [
-      ['projects',['getProjects'],mapProjectRow,true],
+      ['projects',['getProjects'],mapProjectRow,false],
       ['revenue',['getManagerDashboardRevenue','getRevenue'],mapRevenueRow,true],
-      ['orders',['getOrders'],mapOrderRow,true],
+      ['orders',['getOrders'],mapOrderRow,false],
       ['invoices',['getInvoices'],mapInvoiceRow,false],
       ['payments',['getPayments'],mapPaymentRow,false],
       ['straightline',['getStraightline'],mapStraightlineRow,false],
