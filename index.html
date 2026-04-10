@@ -118,6 +118,11 @@
         <div class="card"><h3 style="margin-top:0">Revenue by cost center</h3><div class="table-wrap"><table id="costCenterTable"></table></div></div>
         <div class="card"><h3 style="margin-top:0">PM performance at a glance</h3><div class="table-wrap"><table id="managerTable"></table></div></div>
       </div>
+      <div class="grid two section-gap">
+        <div class="card"><h3 style="margin-top:0">Gross profit by cost center</h3><div class="muted" style="margin-bottom:12px">Average gross profit margin applied: 31.66% from Manager Dashboard daily revenue entries.</div><div class="table-wrap"><table id="executiveGrossProfitTable"></table></div></div>
+        <div class="card"><h3 style="margin-top:0">Gross profit by cost center pie</h3><div class="chart-compact"><canvas id="executiveGrossProfitPieChart" height="140"></canvas></div></div>
+      </div>
+      <div class="card section-gap"><h3 style="margin-top:0">Daily revenue history by date</h3><div class="table-wrap"><table id="executiveHistoryTable"></table></div></div>
       <div class="card" style="margin-top:16px"><h3 style="margin-top:0">Recent revenue rows</h3><div class="table-wrap"><table id="revenueTable"></table></div></div>
     </div><br><br>
     <div>
@@ -225,6 +230,8 @@
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzybrrmTwrD2QyeLkmcANL2j4r92eqoDruV_aIAmTqqrDuSHo-ilSfOyQzg-7nn54/exec';
 const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbxzybrrmTwrD2QyeLkmcANL2j4r92eqoDruV_aIAmTqqrDuSHo-ilSfOyQzg-7nn54/exec';
 const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
+const EXECUTIVE_AVG_GROSS_MARGIN_PCT = 31.66;
+const EXECUTIVE_PIE_COLORS = ['#0f172a','#1d4ed8','#15803d','#b45309','#b91c1c','#7c3aed','#0891b2','#ea580c','#16a34a','#be185d'];
 const DEFAULT_COST_CENTERS = ["Onpoint Ontime", "Aqua Telecoms", "Nkanyezi", "Distinct Hire"];
 const DEFAULT_PROJECT_OPTIONS = ["DBSA Generators", "DBSA Rooiwal", "Joe Gqabi", "Temba", "Midvaal", "Coega","Osingisingin", "KZN General Buildings", "Tshwane", "Public Works Limpopo", "Limpopo Eskom Substation Ephraim Mogale", "Naizna", "Cape Town", "COT Streetlights", "COT Electrification", "COT Metering", "COE Streetlights", "Msunduzi E50", "Msunduzi Streetlights", "Msunduzi E33", "Msunduzi E47", "Moqhaka Streetlights", "Moqhaka Metering", "Centlec CD11", "Centlec Transformers CD32", "Centlec CD45", "Midvaal Mechanical", "Eskom SPU", "Eskom FSOU Substation", "Eskom ECOU", "Eskom LOU General Buildings", "Eskom KZN Minor Reticulation", "Randwest Electrical", "Randwest Roads & Stormwater", "Randwest Water rand sanitation", "Randwest Bulk", "RAL", "Stellenbosh", "Liquid ECPG", "Liquid ECSOD", "Liquid Gauteng SOD", "Telkom", "MTN", "Centlec", "Eskom Harvard", "City Power", "Umhlathuze Municipality", "Eskom WC", "COE Buildings", "Midvaal Water", "Midvaal Electricity", "Uthukela", "Kgetleng River", "Ray Nkonyeni Facility", "Ray Nkonyeni Electrical Material", "Ray Nkonyeni Mast", "Ray Nkonyeni Meter Reading", "Ramotshere Electrical Supplies", "Newcastle Substations", "Ubuntu", "IDT North West Buidlings", "Amajuba Generator", "uPhongolo", "Abaquilisi Battery Supplies", "Abaquilisi Streetlights"];
 const DEFAULT_MANAGER_OPTIONS = ["Moses", "Johan", "Siyanda", "Dave", "James", "Rayman", "Timothy", "Roads Site Agent COT", "Stanley", "Civil Site Agent", "Roads Site Agent CPT", "Brian", "EL CM", "Tony", "Govern","George ","Graham", "Ronald", "Petros", "Elroy", "Mesh", "Vusi", "Tinotenda", "Sydney", "Andrew", "Phillip", "Moeti"];
@@ -347,6 +354,15 @@ async function fetchAction(action){
   const payload = await parseJsonResponse(resp);
   if (payload && payload.success === false) throw new Error(payload.error || `Failed to load ${action}`);
   return Array.isArray(payload) ? payload : (payload.rows || payload.data || []);
+}
+async function fetchActionFirst(actions){
+  const list = Array.isArray(actions) ? actions : [actions];
+  let lastError = null;
+  for (const action of list) {
+    try { return await fetchAction(action); }
+    catch (e) { lastError = e; log(`Action failed: ${action}`, e.message); }
+  }
+  throw lastError || new Error('No action succeeded');
 }
 async function postAction(payload){
   if (isPlaceholderUrl(REVENUE_SAVE_URL) && isPlaceholderUrl(SCRIPT_URL)) throw new Error('Apps Script URL not configured');
@@ -797,9 +813,93 @@ function costCenterPerformanceRows(period = state.filters.period){
 
 function perfBadgeClass(value){ const v=num(value); if (v >= 95) return 'perf-blue'; if (v >= 75) return 'perf-green'; if (v >= 50) return 'perf-yellow'; return 'perf-red'; }
 function summaryPanelActive(){ return $('summaryPanel') && $('summaryPanel').classList.contains('active'); }
-function destroyCharts(){ ['periodChart','managerChart','performanceTotalsChart','pmActualProjectedChart','pmActualStraightlineChart','costCenterVarianceChart','costCenterComparisonChart'].forEach(k => { if (charts[k]) { charts[k].destroy(); charts[k]=null; } }); }
+function destroyCharts(){ ['periodChart','managerChart','performanceTotalsChart','pmActualProjectedChart','pmActualStraightlineChart','costCenterVarianceChart','costCenterComparisonChart','executiveGrossProfitPieChart'].forEach(k => { if (charts[k]) { charts[k].destroy(); charts[k]=null; } }); }
 function periodCardHtml(label, snap){ const projPct = snap.actualVsProjectedPct; const straightPct = snap.actualVsStraightPct; return `<div class="exec-card"><h4>${escapeHtml(label)}</h4><div class="exec-lines"><div class="rowline"><span>Actual</span><strong>${money(snap.actual)}</strong></div><div class="rowline"><span>Projected</span><strong>${money(snap.projected)}</strong></div><div class="rowline"><span>Straight-line</span><strong>${money(snap.straight)}</strong></div><div class="rowline"><span>Actual vs Projected</span><span class="badge ${perfBadgeClass(projPct)}">${projPct}%</span></div><div class="rowline"><span>Actual vs Straight-line</span><span class="badge ${perfBadgeClass(straightPct)}">${straightPct}%</span></div></div></div>`; }
 function financeCardHtml(label, snap){ return `<div class="exec-card"><h4>${escapeHtml(label)}</h4><div class="exec-lines"><div class="rowline"><span>Invoices issued</span><strong>${money(snap.invoicesIssued)}</strong></div><div class="rowline"><span>Payments received</span><strong>${money(snap.paymentsReceived)}</strong></div><div class="rowline"><span>Gross profit</span><strong>${money(snap.grossProfit)}</strong></div><div class="rowline"><span>Profitability</span><span class="badge ${perfBadgeClass(snap.profitability)}">${snap.profitability}%</span></div><div class="rowline"><span>Gross profit / day</span><strong>${money(label==='Daily' ? snap.grossProfit : (snap.grossProfit / Math.max(snap.revenueRows.length ? new Set(snap.revenueRows.map(r=>r.Date)).size : 1,1)))}</strong></div></div></div>`; }
+function executiveGrossProfitValue(actual){ return num(actual) * (EXECUTIVE_AVG_GROSS_MARGIN_PCT / 100); }
+function executiveGrossProfitRows(period = state.filters.period){
+  const revenueRows = revenueRowsForPeriod(period);
+  const map = {};
+  revenueRows.forEach(r => {
+    const key = normalizeCostCenterName(r.CostCenter) || 'Unassigned';
+    if (!map[key]) map[key] = { CostCenter:key, Revenue:0, GrossProfit:0, MarginPct:EXECUTIVE_AVG_GROSS_MARGIN_PCT, RowCount:0 };
+    const actual = revenueActualValue(r);
+    map[key].Revenue += actual;
+    map[key].GrossProfit += executiveGrossProfitValue(actual);
+    map[key].RowCount += 1;
+  });
+  const rows = Object.values(map).sort((a,b)=>num(b.GrossProfit)-num(a.GrossProfit) || a.CostCenter.localeCompare(b.CostCenter));
+  const totalRevenue = rows.reduce((s,r)=>s+num(r.Revenue),0);
+  const totalGrossProfit = rows.reduce((s,r)=>s+num(r.GrossProfit),0);
+  rows.forEach(r => {
+    r.RevenueSharePct = totalRevenue ? Math.round((num(r.Revenue) / totalRevenue) * 100) : 0;
+    r.GrossProfitSharePct = totalGrossProfit ? Math.round((num(r.GrossProfit) / totalGrossProfit) * 100) : 0;
+  });
+  return rows;
+}
+function executiveHistoryRows(period = state.filters.period){
+  const revenueRows = revenueRowsForPeriod(period);
+  const map = {};
+  revenueRows.forEach(r => {
+    const key = normaliseDate(r.Date) || 'No date';
+    if (!map[key]) map[key] = { Date:key, Revenue:0, GrossProfit:0, Rows:0, CostCenters:new Set(), Managers:new Set() };
+    const actual = revenueActualValue(r);
+    map[key].Revenue += actual;
+    map[key].GrossProfit += executiveGrossProfitValue(actual);
+    map[key].Rows += 1;
+    if (text(r.CostCenter)) map[key].CostCenters.add(normalizeCostCenterName(r.CostCenter));
+    if (text(r.Manager)) map[key].Managers.add(text(r.Manager));
+  });
+  return Object.values(map)
+    .sort((a,b)=>(a.Date < b.Date ? 1 : -1))
+    .map(r => ({ ...r, CostCenterCount:r.CostCenters.size, ManagerCount:r.Managers.size }));
+}
+function renderExecutiveGrossProfit(){
+  const gpRows = executiveGrossProfitRows(state.filters.period);
+  if ($('executiveGrossProfitTable')) buildTable($('executiveGrossProfitTable'), [
+    {label:'Cost Center'},
+    {label:'Revenue', class:'right'},
+    {label:'Gross Profit', class:'right'},
+    {label:'Margin %', class:'right'},
+    {label:'Gross Profit Share %', class:'right'}
+  ], gpRows.map(r => [
+    escapeHtml(r.CostCenter),
+    money(r.Revenue),
+    money(r.GrossProfit),
+    `${EXECUTIVE_AVG_GROSS_MARGIN_PCT.toFixed(2)}%`,
+    `${r.GrossProfitSharePct}%`
+  ]));
+  const historyRows = executiveHistoryRows(state.filters.period);
+  if ($('executiveHistoryTable')) buildTable($('executiveHistoryTable'), [
+    {label:'Date'},
+    {label:'Revenue', class:'right'},
+    {label:'Gross Profit', class:'right'},
+    {label:'Cost Centers', class:'right'},
+    {label:'Managers', class:'right'},
+    {label:'Rows', class:'right'}
+  ], historyRows.map(r => [
+    escapeHtml(r.Date),
+    money(r.Revenue),
+    money(r.GrossProfit),
+    String(r.CostCenterCount),
+    String(r.ManagerCount),
+    String(r.Rows)
+  ]));
+  if (typeof Chart === 'undefined' || !summaryPanelActive()) return;
+  const pieCtx = $('executiveGrossProfitPieChart')?.getContext('2d');
+  if (charts.executiveGrossProfitPieChart) { charts.executiveGrossProfitPieChart.destroy(); charts.executiveGrossProfitPieChart = null; }
+  if (pieCtx) {
+    charts.executiveGrossProfitPieChart = new Chart(pieCtx, {
+      type:'pie',
+      data:{
+        labels: gpRows.map(r => r.CostCenter),
+        datasets:[{ data: gpRows.map(r => Math.round(r.GrossProfit)), backgroundColor: gpRows.map((_,i)=>EXECUTIVE_PIE_COLORS[i % EXECUTIVE_PIE_COLORS.length]) }]
+      },
+      options:{ responsive:true, maintainAspectRatio:false, animation:false, plugins:{ legend:{ position:'bottom', labels:{ boxWidth:10, padding:10 } } } }
+    });
+  }
+}
+
 function renderExecutiveDashboard(){ const periods = ['Daily','Weekly','Monthly','Quarterly','Yearly']; const snaps = periods.map(period => ({ period, snap: performanceSnapshot(period) })); $('executiveGroupGrid').innerHTML = snaps.map(item => periodCardHtml(item.period, item.snap)).join(''); $('executiveFinanceGrid').innerHTML = snaps.map(item => financeCardHtml(item.period, item.snap)).join(''); const managerRows = managerPerformanceRows(state.filters.period); buildTable($('executiveManagerTable'), [{label:'Manager'},{label:'Actual',class:'right'},{label:'Projected Budget',class:'right'},{label:'Straight-line',class:'right'},{label:'Actual vs Projected %',class:'right'},{label:'Actual vs Straight-line %',class:'right'}], managerRows.map(r => [escapeHtml(r.Manager), money(r.Actual), money(r.Projected), money(r.Straightline), `<span class="badge ${perfBadgeClass(r.ActualVsProjectedPct)}">${r.ActualVsProjectedPct}%</span>`, `<span class="badge ${perfBadgeClass(r.ActualVsStraightPct)}">${r.ActualVsStraightPct}%</span>`])); renderPerformanceCharts(snaps, managerRows); }
 function renderPerformanceCharts(snaps, managerRows){
   if (typeof Chart === 'undefined' || !summaryPanelActive()) { destroyCharts(); return; }
@@ -1203,6 +1303,7 @@ function renderProgressCards(){
 
 function renderSummary(){
   renderExecutiveDashboard();
+  renderExecutiveGrossProfit();
   const ccRows = costCenterPeriodRows(state.filters.period);
   buildTable($('costCenterTable'), [{label:'Cost Center'},{label:'Actual',class:'right'},{label:'Projected',class:'right'},{label:'Straight-line',class:'right'},{label:'Actual vs Projected %',class:'right'}], ccRows.map(item => {
     const p = item.Projected ? Math.round((item.Actual/item.Projected)*100) : 0;
@@ -1363,19 +1464,20 @@ async function loadData(){
   const failures=[];
   try {
     const endpointMap = [
-      ['projects','getProjects',mapProjectRow,true],
-      ['revenue','getRevenue',mapRevenueRow,true],
-      ['orders','getOrders',mapOrderRow,true],
-      ['invoices','getInvoices',mapInvoiceRow,false],
-      ['payments','getPayments',mapPaymentRow,false],
-      ['straightline','getStraightline',mapStraightlineRow,false],
-      ['managerBudgets','getManagerBudgets',mapManagerBudgetRow,false],
+      ['projects',['getProjects'],mapProjectRow,true],
+      ['revenue',['getManagerDashboardRevenue','getRevenue'],mapRevenueRow,true],
+      ['orders',['getOrders'],mapOrderRow,true],
+      ['invoices',['getInvoices'],mapInvoiceRow,false],
+      ['payments',['getPayments'],mapPaymentRow,false],
+      ['straightline',['getStraightline'],mapStraightlineRow,false],
+      ['managerBudgets',['getManagerBudgets'],mapManagerBudgetRow,false],
     ];
-    const results = await Promise.allSettled(endpointMap.map(([,action]) => fetchAction(action)));
-    endpointMap.forEach(([stateKey, action, mapper, required], idx) => {
+    const results = await Promise.allSettled(endpointMap.map(([,actions]) => fetchActionFirst(actions)));
+    endpointMap.forEach(([stateKey, actions, mapper, required], idx) => {
       const res = results[idx];
+      const actionLabel = Array.isArray(actions) ? actions.join(' -> ') : String(actions);
       if (res.status === 'fulfilled') state[stateKey] = res.value.map(mapper);
-      else { state[stateKey] = []; if (required) failures.push(`${action}: ${res.reason.message}`); }
+      else { state[stateKey] = []; if (required) failures.push(`${actionLabel}: ${res.reason.message}`); }
     });
     state.managerBudgets = Array.isArray(state.managerBudgets) ? state.managerBudgets : [];
     log('Loaded rows / failed endpoints', {
