@@ -1626,13 +1626,33 @@ function renderSummary(){
   const savedSnapshot = saveExecutiveHistorySnapshot(false);
   if ($('historySnapshotSelect') && !$('historySnapshotSelect').dataset.selectedValue) $('historySnapshotSelect').dataset.selectedValue = savedSnapshot.snapshotDate;
   renderHistorySnapshots();
-  const ccRows = costCenterPeriodRows(state.filters.period);
-  buildTable($('costCenterTable'), [{label:'Cost Center'},{label:'Actual',class:'right'},{label:'Projected',class:'right'},{label:'Straight-line',class:'right'},{label:'Actual vs Projected %',class:'right'}], ccRows.map(item => {
-    const p = item.Projected ? Math.round((item.Actual/item.Projected)*100) : 0;
-    return [escapeHtml(item.CostCenter), money(item.Actual), money(item.Projected), money(item.Straightline), `${p}%`];
-  }));
-  const mgr = managerPerformanceRows(state.filters.period);
-  buildTable($('managerTable'), [{label:'Manager'},{label:'Actual',class:'right'},{label:'Projected',class:'right'},{label:'Straightline',class:'right'},{label:'Performance',class:'right'}], mgr.sort((a,b)=>num(a.ActualVsProjectedPct)-num(b.ActualVsProjectedPct) || a.Manager.localeCompare(b.Manager)).map(r => [escapeHtml(r.Manager), money(r.Actual), money(r.Projected), money(r.Straightline), `<span class="badge ${perfBadgeClass(r.ActualVsProjectedPct)}">★ ${Math.round(num(r.ActualVsProjectedPct))}%</span>`]));
+  const ccRows = costCenterPeriodRows(state.filters.period)
+    .map(item => ({
+      ...item,
+      ActualVsProjectedPct: item.Projected ? Math.round((item.Actual / item.Projected) * 100) : 0,
+      ActualVsStraightPct: item.Straightline ? Math.round((item.Actual / item.Straightline) * 100) : 0,
+      SortPct: item.Projected ? Math.round((item.Actual / item.Projected) * 100) : (item.Straightline ? Math.round((item.Actual / item.Straightline) * 100) : 0)
+    }))
+    .sort((a,b)=>num(a.SortPct)-num(b.SortPct) || num(a.ActualVsStraightPct)-num(b.ActualVsStraightPct) || a.CostCenter.localeCompare(b.CostCenter));
+  buildTable($('costCenterTable'), [{label:'Cost Center'},{label:'Actual',class:'right'},{label:'Projected',class:'right'},{label:'Straight-line',class:'right'},{label:'Actual vs Projected %',class:'right'},{label:'Actual vs Straight-line %',class:'right'}], ccRows.map(item => [
+    escapeHtml(item.CostCenter),
+    money(item.Actual),
+    money(item.Projected),
+    money(item.Straightline),
+    `<span class="badge ${perfBadgeClass(item.ActualVsProjectedPct || item.ActualVsStraightPct)}">${item.ActualVsProjectedPct}%</span>`,
+    `<span class="badge ${perfBadgeClass(item.ActualVsStraightPct)}">${item.ActualVsStraightPct}%</span>`
+  ]));
+  const mgr = managerPerformanceRows(state.filters.period)
+    .slice()
+    .sort((a,b)=>num(a.ActualVsProjectedPct)-num(b.ActualVsProjectedPct) || num(a.ActualVsStraightPct)-num(b.ActualVsStraightPct) || a.Manager.localeCompare(b.Manager));
+  buildTable($('managerTable'), [{label:'Manager'},{label:'Actual',class:'right'},{label:'Projected',class:'right'},{label:'Straightline',class:'right'},{label:'Actual vs Projected %',class:'right'},{label:'Actual vs Straight-line %',class:'right'}], mgr.map(r => [
+    escapeHtml(r.Manager),
+    money(r.Actual),
+    money(r.Projected),
+    money(r.Straightline),
+    `<span class="badge ${perfBadgeClass(r.ActualVsProjectedPct || r.ActualVsStraightPct)}">${Math.round(num(r.ActualVsProjectedPct))}%</span>`,
+    `<span class="badge ${perfBadgeClass(r.ActualVsStraightPct)}">${Math.round(num(r.ActualVsStraightPct))}%</span>`
+  ]));
   const rows = filteredRevenue().slice().sort((a,b)=>(a.Date < b.Date ? 1 : -1)).slice(0, 40);
   buildTable($('revenueTable'), [{label:'Date'},{label:'Manager'},{label:'CostCenter'},{label:'ProjectName'},{label:'Actuals',class:'right'},{label:'Budget',class:'right'},{label:'Daily Budget',class:'right'}], rows.map(r => [escapeHtml(r.Date), escapeHtml(r.Manager), escapeHtml(r.CostCenter), escapeHtml(r.ProjectName), money(revenueActualValue(r)), money(revenueProjectedValue(r,'Monthly')), money(revenueProjectedValue(r,'Daily'))]));
   const revenueRows = filteredRevenue();
@@ -2128,7 +2148,7 @@ function managerPerformanceRows(period = state.filters.period){
   return Object.values(map).map(item => ({ ...item, ActualVsProjectedPct: item.Projected ? Math.round((item.Actual / item.Projected) * 100) : 0, ActualVsStraightPct: item.Straightline ? Math.round((item.Actual / item.Straightline) * 100) : 0 })).sort((a,b)=>a.ActualVsProjectedPct-b.ActualVsProjectedPct || a.ActualVsStraightPct-b.ActualVsStraightPct || a.Manager.localeCompare(b.Manager));
 }
 function managerPerformanceSectionRows(period = state.filters.period){ return managerPerformanceRows(period); }
-function costCenterPerformanceRows(period = state.filters.period){ return costCenterPeriodRows(period).map(item => ({ ...item, ActualVsProjectedPct: item.Projected ? Math.round((item.Actual / item.Projected) * 100) : 0, ActualVsStraightPct: item.Straightline ? Math.round((item.Actual / item.Straightline) * 100) : 0 })).sort((a,b)=>b.Actual-a.Actual || a.CostCenter.localeCompare(b.CostCenter)); }
+function costCenterPerformanceRows(period = state.filters.period){ return costCenterPeriodRows(period).map(item => ({ ...item, ActualVsProjectedPct: item.Projected ? Math.round((item.Actual / item.Projected) * 100) : 0, ActualVsStraightPct: item.Straightline ? Math.round((item.Actual / item.Straightline) * 100) : 0, SortPct: item.Projected ? Math.round((item.Actual / item.Projected) * 100) : (item.Straightline ? Math.round((item.Actual / item.Straightline) * 100) : 0) })).sort((a,b)=>num(a.SortPct)-num(b.SortPct) || num(a.ActualVsStraightPct)-num(b.ActualVsStraightPct) || a.CostCenter.localeCompare(b.CostCenter)); }
 function applyRememberedRevenueBudgets(){
   const project = $('revProjectName') ? $('revProjectName').value : '';
   const manager = $('revManager') ? $('revManager').value : '';
