@@ -74,7 +74,127 @@
     }
 
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js">
+
+/* Exact budget-source override patch */
+function managerBudgetSourceRows(){
+  return (Array.isArray(state.managerBudgets) ? state.managerBudgets : [])
+    .map(r => ({
+      Manager: text(r.ProjectManager || r['Project Manager'] || r.Manager || r.manager || rowVal(r,0)),
+      ProjectManager: text(r.ProjectManager || r['Project Manager'] || r.Manager || r.manager || rowVal(r,0)),
+      CostCenter: normalizeCostCenterName(r.CostCenter || r['Cost Center'] || r.Division || rowVal(r,1)),
+      Division: normalizeCostCenterName(r.CostCenter || r['Cost Center'] || r.Division || rowVal(r,1)),
+      ProjectName: text(r.ProjectName || r['Project Name'] || r.projectName || rowVal(r,2)),
+      ProjectedBudget: num(r['Projected budget'] ?? r['Projected Budget'] ?? r['ProjectedBudget'] ?? r.ProjectedBudget ?? r.Budget ?? r.Projected ?? rowVal(r,3)),
+      StraightlineBudget: num(r['Straightline'] ?? r['Straightline budget'] ?? r['Straightline Budget'] ?? r['StraightlineBudget'] ?? r.StraightlineBudget ?? r['Monthly Straightline Budget'] ?? rowVal(r,4)),
+      MonthlyStraightlineBudget: num(r['Straightline'] ?? r['Straightline budget'] ?? r['Straightline Budget'] ?? r['StraightlineBudget'] ?? r.StraightlineBudget ?? r['Monthly Straightline Budget'] ?? rowVal(r,4))
+    }))
+    .filter(r => r.Manager || r.ProjectName || r.CostCenter || r.ProjectedBudget || r.StraightlineBudget);
+}
+function budgetRowsFiltered(){
+  return managerBudgetSourceRows().filter(r => {
+    if (state.filters.division !== 'All' && normalizeCostCenterName(r.CostCenter || r.Division) !== state.filters.division) return false;
+    if (state.filters.manager !== 'All' && !managerNamesMatch(r.Manager || r.ProjectManager, state.filters.manager)) return false;
+    if (!filterMatchProject(r.ProjectName)) return false;
+    if (state.filters.search && !`${r.ProjectName} ${r.Manager || r.ProjectManager} ${r.CostCenter || r.Division}`.toLowerCase().includes(state.filters.search.toLowerCase())) return false;
+    return true;
+  });
+}
+function findBudgetRows(costCenter, manager, projectName){
+  const normalized = normalizeCostCenterName(costCenter);
+  return managerBudgetSourceRows().filter(r => {
+    const cc = normalizeCostCenterName(r.CostCenter || r.Division);
+    const pr = text(r.ProjectName);
+    const mg = text(r.Manager || r.ProjectManager);
+    if (projectName && pr !== text(projectName)) return false;
+    if (manager && !managerNamesMatch(mg, manager)) return false;
+    if (costCenter && cc !== normalized) return false;
+    return true;
+  });
+}
+function monthlyProjectedBudgetFor(costCenter, manager, projectName){
+  const rows = findBudgetRows(costCenter, manager, projectName);
+  if (rows.length) return rows.reduce((s,r)=>s + num(r.ProjectedBudget), 0);
+  const fallback = findBudgetRow(costCenter, manager, projectName);
+  return num(fallback ? (fallback.ProjectedBudget ?? fallback.Projected ?? fallback.Budget ?? fallback.MonthlyProjectedBudget) : 0);
+}
+function monthlyStraightlineBudgetFor(costCenter, manager, projectName){
+  const rows = findBudgetRows(costCenter, manager, projectName);
+  if (rows.length) return rows.reduce((s,r)=>s + num(r.StraightlineBudget ?? r.MonthlyStraightlineBudget), 0);
+  const fallback = findBudgetRow(costCenter, manager, projectName);
+  return num(fallback ? (fallback.StraightlineBudget ?? fallback.MonthlyStraightlineBudget ?? fallback['Straightline Budget']) : 0);
+}
+function revenueProjectedValue(r, period = state.filters.period){
+  const monthly = monthlyProjectedBudgetFor(r.CostCenter, r.Manager, r.ProjectName);
+  return scaleMonthlyBudgetForDashboard(monthly, period);
+}
+function revenueStraightlineValue(r, period = state.filters.period){
+  const monthly = monthlyStraightlineBudgetFor(r.CostCenter, r.Manager, r.ProjectName);
+  return scaleMonthlyBudgetForDashboard(monthly, period);
+}
+function groupProjectedTarget(period){
+  return budgetRowsFiltered().reduce((s,r)=>s + scaleMonthlyBudgetForDashboard(num(r.ProjectedBudget), period), 0);
+}
+function groupStraightlineTarget(period){
+  return budgetRowsFiltered().reduce((s,r)=>s + scaleMonthlyBudgetForDashboard(num(r.StraightlineBudget || r.MonthlyStraightlineBudget), period), 0);
+}
+function costCenterPeriodRows(period = state.filters.period){
+  const revenueRows = revenueRowsForPeriod(period);
+  const budgetRows = budgetRowsFiltered();
+  const map = {};
+  [...revenueRows, ...budgetRows].forEach(r => {
+    const key = normalizeCostCenterName(r.CostCenter || r.Division) || 'Unassigned';
+    if (!map[key]) map[key] = { CostCenter:key, Actual:0, Projected:0, Straightline:0 };
+  });
+  revenueRows.forEach(r => {
+    const key = normalizeCostCenterName(r.CostCenter) || 'Unassigned';
+    if (!map[key]) map[key] = { CostCenter:key, Actual:0, Projected:0, Straightline:0 };
+    map[key].Actual += revenueActualValue(r);
+  });
+  budgetRows.forEach(r => {
+    const key = normalizeCostCenterName(r.CostCenter || r.Division) || 'Unassigned';
+    if (!map[key]) map[key] = { CostCenter:key, Actual:0, Projected:0, Straightline:0 };
+    map[key].Projected += scaleMonthlyBudgetForDashboard(num(r.ProjectedBudget), period);
+    map[key].Straightline += scaleMonthlyBudgetForDashboard(num(r.StraightlineBudget || r.MonthlyStraightlineBudget), period);
+  });
+  return Object.values(map).sort((a,b)=>num(a.ActualVsProjectedPct)-num(b.ActualVsProjectedPct) || a.CostCenter.localeCompare(b.CostCenter));
+}
+function managerPerformanceRows(period = state.filters.period){
+  const revenueRows = revenueRowsForPeriod(period);
+  const budgetRows = budgetRowsFiltered();
+  const map = {};
+  const ensureManager = (name) => {
+    const display = text(name) || 'Unassigned';
+    const alias = managerNameAlias(display);
+    const existingKey = Object.keys(map).find(k => managerNameAlias(k) === alias);
+    const key = existingKey || display;
+    if (!map[key]) map[key] = { Manager:key, Actual:0, Projected:0, Straightline:0 };
+    return key;
+  };
+  [...revenueRows.map(r=>text(r.Manager)), ...budgetRows.map(r=>text(r.Manager || r.ProjectManager)), ...state.projects.map(r=>text(r.Manager))].filter(Boolean).forEach(ensureManager);
+  revenueRows.forEach(r => {
+    const key = ensureManager(r.Manager);
+    map[key].Actual += revenueActualValue(r);
+  });
+  budgetRows.forEach(r => {
+    const key = ensureManager(r.Manager || r.ProjectManager);
+    map[key].Projected += scaleMonthlyBudgetForDashboard(num(r.ProjectedBudget), period);
+    map[key].Straightline += scaleMonthlyBudgetForDashboard(num(r.StraightlineBudget || r.MonthlyStraightlineBudget), period);
+  });
+  return Object.values(map)
+    .map(item => ({ ...item, ActualVsProjectedPct: item.Projected ? Math.round((item.Actual / item.Projected) * 100) : 0, ActualVsStraightPct: item.Straightline ? Math.round((item.Actual / item.Straightline) * 100) : 0 }))
+    .sort((a,b)=>a.ActualVsProjectedPct-b.ActualVsProjectedPct || a.ActualVsStraightPct-b.ActualVsStraightPct || a.Manager.localeCompare(b.Manager));
+}
+function managerPerformanceSectionRows(period = state.filters.period){ return managerPerformanceRows(period); }
+function costCenterPerformanceRows(period = state.filters.period){
+  return costCenterPeriodRows(period)
+    .map(item => ({ ...item, ActualVsProjectedPct: item.Projected ? Math.round((item.Actual / item.Projected) * 100) : 0, ActualVsStraightPct: item.Straightline ? Math.round((item.Actual / item.Straightline) * 100) : 0, SortPct: item.Projected ? Math.round((item.Actual / item.Projected) * 100) : (item.Straightline ? Math.round((item.Actual / item.Straightline) * 100) : 0) }))
+    .sort((a,b)=>num(a.SortPct)-num(b.SortPct) || num(a.ActualVsStraightPct)-num(b.ActualVsStraightPct) || a.CostCenter.localeCompare(b.CostCenter));
+}
+function monthlyStraightlineForRevenue(costCenter, manager, projectName, dateValue){ return monthlyStraightlineBudgetFor(costCenter, manager, projectName); }
+function monthlyProjectedForRevenue(costCenter, manager, projectName, dateValue){ return monthlyProjectedBudgetFor(costCenter, manager, projectName); }
+
+</script>
 </head>
 <body>
   <div id="toastWrap" class="toast-wrap"></div>
@@ -2187,6 +2307,126 @@ function wireFilters(){ $('periodFilter').onchange = e => { state.filters.period
 function monthlyStraightlineForRevenue(costCenter, manager, projectName, dateValue){ return monthlyStraightlineBudgetFor(costCenter, manager, projectName); }
 function init(){ bindTabs(); wireFilters(); wireProjectAdders(); wireExecutiveExports(); $('testBtn').onclick = () => quickConnectionTest(); $('refreshBtn').onclick = () => loadData(); $('saveRevenueBtn').onclick = saveRevenue; $('saveProjectBtn').onclick = saveProject; $('saveInvoiceBtn').onclick = saveInvoice; $('savePaymentBtn').onclick = savePaymentReceived; $('revDate').value = $('projCreatedAt').value = $('invDate').value = $('payDate').value = todayISO(); $('periodFilter').innerHTML = PERIODS.map(p=>`<option ${p===state.filters.period?'selected':''}>${p}</option>`).join(''); if ($('revProjectName')) $('revProjectName').addEventListener('change', applyRememberedRevenueBudgets); if ($('revManager')) $('revManager').addEventListener('change', applyRememberedRevenueBudgets); if ($('revCostCenter')) $('revCostCenter').addEventListener('change', applyRememberedRevenueBudgets); $('diagnostics').textContent = 'Waiting for first load...'; loadData(); }
 document.addEventListener('DOMContentLoaded', init);
+
+
+/* Exact budget-source override patch */
+function managerBudgetSourceRows(){
+  return (Array.isArray(state.managerBudgets) ? state.managerBudgets : [])
+    .map(r => ({
+      Manager: text(r.ProjectManager || r['Project Manager'] || r.Manager || r.manager || rowVal(r,0)),
+      ProjectManager: text(r.ProjectManager || r['Project Manager'] || r.Manager || r.manager || rowVal(r,0)),
+      CostCenter: normalizeCostCenterName(r.CostCenter || r['Cost Center'] || r.Division || rowVal(r,1)),
+      Division: normalizeCostCenterName(r.CostCenter || r['Cost Center'] || r.Division || rowVal(r,1)),
+      ProjectName: text(r.ProjectName || r['Project Name'] || r.projectName || rowVal(r,2)),
+      ProjectedBudget: num(r['Projected budget'] ?? r['Projected Budget'] ?? r['ProjectedBudget'] ?? r.ProjectedBudget ?? r.Budget ?? r.Projected ?? rowVal(r,3)),
+      StraightlineBudget: num(r['Straightline'] ?? r['Straightline budget'] ?? r['Straightline Budget'] ?? r['StraightlineBudget'] ?? r.StraightlineBudget ?? r['Monthly Straightline Budget'] ?? rowVal(r,4)),
+      MonthlyStraightlineBudget: num(r['Straightline'] ?? r['Straightline budget'] ?? r['Straightline Budget'] ?? r['StraightlineBudget'] ?? r.StraightlineBudget ?? r['Monthly Straightline Budget'] ?? rowVal(r,4))
+    }))
+    .filter(r => r.Manager || r.ProjectName || r.CostCenter || r.ProjectedBudget || r.StraightlineBudget);
+}
+function budgetRowsFiltered(){
+  return managerBudgetSourceRows().filter(r => {
+    if (state.filters.division !== 'All' && normalizeCostCenterName(r.CostCenter || r.Division) !== state.filters.division) return false;
+    if (state.filters.manager !== 'All' && !managerNamesMatch(r.Manager || r.ProjectManager, state.filters.manager)) return false;
+    if (!filterMatchProject(r.ProjectName)) return false;
+    if (state.filters.search && !`${r.ProjectName} ${r.Manager || r.ProjectManager} ${r.CostCenter || r.Division}`.toLowerCase().includes(state.filters.search.toLowerCase())) return false;
+    return true;
+  });
+}
+function findBudgetRows(costCenter, manager, projectName){
+  const normalized = normalizeCostCenterName(costCenter);
+  return managerBudgetSourceRows().filter(r => {
+    const cc = normalizeCostCenterName(r.CostCenter || r.Division);
+    const pr = text(r.ProjectName);
+    const mg = text(r.Manager || r.ProjectManager);
+    if (projectName && pr !== text(projectName)) return false;
+    if (manager && !managerNamesMatch(mg, manager)) return false;
+    if (costCenter && cc !== normalized) return false;
+    return true;
+  });
+}
+function monthlyProjectedBudgetFor(costCenter, manager, projectName){
+  const rows = findBudgetRows(costCenter, manager, projectName);
+  if (rows.length) return rows.reduce((s,r)=>s + num(r.ProjectedBudget), 0);
+  const fallback = findBudgetRow(costCenter, manager, projectName);
+  return num(fallback ? (fallback.ProjectedBudget ?? fallback.Projected ?? fallback.Budget ?? fallback.MonthlyProjectedBudget) : 0);
+}
+function monthlyStraightlineBudgetFor(costCenter, manager, projectName){
+  const rows = findBudgetRows(costCenter, manager, projectName);
+  if (rows.length) return rows.reduce((s,r)=>s + num(r.StraightlineBudget ?? r.MonthlyStraightlineBudget), 0);
+  const fallback = findBudgetRow(costCenter, manager, projectName);
+  return num(fallback ? (fallback.StraightlineBudget ?? fallback.MonthlyStraightlineBudget ?? fallback['Straightline Budget']) : 0);
+}
+function revenueProjectedValue(r, period = state.filters.period){
+  const monthly = monthlyProjectedBudgetFor(r.CostCenter, r.Manager, r.ProjectName);
+  return scaleMonthlyBudgetForDashboard(monthly, period);
+}
+function revenueStraightlineValue(r, period = state.filters.period){
+  const monthly = monthlyStraightlineBudgetFor(r.CostCenter, r.Manager, r.ProjectName);
+  return scaleMonthlyBudgetForDashboard(monthly, period);
+}
+function groupProjectedTarget(period){
+  return budgetRowsFiltered().reduce((s,r)=>s + scaleMonthlyBudgetForDashboard(num(r.ProjectedBudget), period), 0);
+}
+function groupStraightlineTarget(period){
+  return budgetRowsFiltered().reduce((s,r)=>s + scaleMonthlyBudgetForDashboard(num(r.StraightlineBudget || r.MonthlyStraightlineBudget), period), 0);
+}
+function costCenterPeriodRows(period = state.filters.period){
+  const revenueRows = revenueRowsForPeriod(period);
+  const budgetRows = budgetRowsFiltered();
+  const map = {};
+  [...revenueRows, ...budgetRows].forEach(r => {
+    const key = normalizeCostCenterName(r.CostCenter || r.Division) || 'Unassigned';
+    if (!map[key]) map[key] = { CostCenter:key, Actual:0, Projected:0, Straightline:0 };
+  });
+  revenueRows.forEach(r => {
+    const key = normalizeCostCenterName(r.CostCenter) || 'Unassigned';
+    if (!map[key]) map[key] = { CostCenter:key, Actual:0, Projected:0, Straightline:0 };
+    map[key].Actual += revenueActualValue(r);
+  });
+  budgetRows.forEach(r => {
+    const key = normalizeCostCenterName(r.CostCenter || r.Division) || 'Unassigned';
+    if (!map[key]) map[key] = { CostCenter:key, Actual:0, Projected:0, Straightline:0 };
+    map[key].Projected += scaleMonthlyBudgetForDashboard(num(r.ProjectedBudget), period);
+    map[key].Straightline += scaleMonthlyBudgetForDashboard(num(r.StraightlineBudget || r.MonthlyStraightlineBudget), period);
+  });
+  return Object.values(map).sort((a,b)=>num(a.ActualVsProjectedPct)-num(b.ActualVsProjectedPct) || a.CostCenter.localeCompare(b.CostCenter));
+}
+function managerPerformanceRows(period = state.filters.period){
+  const revenueRows = revenueRowsForPeriod(period);
+  const budgetRows = budgetRowsFiltered();
+  const map = {};
+  const ensureManager = (name) => {
+    const display = text(name) || 'Unassigned';
+    const alias = managerNameAlias(display);
+    const existingKey = Object.keys(map).find(k => managerNameAlias(k) === alias);
+    const key = existingKey || display;
+    if (!map[key]) map[key] = { Manager:key, Actual:0, Projected:0, Straightline:0 };
+    return key;
+  };
+  [...revenueRows.map(r=>text(r.Manager)), ...budgetRows.map(r=>text(r.Manager || r.ProjectManager)), ...state.projects.map(r=>text(r.Manager))].filter(Boolean).forEach(ensureManager);
+  revenueRows.forEach(r => {
+    const key = ensureManager(r.Manager);
+    map[key].Actual += revenueActualValue(r);
+  });
+  budgetRows.forEach(r => {
+    const key = ensureManager(r.Manager || r.ProjectManager);
+    map[key].Projected += scaleMonthlyBudgetForDashboard(num(r.ProjectedBudget), period);
+    map[key].Straightline += scaleMonthlyBudgetForDashboard(num(r.StraightlineBudget || r.MonthlyStraightlineBudget), period);
+  });
+  return Object.values(map)
+    .map(item => ({ ...item, ActualVsProjectedPct: item.Projected ? Math.round((item.Actual / item.Projected) * 100) : 0, ActualVsStraightPct: item.Straightline ? Math.round((item.Actual / item.Straightline) * 100) : 0 }))
+    .sort((a,b)=>a.ActualVsProjectedPct-b.ActualVsProjectedPct || a.ActualVsStraightPct-b.ActualVsStraightPct || a.Manager.localeCompare(b.Manager));
+}
+function managerPerformanceSectionRows(period = state.filters.period){ return managerPerformanceRows(period); }
+function costCenterPerformanceRows(period = state.filters.period){
+  return costCenterPeriodRows(period)
+    .map(item => ({ ...item, ActualVsProjectedPct: item.Projected ? Math.round((item.Actual / item.Projected) * 100) : 0, ActualVsStraightPct: item.Straightline ? Math.round((item.Actual / item.Straightline) * 100) : 0, SortPct: item.Projected ? Math.round((item.Actual / item.Projected) * 100) : (item.Straightline ? Math.round((item.Actual / item.Straightline) * 100) : 0) }))
+    .sort((a,b)=>num(a.SortPct)-num(b.SortPct) || num(a.ActualVsStraightPct)-num(b.ActualVsStraightPct) || a.CostCenter.localeCompare(b.CostCenter));
+}
+function monthlyStraightlineForRevenue(costCenter, manager, projectName, dateValue){ return monthlyStraightlineBudgetFor(costCenter, manager, projectName); }
+function monthlyProjectedForRevenue(costCenter, manager, projectName, dateValue){ return monthlyProjectedBudgetFor(costCenter, manager, projectName); }
+
 </script>
 </body>
 </html>
