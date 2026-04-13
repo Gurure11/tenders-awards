@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Onpoint Group Dashboard</title>
   <style>
-    :root{--bg:#f5f7fb;--card:#fff;--line:#dbe2ea;--text:#122033;--muted:#5f7187;--primary:#0f172a;--green:#15803d;--amber:#b45309;--red:#b91c1c;--green-bg:#dcfce7;--amber-bg:#fef3c7;--red-bg:#fee2e2;--shadow:0 12px 30px rgba(15,23,42,.08)}
+    :root{--bg:#eef4ff;--card:#ffffff;--line:#cfe0ff;--text:#122033;--muted:#58708f;--primary:#0b3b91;--primary-2:#1d4ed8;--primary-soft:#dbeafe;--green:#15803d;--amber:#b45309;--red:#b91c1c;--green-bg:#dcfce7;--amber-bg:#fef3c7;--red-bg:#fee2e2;--shadow:0 16px 34px rgba(29,78,216,.10)}
     *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 Arial,sans-serif}
     .wrap{max-width:1500px;margin:0 auto;padding:18px}.card{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:18px}
     .topbar,.hero,.grid,.form-grid,.kpis,.tabs,.toolbar,.stats,.progress-cards{display:grid;gap:14px}
@@ -72,6 +72,32 @@
       transition: 0.7;
       opacity: 0.6;
     }
+
+  
+    .topbar{background:linear-gradient(135deg,#0b3b91 0%,#1d4ed8 58%,#60a5fa 100%);border-color:#2563eb;color:#fff}
+    .topbar .muted,.topbar h1{color:#fff}
+    .hero{background:linear-gradient(180deg,#f8fbff 0%,#eef5ff 100%);border:1px solid #d7e7ff;border-radius:22px;padding:16px;box-shadow:var(--shadow)}
+    .toolbar{align-items:end}
+    .card{backdrop-filter:blur(4px)}
+    .tab{background:#eaf2ff;border-color:#cfe0ff;color:#10356f}
+    .tab.active{background:linear-gradient(180deg,#ffffff 0%,#f6faff 100%);border-color:#93c5fd;color:#0b3b91;box-shadow:0 10px 20px rgba(29,78,216,.08)}
+    .kpi{background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);border-color:#d7e7ff}
+    .kpi .value{color:#0b3b91}
+    .table-wrap, .progress-card, .exec-card{border-color:#d7e7ff}
+    input,select,button,textarea{border-color:#cfe0ff}
+    input:focus,select:focus,textarea:focus{outline:none;border-color:#60a5fa;box-shadow:0 0 0 4px rgba(96,165,250,.18)}
+    button{background:linear-gradient(135deg,#0b3b91 0%,#1d4ed8 100%)}
+    .secondary{background:#f8fbff;color:#10356f;border:1px solid #cfe0ff}
+    .progress>div{background:linear-gradient(90deg,#0b3b91 0%,#2563eb 100%)}
+    .progress.alt>div{background:linear-gradient(90deg,#60a5fa 0%,#93c5fd 100%)}
+    .section-chip{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:#eaf2ff;color:#0b3b91;font-size:12px;font-weight:700;margin-bottom:12px}
+    .revenue-form-shell{background:linear-gradient(180deg,#ffffff 0%,#f7fbff 100%);border:1px solid #d7e7ff;border-radius:20px;padding:16px}
+    .reason-box{grid-column:span 12;border:1px solid #d7e7ff;border-radius:18px;background:#f8fbff;padding:14px}
+    .reason-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+    .check-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #d7e7ff;border-radius:14px;background:#fff}
+    .check-item input{width:auto;margin:0}
+    .subtle-title{margin:0 0 10px;font-size:13px;font-weight:700;color:#0b3b91;text-transform:uppercase;letter-spacing:.06em}
+    @media (max-width:1100px){.reason-grid{grid-template-columns:1fr}}
 
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -188,18 +214,35 @@
 
     <div class="panel" id="revenuePanel">
       <div class="card">
+        <div class="section-chip">Daily revenue input</div>
         <h3 style="margin-top:0">Save Daily Revenue</h3>
-        <div class="form-grid">
-          <div class="field span-2"><label>Date</label><input id="revDate" type="date"></div>
-          <div class="field span-3"><label>Manager</label><select id="revManager"></select></div>
-          <div class="field span-3"><label>Cost Center</label><select id="revCostCenter"></select></div>
-          <div class="field span-4"><label>Project Name</label><select id="revProjectName"></select></div>
-          <div class="field span-2"><label>Actuals</label><input id="revAmount" type="number" min="0" step="0.01"></div>
-          <div class="field span-2"><label>Budget</label><input id="revBudget" type="number" min="0" step="0.01"></div>
-          <div class="field span-2"><label>Daily Budget</label><input id="revDailyBudget" type="number" min="0" step="0.01"></div>
-          <div class="field span-2"><label>Quality</label><input id="revQuality" type="number" min="0" max="100" value="80"></div>
-          <div class="field span-2"><label>Safety</label><input id="revSafety" type="number" min="0" value="0"></div>
-          <div class="field span-12"><button id="saveRevenueBtn" type="button">Save Daily Revenue</button></div>
+        <div class="revenue-form-shell">
+          <div class="form-grid">
+            <div class="field span-2"><label>Date</label><input id="revDate" type="date"></div>
+            <div class="field span-3"><label>Manager</label><select id="revManager"></select></div>
+            <div class="field span-3"><label>Cost Center</label><select id="revCostCenter"></select></div>
+            <div class="field span-4"><label>Project Name</label><select id="revProjectName"></select></div>
+            <div class="field span-2"><label>Actuals</label><input id="revAmount" type="number" min="0" step="0.01"></div>
+            <div class="field span-2"><label>Budget</label><input id="revBudget" type="number" min="0" step="0.01"></div>
+            <div class="field span-2"><label>Daily Budget</label><input id="revDailyBudget" type="number" min="0" step="0.01"></div>
+            <div class="field span-2"><label>Quality</label><input id="revQuality" type="number" min="0" max="100" value="80"></div>
+            <div class="field span-2"><label>Safety</label><input id="revSafety" type="number" min="0" value="0"></div>
+            <div class="reason-box">
+              <div class="subtle-title">Target not reached comments</div>
+              <div class="reason-grid">
+                <label class="check-item"><input id="revReasonRainfall" type="checkbox"> <span>Rainfall</span></label>
+                <label class="check-item"><input id="revReasonBadWeather" type="checkbox"> <span>Bad weather</span></label>
+                <label class="check-item"><input id="revReasonShortage" type="checkbox"> <span>Shortage of material</span></label>
+                <label class="check-item"><input id="revReasonDelay" type="checkbox"> <span>Delay in supplies</span></label>
+                <label class="check-item"><input id="revReasonPlanning" type="checkbox"> <span>Poor planning</span></label>
+              </div>
+              <div class="form-grid" style="margin-top:12px">
+                <div class="field span-12"><label>Comment</label><textarea id="revComment" rows="3" placeholder="Add a comment or explain why target was not reached"></textarea></div>
+                <div class="field span-12"><label>Additional reason</label><input id="revReasonOther" placeholder="Type any other reason here"></div>
+              </div>
+            </div>
+            <div class="field span-12"><button id="saveRevenueBtn" type="button">Save Daily Revenue</button></div>
+          </div>
         </div>
       </div>
       <div class="card" style="margin-top:16px"><h3 style="margin-top:0">Revenue Summary</h3><div id="revenueStats" class="stats"></div></div>
@@ -262,8 +305,8 @@
   </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyGtrADfCsYr2WuMBsuuyCLHNKvZVjYMcRMaTqBxKsm08q1-UzQr3FEVoxSsiZnwROL/exec';
-const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbyGtrADfCsYr2WuMBsuuyCLHNKvZVjYMcRMaTqBxKsm08q1-UzQr3FEVoxSsiZnwROL/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw5OXuG_NyXtkeS0X36xp2v5Hl8E_R_dH-ibPSFt5ke8eR2vgHjoAjISkQ4o7ekFKRH/exec';
+const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbw5OXuG_NyXtkeS0X36xp2v5Hl8E_R_dH-ibPSFt5ke8eR2vgHjoAjISkQ4o7ekFKRH/exec';
 const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
 const EXECUTIVE_AVG_GROSS_MARGIN_PCT = 31.66;
 const EXECUTIVE_PIE_COLORS = ['#0f172a','#1d4ed8','#15803d','#b45309','#b91c1c','#7c3aed','#0891b2','#ea580c','#16a34a','#be185d'];
@@ -1545,6 +1588,32 @@ function executiveReportHtml(){
     .muted{color:#5f7187}.right{text-align:right}
     img{display:block;max-width:100%;page-break-inside:avoid}
     @media print{body{margin:12mm}.card,.table-wrap{box-shadow:none} }
+  
+    .topbar{background:linear-gradient(135deg,#0b3b91 0%,#1d4ed8 58%,#60a5fa 100%);border-color:#2563eb;color:#fff}
+    .topbar .muted,.topbar h1{color:#fff}
+    .hero{background:linear-gradient(180deg,#f8fbff 0%,#eef5ff 100%);border:1px solid #d7e7ff;border-radius:22px;padding:16px;box-shadow:var(--shadow)}
+    .toolbar{align-items:end}
+    .card{backdrop-filter:blur(4px)}
+    .tab{background:#eaf2ff;border-color:#cfe0ff;color:#10356f}
+    .tab.active{background:linear-gradient(180deg,#ffffff 0%,#f6faff 100%);border-color:#93c5fd;color:#0b3b91;box-shadow:0 10px 20px rgba(29,78,216,.08)}
+    .kpi{background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);border-color:#d7e7ff}
+    .kpi .value{color:#0b3b91}
+    .table-wrap, .progress-card, .exec-card{border-color:#d7e7ff}
+    input,select,button,textarea{border-color:#cfe0ff}
+    input:focus,select:focus,textarea:focus{outline:none;border-color:#60a5fa;box-shadow:0 0 0 4px rgba(96,165,250,.18)}
+    button{background:linear-gradient(135deg,#0b3b91 0%,#1d4ed8 100%)}
+    .secondary{background:#f8fbff;color:#10356f;border:1px solid #cfe0ff}
+    .progress>div{background:linear-gradient(90deg,#0b3b91 0%,#2563eb 100%)}
+    .progress.alt>div{background:linear-gradient(90deg,#60a5fa 0%,#93c5fd 100%)}
+    .section-chip{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:#eaf2ff;color:#0b3b91;font-size:12px;font-weight:700;margin-bottom:12px}
+    .revenue-form-shell{background:linear-gradient(180deg,#ffffff 0%,#f7fbff 100%);border:1px solid #d7e7ff;border-radius:20px;padding:16px}
+    .reason-box{grid-column:span 12;border:1px solid #d7e7ff;border-radius:18px;background:#f8fbff;padding:14px}
+    .reason-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+    .check-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #d7e7ff;border-radius:14px;background:#fff}
+    .check-item input{width:auto;margin:0}
+    .subtle-title{margin:0 0 10px;font-size:13px;font-weight:700;color:#0b3b91;text-transform:uppercase;letter-spacing:.06em}
+    @media (max-width:1100px){.reason-grid{grid-template-columns:1fr}}
+
   </style></head><body><h1>${escapeHtml(title)}</h1><div class="muted" style="margin-bottom:14px">Generated on ${escapeHtml(new Date().toLocaleString())}</div>${clone.innerHTML}</body></html>`;
 }
 function exportExecutivePdf(){
