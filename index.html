@@ -423,6 +423,16 @@ async function fetchLoginUsers(){
 function isRegisterSectionExpanded(){
   return $('registerSection')?.classList.contains('expanded');
 }
+function setRegisterButtonState(){
+  const btn = $('registerBtn');
+  if (!btn) return;
+  btn.textContent = isRegisterSectionExpanded() ? 'Submit Registration' : 'Register User';
+}
+function showLoginFeedback(message, type='error', useAlert=false){
+  if ($('loginMessage')) $('loginMessage').textContent = message;
+  showToast(message, type);
+  if (useAlert) alert(message);
+}
 function toggleRegisterSection(forceState){
   const section = $('registerSection');
   const card = $('loginCard');
@@ -430,6 +440,7 @@ function toggleRegisterSection(forceState){
   const shouldExpand = typeof forceState === 'boolean' ? forceState : !section.classList.contains('expanded');
   section.classList.toggle('expanded', shouldExpand);
   if (card) card.classList.toggle('expanded', shouldExpand);
+  setRegisterButtonState();
   return shouldExpand;
 }
 async function handleRegisterButton(){
@@ -446,11 +457,11 @@ async function registerUser(){
   const password=text($('registerPassword')?.value);
   const confirmPassword=text($('registerConfirmPassword')?.value);
   const role=text($('registerRole')?.value || 'user');
-  if(!displayName || !username || !password || !confirmPassword){ $('loginMessage').textContent='Complete all registration fields.'; showToast('Complete all registration fields','error'); return; }
-  if(password !== confirmPassword){ $('loginMessage').textContent='Passwords do not match.'; showToast('Passwords do not match','error'); return; }
-  if(password.length < 4){ $('loginMessage').textContent='Password must be at least 4 characters.'; showToast('Password must be at least 4 characters','error'); return; }
+  if(!displayName || !username || !password || !confirmPassword){ showLoginFeedback('Complete all registration fields.', 'error', true); return; }
+  if(password !== confirmPassword){ showLoginFeedback('Passwords do not match.', 'error', true); return; }
+  if(password.length < 4){ showLoginFeedback('Password must be at least 4 characters.', 'error', true); return; }
   const users = await fetchLoginUsers();
-  if (users.some(u => lower(u.username)===lower(username))) { $('loginMessage').textContent='That username already exists.'; showToast('That username already exists','error'); return; }
+  if (users.some(u => lower(u.username)===lower(username))) { showLoginFeedback('That username already exists.', 'error', true); return; }
   const newUser = { username, password, role, displayName, isActive:true };
   mergeLoginUsers([newUser]);
   state.logins = mergeLoginUsers([]);
@@ -465,15 +476,16 @@ async function registerUser(){
   if ($('registerUsername')) $('registerUsername').value = '';
   if ($('registerPassword')) $('registerPassword').value = '';
   if ($('registerConfirmPassword')) $('registerConfirmPassword').value = '';
-  $('loginMessage').textContent = savedToSheet ? 'User registered successfully and saved to the Login tab.' : 'User registered successfully in the browser. Apps Script registerUser action is still required for Login tab sync.';
-  showToast(savedToSheet ? 'User registered successfully' : 'User registered locally; Login tab sync still needs Apps Script', savedToSheet ? 'success' : 'info');
+  const msg = savedToSheet ? 'User registered successfully and saved to the Login tab.' : 'User registered successfully in the browser. Apps Script registerUser action is still required for Login tab sync.';
+  showLoginFeedback(msg, savedToSheet ? 'success' : 'info', false);
   toggleRegisterSection(false);
 }
 async function handleLogin(){
   const username=text($('loginUsername')?.value);
   const password=text($('loginPassword')?.value);
-  if(!username || !password){ $('loginMessage').textContent='Enter username and password.'; return; }
+  if(!username || !password){ showLoginFeedback('Enter username and password.', 'error', true); return; }
   const users = await fetchLoginUsers();
+  const userExists = users.find(u => lower(u.username)===lower(username));
   let matched = users.find(u => lower(u.username)===lower(username) && u.password===password && u.isActive);
   if (!matched) {
     try {
@@ -485,13 +497,21 @@ async function handleLogin(){
       }
     } catch(e) { log('loginUser action unavailable', e.message); }
   }
-  if (!matched) { $('loginMessage').textContent='Login failed. Please check Login tab credentials or register the user first.'; showToast('Login failed','error'); return; }
+  if (!matched) {
+    if (!userExists) {
+      showLoginFeedback('User not registered. Please register the user first.', 'error', true);
+    } else if (userExists && !userExists.isActive) {
+      showLoginFeedback('This user is inactive. Please contact the administrator.', 'error', true);
+    } else {
+      showLoginFeedback('Wrong password. Please try again.', 'error', true);
+    }
+    return;
+  }
   setCurrentUser({ username:matched.username, name:matched.displayName, displayName:matched.displayName, role:matched.role });
   $('loginOverlay').classList.add('login-hidden');
   $('logoutBtn').classList.remove('login-hidden');
   $('loginPassword').value='';
-  $('loginMessage').textContent=`Logged in as ${matched.displayName} (${matched.role})`;
-  showToast(`Welcome ${matched.displayName}`,'success');
+  showLoginFeedback(`Logged in as ${matched.displayName} (${matched.role})`, 'success', false);
   renderAll();
 }
 function logoutUser(){ setCurrentUser(null); $('loginOverlay').classList.remove('login-hidden'); $('logoutBtn').classList.add('login-hidden'); $('loginMessage').textContent='Please sign in to continue.'; renderAll(); }
@@ -2492,7 +2512,7 @@ function wireFilters(){ $('periodFilter').onchange = e => { state.filters.period
 function monthlyStraightlineForRevenue(costCenter, manager, projectName, dateValue){ return monthlyStraightlineBudgetFor(costCenter, manager, projectName); }
 function updateDashboardClock(){ const el = $('dashboardClockTime'); if (!el) return; const now = new Date(); el.textContent = now.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}); }
 function startDashboardClock(){ updateDashboardClock(); if (window.dashboardClockTimer) clearInterval(window.dashboardClockTimer); window.dashboardClockTimer = setInterval(updateDashboardClock, 1000); }
-function init(){ restoreSessionUser(); mergeLoginUsers([]); bindTabs(); wireFilters(); wireProjectAdders(); wireExecutiveExports(); startDashboardClock(); $('testBtn').onclick = () => quickConnectionTest(); $('refreshBtn').onclick = () => loadData(); $('saveRevenueBtn').onclick = saveRevenue; $('saveProjectBtn').onclick = saveProject; $('saveInvoiceBtn').onclick = saveInvoice; $('savePaymentBtn').onclick = savePaymentReceived; if ($('loginBtn')) $('loginBtn').onclick = handleLogin; if ($('registerBtn')) $('registerBtn').onclick = handleRegisterButton; if ($('logoutBtn')) $('logoutBtn').onclick = logoutUser; if ($('loginPassword')) $('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); }); if ($('loginUsername')) $('loginUsername').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); }); ['registerName','registerUsername','registerPassword','registerConfirmPassword'].forEach(id => { if ($(id)) $(id).addEventListener('keydown', e => { if (e.key === 'Enter') registerUser(); }); }); $('revDate').value = $('projCreatedAt').value = $('invDate').value = $('payDate').value = todayISO(); $('periodFilter').innerHTML = PERIODS.map(p=>`<option ${p===state.filters.period?'selected':''}>${p}</option>`).join(''); if ($('revProjectName')) $('revProjectName').addEventListener('change', applyRememberedRevenueBudgets); if ($('revManager')) $('revManager').addEventListener('change', applyRememberedRevenueBudgets); if ($('revCostCenter')) $('revCostCenter').addEventListener('change', applyRememberedRevenueBudgets); $('diagnostics').textContent = 'Waiting for first load...'; applyRolePermissions(); loadData().then(() => { if (state.currentUser) $('loginOverlay').classList.add('login-hidden'); }); }
+function init(){ restoreSessionUser(); mergeLoginUsers([]); bindTabs(); wireFilters(); wireProjectAdders(); wireExecutiveExports(); startDashboardClock(); $('testBtn').onclick = () => quickConnectionTest(); $('refreshBtn').onclick = () => loadData(); $('saveRevenueBtn').onclick = saveRevenue; $('saveProjectBtn').onclick = saveProject; $('saveInvoiceBtn').onclick = saveInvoice; $('savePaymentBtn').onclick = savePaymentReceived; if ($('loginBtn')) $('loginBtn').onclick = handleLogin; if ($('registerBtn')) $('registerBtn').onclick = handleRegisterButton; if ($('logoutBtn')) $('logoutBtn').onclick = logoutUser; if ($('loginPassword')) $('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); }); if ($('loginUsername')) $('loginUsername').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); }); ['registerName','registerUsername','registerPassword','registerConfirmPassword'].forEach(id => { if ($(id)) $(id).addEventListener('keydown', e => { if (e.key === 'Enter') registerUser(); }); }); $('revDate').value = $('projCreatedAt').value = $('invDate').value = $('payDate').value = todayISO(); $('periodFilter').innerHTML = PERIODS.map(p=>`<option ${p===state.filters.period?'selected':''}>${p}</option>`).join(''); if ($('revProjectName')) $('revProjectName').addEventListener('change', applyRememberedRevenueBudgets); if ($('revManager')) $('revManager').addEventListener('change', applyRememberedRevenueBudgets); if ($('revCostCenter')) $('revCostCenter').addEventListener('change', applyRememberedRevenueBudgets); $('diagnostics').textContent = 'Waiting for first load...'; applyRolePermissions(); setRegisterButtonState(); loadData().then(() => { if (state.currentUser) $('loginOverlay').classList.add('login-hidden'); }); }
 document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
