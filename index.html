@@ -437,6 +437,37 @@ function showLoginFeedback(message, type='error', useAlert=false){
   showToast(message, type);
   if (useAlert) alert(message);
 }
+
+function normaliseUserFacingAuthMessage(message, fallback='Request failed.'){
+  const msg = String(message || '').trim();
+  const low = msg.toLowerCase();
+  if (!msg) return fallback;
+  if (low.includes('not registered') || low.includes('no user') || low.includes('user not found')) return 'User not registered. Please create the user first.';
+  if (low.includes('wrong password') || low.includes('invalid password') || low.includes('incorrect password') || low.includes('invalid credentials')) return 'Wrong password.';
+  if (low.includes('inactive')) return 'User inactive. Please contact administrator.';
+  if (low.includes('timeout')) return 'Synchronising timed out. Please try again.';
+  return msg;
+}
+function setButtonBusy(buttonId, busyText, isBusy){
+  const btn = $(buttonId);
+  if (!btn) return () => {};
+  const oldText = btn.dataset.originalText || btn.textContent;
+  if (!btn.dataset.originalText) btn.dataset.originalText = oldText;
+  if (isBusy) {
+    btn.textContent = busyText;
+    btn.disabled = true;
+    btn.classList.add('btn-loading');
+  } else {
+    btn.textContent = oldText;
+    btn.disabled = false;
+    btn.classList.remove('btn-loading');
+  }
+  return () => {
+    btn.textContent = oldText;
+    btn.disabled = false;
+    btn.classList.remove('btn-loading');
+  };
+}
 function toggleRegisterSection(forceState){
   const section = $('registerSection');
   const card = $('loginCard');
@@ -463,10 +494,12 @@ async function registerUser(){
   if(!displayName || !username || !password || !confirmPassword){ showLoginFeedback('Complete all registration fields.', 'error', true); return; }
   if(password !== confirmPassword){ showLoginFeedback('Passwords do not match.', 'error', true); return; }
   if(password.length < 6){ showLoginFeedback('Password must be at least 6 characters.', 'error', true); return; }
+  const done = setButtonBusy('registerBtn', '⟳ Synchronising user...', true);
+  showLoginFeedback('Synchronising new user registration...', 'info', false);
   let users = [];
-  try { users = await fetchLoginUsers(); } catch (e) { showLoginFeedback(`Could not check existing users. ${e.message}`, 'error', true); return; }
-  if (users.some(u => lower(u.username)===lower(username))) { showLoginFeedback('That username already exists.', 'error', true); return; }
   try {
+    users = await fetchLoginUsers();
+    if (users.some(u => lower(u.username)===lower(username))) { showLoginFeedback('That username already exists.', 'error', true); return; }
     const res = await postAction({ action:'registerUser', targetSpreadsheetId:LOGIN_TAB_SHEET_ID, spreadsheetId:LOGIN_TAB_SHEET_ID, workbookName:'Manager Dashboard', sheetName:'Manager Dashboard', tabName:'Login', targetTab:'Login', username, password, role, name:displayName, active:true });
     if ($('loginUsername')) $('loginUsername').value = username;
     if ($('loginPassword')) $('loginPassword').value = '';
@@ -475,29 +508,39 @@ async function registerUser(){
     if ($('registerPassword')) $('registerPassword').value = '';
     if ($('registerConfirmPassword')) $('registerConfirmPassword').value = '';
     await fetchLoginUsers();
-    showLoginFeedback(res.message || 'User registered successfully and saved to the Login tab.', 'success', false);
+    const okMsg = res.message || 'User created successfully. Synchronisation complete.';
+    showLoginFeedback(okMsg, 'success', false);
+    alert(okMsg);
     toggleRegisterSection(false);
   } catch(e) {
-    showLoginFeedback(e.message || 'Registration failed.', 'error', true);
+    showLoginFeedback(normaliseUserFacingAuthMessage(e.message, 'Registration failed.'), 'error', true);
+  } finally {
+    done();
+    setRegisterButtonState();
   }
 }
 async function handleLogin(){
   const username=text($('loginUsername')?.value);
   const password=text($('loginPassword')?.value);
   if(!username || !password){ showLoginFeedback('Enter username and password.', 'error', true); return; }
+  const done = setButtonBusy('loginBtn', '⟳ Synchronising login...', true);
+  showLoginFeedback('Synchronising login...', 'info', false);
   try {
     const res = await postAction({ action:'loginUser', targetSpreadsheetId:LOGIN_TAB_SHEET_ID, spreadsheetId:LOGIN_TAB_SHEET_ID, workbookName:'Manager Dashboard', sheetName:'Manager Dashboard', tabName:'Login', targetTab:'Login', username, password });
     const user = mapLoginRow(res.user || res.data || res.row || {});
-    if (!user.username) throw new Error('User not registered. Please register the user first.');
+    if (!user.username) throw new Error('User not registered. Please create the user first.');
     setCurrentUser({ username:user.username, name:user.displayName, displayName:user.displayName, role:user.role });
     $('loginOverlay').classList.add('login-hidden');
     $('logoutBtn').classList.remove('login-hidden');
     $('loginPassword').value='';
-    showLoginFeedback(`Logged in as ${user.displayName} (${user.role})`, 'success', false);
+    const okMsg = `Logged in as ${user.displayName} (${user.role})`;
+    showLoginFeedback(okMsg, 'success', false);
+    alert(okMsg);
     await loadData();
   } catch(e) {
-    const msg = String(e.message || 'Login failed.');
-    showLoginFeedback(msg, 'error', true);
+    showLoginFeedback(normaliseUserFacingAuthMessage(e.message, 'Login failed.'), 'error', true);
+  } finally {
+    done();
   }
 }
 function logoutUser(){ setCurrentUser(null); $('loginOverlay').classList.remove('login-hidden'); $('logoutBtn').classList.add('login-hidden'); $('loginMessage').textContent='Please sign in to continue.'; renderAll(); }
@@ -2497,6 +2540,163 @@ function wireFilters(){ $('periodFilter').onchange = e => { state.filters.period
 function monthlyStraightlineForRevenue(costCenter, manager, projectName, dateValue){ return monthlyStraightlineBudgetFor(costCenter, manager, projectName); }
 function updateDashboardClock(){ const el = $('dashboardClockTime'); if (!el) return; const now = new Date(); el.textContent = now.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}); }
 function startDashboardClock(){ updateDashboardClock(); if (window.dashboardClockTimer) clearInterval(window.dashboardClockTimer); window.dashboardClockTimer = setInterval(updateDashboardClock, 1000); }
+
+
+/* === Patched revenue and budget formulas === */
+function mapRevenueRow(r){
+  const actualValue = num(r['Daily Revenue'] ?? r.DailyRevenue ?? r.dailyRevenue ?? rowVal(r,9));
+  return repairRevenueShape({
+    Date: normaliseDate(r.Date ?? rowVal(r,0)),
+    CostCenter: normalizeCostCenterName(r['Cost Center'] ?? r.CostCenter ?? rowVal(r,1)),
+    Category: text(r.Category ?? rowVal(r,2) ?? 'Daily Revenue'),
+    Manager: text(r['Project Manager'] ?? r.ProjectManager ?? r.Manager ?? rowVal(r,3)),
+    ProjectName: text(r['Project Name'] ?? r.ProjectName ?? rowVal(r,4)),
+    MonthlyProjectedBudget: num(r['Monthly Projected Budget'] ?? r.MonthlyProjectedBudget ?? rowVal(r,5)),
+    MonthlyStraightlineBudget: num(r['Monthly Straightline Budget'] ?? r.MonthlyStraightlineBudget ?? rowVal(r,6)),
+    DailyProjectedBudget: num(r['Daily Projected Budget'] ?? r.DailyProjectedBudget ?? rowVal(r,7)),
+    DailyStraightlineBudget: num(r['Daily Straightline Budget'] ?? r.DailyStraightlineBudget ?? rowVal(r,8)),
+    DailyRevenue: actualValue,
+    Actual: actualValue,
+    Actuals: actualValue,
+    Amount: actualValue,
+    Budget: num(r['Monthly Projected Budget'] ?? r.MonthlyProjectedBudget ?? rowVal(r,5)),
+    DailyBudget: num(r['Daily Projected Budget'] ?? r.DailyProjectedBudget ?? rowVal(r,7)),
+    ApprovalStatus: normalizeApprovalStatus(r.ApprovalStatus || r.Status || r.status || rowVal(r,16)),
+    Status: normalizeApprovalStatus(r.Status || r.ApprovalStatus || r.status || rowVal(r,16)),
+    PostedBy: text(r.PostedBy || r.UserName || r.Username || rowVal(r,17)),
+    ManagerComment: text(r.ManagerComment || rowVal(r,18)),
+    SafetyManagerComment: text(r.SafetyManagerComment || rowVal(r,19)),
+    Comment: text(r.Comment || rowVal(r,20)),
+    Reason: text(r.Reason || rowVal(r,21)),
+    RowId: text(r.RowId || r.ID || rowVal(r,22)),
+    Margin: 0
+  });
+}
+function mapManagerBudgetRow(r){
+  return {
+    Date: normaliseDate(r.Date ?? rowVal(r,0)),
+    CostCenter: normalizeCostCenterName(r['Cost Center'] ?? r.CostCenter ?? r.Division ?? rowVal(r,0)),
+    ProjectManager: text(r['Project Manager'] ?? r.ProjectManager ?? r.Manager ?? rowVal(r,1)),
+    ProjectName: text(r['Project Name'] ?? r.ProjectName ?? rowVal(r,2)),
+    MonthlyProjectedBudget: num(r['Monthly Projected Budget'] ?? r.ProjectedBudget ?? r.Projected ?? r.Budget ?? rowVal(r,3)),
+    MonthlyStraightlineBudget: num(r['Monthly Straightline Budget'] ?? r.StraightlineBudget ?? rowVal(r,4)),
+    DailyProjectedBudget: num(r['Daily Projected Budget'] ?? rowVal(r,5)),
+    DailyStraightlineBudget: num(r['Daily Straightline Budget'] ?? rowVal(r,6))
+  };
+}
+function getBudgetRecordForRevenue(r){
+  const project = lower(r.ProjectName);
+  const manager = lower(r.Manager);
+  const cc = lower(normalizeCostCenterName(r.CostCenter));
+  const rows = Array.isArray(state.managerBudgets) ? state.managerBudgets : [];
+  return rows.find(b => lower(text(b.ProjectName)) === project && lower(text(b.ProjectManager)) === manager)
+    || rows.find(b => lower(text(b.ProjectName)) === project)
+    || rows.find(b => lower(text(b.ProjectManager)) === manager && lower(normalizeCostCenterName(b.CostCenter)) === cc)
+    || rows.find(b => lower(normalizeCostCenterName(b.CostCenter)) === cc);
+}
+function revenueProjectedValue(r, period = state.filters.period){
+  const b = getBudgetRecordForRevenue(r) || {};
+  const monthly = num(b.MonthlyProjectedBudget ?? r.MonthlyProjectedBudget ?? r.Budget);
+  const daily = num(b.DailyProjectedBudget ?? r.DailyProjectedBudget ?? r.DailyBudget);
+  if (period === 'Daily') return daily || scaleProjectedBudgetValue(monthly, 'Daily');
+  return scaleProjectedBudgetValue(monthly, period);
+}
+function revenueStraightlineValue(r, period = state.filters.period){
+  const b = getBudgetRecordForRevenue(r) || {};
+  const monthly = num(b.MonthlyStraightlineBudget ?? r.MonthlyStraightlineBudget);
+  const daily = num(b.DailyStraightlineBudget ?? r.DailyStraightlineBudget);
+  if (period === 'Daily') return daily || scaleStraightlineBudgetValue(monthly, 'Daily', r.Date || todayISO());
+  return scaleStraightlineBudgetValue(monthly, period, r.Date || todayISO());
+}
+function applyOnpointCostCenterOverrides(rows, period){ return rows; }
+function applyManagerOverrideTotals(rows, period){ return rows; }
+function useGroupFixedBudgetOverride(){ return false; }
+function replaceOnpointConfirmedTotal(total, orders){ return total; }
+function costCenterPeriodRows(period = state.filters.period){
+  const revenueRows = revenueRowsForPeriod(period);
+  const map = {};
+  revenueRows.forEach(r => {
+    const key = normalizeCostCenterName(r.CostCenter) || 'Unassigned';
+    if (!map[key]) map[key] = { CostCenter:key, Actual:0, Projected:0, Straightline:0 };
+    map[key].Actual += revenueActualValue(r);
+    map[key].Projected += revenueProjectedValue(r, period);
+    map[key].Straightline += revenueStraightlineValue(r, period);
+  });
+  return Object.values(map).sort((a,b)=>b.Actual-a.Actual || a.CostCenter.localeCompare(b.CostCenter));
+}
+function renderKPIs(){
+  const monthRows = revenueRowsForPeriod('Monthly');
+  const yearRows = revenueRowsForPeriod('Yearly');
+  const selectedRows = revenueRowsForPeriod(state.filters.period);
+  const mtd = monthRows.reduce((s,r)=>s + revenueActualValue(r), 0);
+  const ytd = yearRows.reduce((s,r)=>s + revenueActualValue(r), 0);
+  const actual = selectedRows.reduce((s,r)=>s + revenueActualValue(r), 0);
+  const projected = selectedRows.reduce((s,r)=>s + revenueProjectedValue(r, state.filters.period), 0);
+  const straightline = selectedRows.reduce((s,r)=>s + revenueStraightlineValue(r, state.filters.period), 0);
+  const selectedMetricLabel = selectedPeriodMetricLabel(state.filters.period) || 'MTD';
+  $('headlineKpis').innerHTML = [
+    ['Projected Budget', money(projected), `${state.filters.period} / Budgets`],
+    ['Straightline Budget', money(straightline), `${state.filters.period} / Budgets`],
+    ['Actual', money(actual), `${state.filters.period} / Daily Revenue`],
+    ['MTD', money(mtd), 'Manager Dashboard / Daily Revenue'],
+    ['Group YTD', money(ytd), 'Manager Dashboard / Daily Revenue'],
+    [selectedMetricLabel, money(actual), 'Selected period total daily revenue']
+  ].map(([a,b,c])=>`<div class="kpi"><div class="label">${a}</div><div class="value">${b}</div><div class="sub">${c}</div></div>`).join('');
+}
+async function loadData(){
+  if (isLoadingData) return;
+  isLoadingData = true;
+  if (isPlaceholderUrl(SCRIPT_URL)) {
+    setConn('Set Script URL','warn');
+    populateFilters();
+    applyRolePermissions();
+    renderAll();
+    isLoadingData = false;
+    return;
+  }
+  setConn('Connecting','warn');
+  const testBtn=$('testBtn'), refreshBtn=$('refreshBtn');
+  const t1=testBtn.textContent, t2=refreshBtn.textContent;
+  testBtn.textContent='Loading...'; refreshBtn.textContent='Loading...';
+  testBtn.classList.add('btn-loading'); refreshBtn.classList.add('btn-loading');
+  const failures=[];
+  try {
+    const endpointMap = [
+      ['projects',['getProjects'],mapProjectRow,false],
+      ['revenue',['getManagerDashboardRevenue','getRevenue'],mapRevenueRow,true],
+      ['invoices',['getInvoices'],mapInvoiceRow,false],
+      ['payments',['getPayments'],mapPaymentRow,false],
+      ['managerBudgets',['getBudgets','getManagerBudgets'],mapManagerBudgetRow,true],
+      ['logins',['getLoginUsers','getLogins'],mapLoginRow,false],
+    ];
+    const results = await Promise.allSettled(endpointMap.map(([,actions]) => fetchActionFirst(actions)));
+    endpointMap.forEach(([stateKey, actions, mapper, required], idx) => {
+      const res = results[idx];
+      const actionLabel = Array.isArray(actions) ? actions.join(' -> ') : String(actions);
+      if (res.status === 'fulfilled') state[stateKey] = (Array.isArray(res.value) ? res.value : []).map(mapper);
+      else { state[stateKey] = []; if (required) failures.push(`${actionLabel}: ${res.reason.message}`); }
+    });
+    state.orders = [];
+    state.straightline = [];
+    populateFilters();
+    renderAll();
+    if (failures.length) {
+      setConn('Partially Connected','warn');
+      showToast(`Some data failed to load: ${failures.join(' | ')}`,'info');
+    } else {
+      setConn('Live Connected','ok');
+    }
+  } catch (e) {
+    setConn('Connection Failed','bad');
+    showToast(`Load failed: ${e.message}`,'error');
+    log('Load failed', e.message);
+  } finally {
+    isLoadingData = false;
+    testBtn.textContent=t1; refreshBtn.textContent=t2;
+    testBtn.classList.remove('btn-loading'); refreshBtn.classList.remove('btn-loading');
+  }
+}
+/* === End patched formulas === */
 function init(){ restoreSessionUser(); bindTabs(); wireFilters(); wireProjectAdders(); wireExecutiveExports(); startDashboardClock(); $('testBtn').onclick = () => quickConnectionTest(); $('refreshBtn').onclick = () => loadData(); $('saveRevenueBtn').onclick = saveRevenue; $('saveProjectBtn').onclick = saveProject; $('saveInvoiceBtn').onclick = saveInvoice; $('savePaymentBtn').onclick = savePaymentReceived; if ($('loginBtn')) $('loginBtn').onclick = handleLogin; if ($('registerBtn')) $('registerBtn').onclick = handleRegisterButton; if ($('logoutBtn')) $('logoutBtn').onclick = logoutUser; if ($('loginPassword')) $('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); }); if ($('loginUsername')) $('loginUsername').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); }); ['registerName','registerUsername','registerPassword','registerConfirmPassword'].forEach(id => { if ($(id)) $(id).addEventListener('keydown', e => { if (e.key === 'Enter') registerUser(); }); }); $('revDate').value = $('projCreatedAt').value = $('invDate').value = $('payDate').value = todayISO(); $('periodFilter').innerHTML = PERIODS.map(p=>`<option ${p===state.filters.period?'selected':''}>${p}</option>`).join(''); if ($('revProjectName')) $('revProjectName').addEventListener('change', applyRememberedRevenueBudgets); if ($('revManager')) $('revManager').addEventListener('change', applyRememberedRevenueBudgets); if ($('revCostCenter')) $('revCostCenter').addEventListener('change', applyRememberedRevenueBudgets); $('diagnostics').textContent = 'Waiting for first load...'; applyRolePermissions(); setRegisterButtonState(); loadData().then(() => { if (state.currentUser) $('loginOverlay').classList.add('login-hidden'); }); }
 document.addEventListener('DOMContentLoaded', init);
 </script>
