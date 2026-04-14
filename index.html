@@ -114,6 +114,11 @@
     .approval-actions{display:flex;flex-wrap:wrap;gap:8px}
     .approval-actions button{width:auto;padding:8px 12px;border-radius:10px}
     .role-note{font-size:12px;color:var(--muted);margin-top:6px}
+    .login-overlay{overflow-y:auto}
+    .login-card{max-height:calc(100vh - 40px);overflow-y:auto;transition:max-width .25s ease,width .25s ease}
+    .login-card.expanded{width:min(760px,100%)}
+    .register-section{max-height:0;overflow:hidden;opacity:0;transition:max-height .25s ease,opacity .2s ease,margin-top .25s ease}
+    .register-section.expanded{max-height:520px;opacity:1;margin-top:10px}
 
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -121,21 +126,31 @@
 <body>
   <div id="toastWrap" class="toast-wrap"></div>
   <div id="loginOverlay" class="login-overlay">
-    <div class="login-card">
+    <div class="login-card" id="loginCard">
       <h2 class="login-title">Manager Dashboard Login</h2>
       <p class="login-sub">Login uses the <strong>Login</strong> tab in the Manager Dashboard workbook.</p>
       <div class="form-grid">
-        <div class="field span-12"><label>Username</label><input id="loginUsername" placeholder="Enter username"></div>
-        <div class="field span-12"><label>Password</label><input id="loginPassword" type="password" placeholder="Enter password"></div>
-        <div class="field span-12"><label>Full name</label><input id="registerName" placeholder="Enter full name"></div>
-        <div class="field span-12"><label>Role</label><select id="registerRole"><option value="user">User</option><option value="admin manager">Admin Manager</option><option value="safety manager">Safety Manager</option></select></div>
+        <div class="field span-12"><label>Login Username</label><input id="loginUsername" placeholder="Enter username"></div>
+        <div class="field span-12"><label>Login Password</label><input id="loginPassword" type="password" placeholder="Enter password"></div>
       </div>
       <div class="login-actions">
         <button id="loginBtn" type="button">Login</button>
-        <button id="registerBtn" type="button" class="secondary">Register User</button>
         <button id="logoutBtn" type="button" class="secondary login-hidden">Logout</button>
       </div>
-      <div id="loginMessage" class="role-note">Please sign in to continue. New users can be registered here and will also try to save to the Login tab.</div>
+      <div id="registerSection" class="register-section">
+        <div class="role-note" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">Create a new user</div>
+        <div class="form-grid" style="margin-top:10px">
+          <div class="field span-12"><label>Full name</label><input id="registerName" placeholder="Enter full name"></div>
+          <div class="field span-12"><label>Registration Username</label><input id="registerUsername" placeholder="Create username"></div>
+          <div class="field span-12"><label>Registration Password</label><input id="registerPassword" type="password" placeholder="Create password"></div>
+          <div class="field span-12"><label>Confirm Password</label><input id="registerConfirmPassword" type="password" placeholder="Confirm password"></div>
+          <div class="field span-12"><label>Role</label><select id="registerRole"><option value="user">User</option><option value="admin manager">Admin Manager</option><option value="safety manager">Safety Manager</option></select></div>
+        </div>
+      </div>
+      <div class="login-actions">
+        <button id="registerBtn" type="button" class="secondary">Register User</button>
+      </div>
+      <div id="loginMessage" class="role-note">Please sign in to continue. Registration will save locally immediately and will also try to save to the Login tab.</div>
     </div>
   </div>
   <div class="wrap">
@@ -405,23 +420,54 @@ async function fetchLoginUsers(){
   state.logins = mergeLoginUsers(Array.isArray(remoteRows) ? remoteRows.map(mapLoginRow) : []);
   return state.logins;
 }
+function isRegisterSectionExpanded(){
+  return $('registerSection')?.classList.contains('expanded');
+}
+function toggleRegisterSection(forceState){
+  const section = $('registerSection');
+  const card = $('loginCard');
+  if (!section) return false;
+  const shouldExpand = typeof forceState === 'boolean' ? forceState : !section.classList.contains('expanded');
+  section.classList.toggle('expanded', shouldExpand);
+  if (card) card.classList.toggle('expanded', shouldExpand);
+  return shouldExpand;
+}
+async function handleRegisterButton(){
+  if (!isRegisterSectionExpanded()) {
+    toggleRegisterSection(true);
+    return;
+  }
+  await registerUser();
+}
+
 async function registerUser(){
-  const username=text($('loginUsername')?.value);
-  const password=text($('loginPassword')?.value);
-  const displayName=text($('registerName')?.value || username);
+  const displayName=text($('registerName')?.value);
+  const username=text($('registerUsername')?.value);
+  const password=text($('registerPassword')?.value);
+  const confirmPassword=text($('registerConfirmPassword')?.value);
   const role=text($('registerRole')?.value || 'user');
-  if(!username || !password){ $('loginMessage').textContent='Enter username and password to register.'; showToast('Enter username and password to register','error'); return; }
+  if(!displayName || !username || !password || !confirmPassword){ $('loginMessage').textContent='Complete all registration fields.'; showToast('Complete all registration fields','error'); return; }
+  if(password !== confirmPassword){ $('loginMessage').textContent='Passwords do not match.'; showToast('Passwords do not match','error'); return; }
+  if(password.length < 4){ $('loginMessage').textContent='Password must be at least 4 characters.'; showToast('Password must be at least 4 characters','error'); return; }
   const users = await fetchLoginUsers();
   if (users.some(u => lower(u.username)===lower(username))) { $('loginMessage').textContent='That username already exists.'; showToast('That username already exists','error'); return; }
   const newUser = { username, password, role, displayName, isActive:true };
   mergeLoginUsers([newUser]);
+  state.logins = mergeLoginUsers([]);
   let savedToSheet = false;
   try {
     const res = await postAction({ action:'registerUser', targetSpreadsheetId:LOGIN_TAB_SHEET_ID, spreadsheetId:LOGIN_TAB_SHEET_ID, workbookName:'Manager Dashboard', sheetName:'Manager Dashboard', tabName:'Login', targetTab:'Login', username, password, role, name:displayName, active:true });
     savedToSheet = !(res && res.success === false);
   } catch(e) { log('registerUser action unavailable', e.message); }
-  $('loginMessage').textContent = savedToSheet ? 'User registered and saved to Login tab.' : 'User registered in browser. Apps Script registerUser action still needed for Login tab sync.';
-  showToast(savedToSheet ? 'User registered' : 'User registered locally; Login tab sync needs Apps Script update', savedToSheet ? 'success' : 'info');
+  if ($('loginUsername')) $('loginUsername').value = username;
+  if ($('loginPassword')) $('loginPassword').value = password;
+  if ($('registerName')) $('registerName').value = '';
+  if ($('registerUsername')) $('registerUsername').value = '';
+  if ($('registerPassword')) $('registerPassword').value = '';
+  if ($('registerConfirmPassword')) $('registerConfirmPassword').value = '';
+  $('loginMessage').textContent = savedToSheet ? 'User registered successfully and saved to the Login tab.' : 'User registered successfully in the browser. Apps Script registerUser action is still required for Login tab sync.';
+  showToast(savedToSheet ? 'User registered successfully' : 'User registered locally; Login tab sync still needs Apps Script', savedToSheet ? 'success' : 'info');
+  toggleRegisterSection(false);
 }
 async function handleLogin(){
   const username=text($('loginUsername')?.value);
@@ -2446,7 +2492,7 @@ function wireFilters(){ $('periodFilter').onchange = e => { state.filters.period
 function monthlyStraightlineForRevenue(costCenter, manager, projectName, dateValue){ return monthlyStraightlineBudgetFor(costCenter, manager, projectName); }
 function updateDashboardClock(){ const el = $('dashboardClockTime'); if (!el) return; const now = new Date(); el.textContent = now.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}); }
 function startDashboardClock(){ updateDashboardClock(); if (window.dashboardClockTimer) clearInterval(window.dashboardClockTimer); window.dashboardClockTimer = setInterval(updateDashboardClock, 1000); }
-function init(){ restoreSessionUser(); mergeLoginUsers([]); bindTabs(); wireFilters(); wireProjectAdders(); wireExecutiveExports(); startDashboardClock(); $('testBtn').onclick = () => quickConnectionTest(); $('refreshBtn').onclick = () => loadData(); $('saveRevenueBtn').onclick = saveRevenue; $('saveProjectBtn').onclick = saveProject; $('saveInvoiceBtn').onclick = saveInvoice; $('savePaymentBtn').onclick = savePaymentReceived; if ($('loginBtn')) $('loginBtn').onclick = handleLogin; if ($('registerBtn')) $('registerBtn').onclick = registerUser; if ($('logoutBtn')) $('logoutBtn').onclick = logoutUser; if ($('loginPassword')) $('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); }); if ($('loginUsername')) $('loginUsername').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); }); $('revDate').value = $('projCreatedAt').value = $('invDate').value = $('payDate').value = todayISO(); $('periodFilter').innerHTML = PERIODS.map(p=>`<option ${p===state.filters.period?'selected':''}>${p}</option>`).join(''); if ($('revProjectName')) $('revProjectName').addEventListener('change', applyRememberedRevenueBudgets); if ($('revManager')) $('revManager').addEventListener('change', applyRememberedRevenueBudgets); if ($('revCostCenter')) $('revCostCenter').addEventListener('change', applyRememberedRevenueBudgets); $('diagnostics').textContent = 'Waiting for first load...'; applyRolePermissions(); loadData().then(() => { if (state.currentUser) $('loginOverlay').classList.add('login-hidden'); }); }
+function init(){ restoreSessionUser(); mergeLoginUsers([]); bindTabs(); wireFilters(); wireProjectAdders(); wireExecutiveExports(); startDashboardClock(); $('testBtn').onclick = () => quickConnectionTest(); $('refreshBtn').onclick = () => loadData(); $('saveRevenueBtn').onclick = saveRevenue; $('saveProjectBtn').onclick = saveProject; $('saveInvoiceBtn').onclick = saveInvoice; $('savePaymentBtn').onclick = savePaymentReceived; if ($('loginBtn')) $('loginBtn').onclick = handleLogin; if ($('registerBtn')) $('registerBtn').onclick = handleRegisterButton; if ($('logoutBtn')) $('logoutBtn').onclick = logoutUser; if ($('loginPassword')) $('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); }); if ($('loginUsername')) $('loginUsername').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); }); ['registerName','registerUsername','registerPassword','registerConfirmPassword'].forEach(id => { if ($(id)) $(id).addEventListener('keydown', e => { if (e.key === 'Enter') registerUser(); }); }); $('revDate').value = $('projCreatedAt').value = $('invDate').value = $('payDate').value = todayISO(); $('periodFilter').innerHTML = PERIODS.map(p=>`<option ${p===state.filters.period?'selected':''}>${p}</option>`).join(''); if ($('revProjectName')) $('revProjectName').addEventListener('change', applyRememberedRevenueBudgets); if ($('revManager')) $('revManager').addEventListener('change', applyRememberedRevenueBudgets); if ($('revCostCenter')) $('revCostCenter').addEventListener('change', applyRememberedRevenueBudgets); $('diagnostics').textContent = 'Waiting for first load...'; applyRolePermissions(); loadData().then(() => { if (state.currentUser) $('loginOverlay').classList.add('login-hidden'); }); }
 document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
