@@ -150,7 +150,7 @@
       <div class="login-actions">
         <button id="registerBtn" type="button" class="secondary">Register User</button>
       </div>
-      <div id="loginMessage" class="role-note">Please sign in to continue. Registration will save locally immediately and will also try to save to the Login tab.</div>
+      <div id="loginMessage" class="role-note">Please sign in to continue. Registration saves directly to the Login tab in the Manager Dashboard workbook.</div>
     </div>
   </div>
   <div class="wrap">
@@ -360,8 +360,8 @@
   </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzu4FrACwfoe2inHzdzYgvfwNxAD33_Q76q7CjtuLNdGQ9wIw81oBnsSTzQtr2eX5DyCQ/exec';
-const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbzu4FrACwfoe2inHzdzYgvfwNxAD33_Q76q7CjtuLNdGQ9wIw81oBnsSTzQtr2eX5DyCQ/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzK2cdaZIJKvnYEeG6NlAa6PX1Q4Uy83e97XDRIZO1y7KEdqt6B8crJWkLvadsKzsldLw/exec';
+const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbzK2cdaZIJKvnYEeG6NlAa6PX1Q4Uy83e97XDRIZO1y7KEdqt6B8crJWkLvadsKzsldLw/exec';
 const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
 const EXECUTIVE_AVG_GROSS_MARGIN_PCT = 31.66;
 const EXECUTIVE_PIE_COLORS = ['#0f172a','#1d4ed8','#15803d','#b45309','#b91c1c','#7c3aed','#0891b2','#ea580c','#16a34a','#be185d'];
@@ -390,10 +390,15 @@ const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 const LOGIN_TAB_SHEET_ID = '1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE';
 const USER_SESSION_KEY = 'onpoint_dashboard_logged_in_user_v1';
-const LOCAL_LOGIN_USERS_KEY = 'onpoint_dashboard_login_users_v1';
-function getLocalLoginUsers(){ try { const rows = JSON.parse(localStorage.getItem(LOCAL_LOGIN_USERS_KEY) || '[]'); return Array.isArray(rows) ? rows : []; } catch(e){ return []; } }
-function setLocalLoginUsers(rows){ localStorage.setItem(LOCAL_LOGIN_USERS_KEY, JSON.stringify(Array.isArray(rows) ? rows : [])); }
-function mergeLoginUsers(rows){ const merged = [...getLocalLoginUsers()]; (Array.isArray(rows) ? rows : []).forEach(item => { const u = mapLoginRow(item); if (!u.username) return; const ix = merged.findIndex(x => lower(x.username)===lower(u.username)); if (ix >= 0) merged[ix] = { ...merged[ix], ...u }; else merged.push(u); }); setLocalLoginUsers(merged); return merged; }
+function mapLoginRow(r){
+  return {
+    username:text(r.Username || r.username || r.UserName || rowVal(r,0)),
+    role:text(r.Role || r.role || rowVal(r,1)),
+    displayName:text(r.Name || r.DisplayName || r.displayName || rowVal(r,2) || r.Username || r.username || rowVal(r,0)),
+    isActive:String(r.Active ?? r.active ?? rowVal(r,3) ?? 'true').toLowerCase() !== 'false',
+    password:''
+  };
+}
 function currentUserName(){ return text(state.currentUser?.displayName || state.currentUser?.name || state.currentUser?.username); }
 function currentUserRole(){ return lower(state.currentUser?.role); }
 function isAdminManager(){ return currentUserRole()==='admin manager' || currentUserRole()==='admin_manager' || currentUserRole()==='admin'; }
@@ -415,9 +420,8 @@ function requireRole(check, message){ if (!check()) { showToast(message,'error')
 function composeRevenueReasonText(){ const reasons=[]; if($('revReasonRainfall')?.checked) reasons.push('Rainfall'); if($('revReasonBadWeather')?.checked) reasons.push('Bad weather'); if($('revReasonShortage')?.checked) reasons.push('Shortage of material'); if($('revReasonDelay')?.checked) reasons.push('Delay in supplies'); if($('revReasonPlanning')?.checked) reasons.push('Poor planning'); if(text($('revReasonOther')?.value)) reasons.push(text($('revReasonOther').value)); return reasons.join(', '); }
 function combinedRevenueComments(){ return [text($('revComment')?.value), text($('revManagerSafetyComment')?.value)].filter(Boolean).join(' | '); }
 async function fetchLoginUsers(){
-  let remoteRows = [];
-  try { remoteRows = await fetchActionFirst(['getLoginUsers','getLogins','loginUsers']); } catch(e) { log('Login users fetch unavailable', e.message); }
-  state.logins = mergeLoginUsers(Array.isArray(remoteRows) ? remoteRows.map(mapLoginRow) : []);
+  const remoteRows = await fetchActionFirst(['getLoginUsers','getLogins','loginUsers']);
+  state.logins = Array.isArray(remoteRows) ? remoteRows.map(mapLoginRow) : [];
   return state.logins;
 }
 function isRegisterSectionExpanded(){
@@ -450,7 +454,6 @@ async function handleRegisterButton(){
   }
   await registerUser();
 }
-
 async function registerUser(){
   const displayName=text($('registerName')?.value);
   const username=text($('registerUsername')?.value);
@@ -459,66 +462,48 @@ async function registerUser(){
   const role=text($('registerRole')?.value || 'user');
   if(!displayName || !username || !password || !confirmPassword){ showLoginFeedback('Complete all registration fields.', 'error', true); return; }
   if(password !== confirmPassword){ showLoginFeedback('Passwords do not match.', 'error', true); return; }
-  if(password.length < 4){ showLoginFeedback('Password must be at least 4 characters.', 'error', true); return; }
-  const users = await fetchLoginUsers();
+  if(password.length < 6){ showLoginFeedback('Password must be at least 6 characters.', 'error', true); return; }
+  let users = [];
+  try { users = await fetchLoginUsers(); } catch (e) { showLoginFeedback(`Could not check existing users. ${e.message}`, 'error', true); return; }
   if (users.some(u => lower(u.username)===lower(username))) { showLoginFeedback('That username already exists.', 'error', true); return; }
-  const newUser = { username, password, role, displayName, isActive:true };
-  mergeLoginUsers([newUser]);
-  state.logins = mergeLoginUsers([]);
-  let savedToSheet = false;
   try {
     const res = await postAction({ action:'registerUser', targetSpreadsheetId:LOGIN_TAB_SHEET_ID, spreadsheetId:LOGIN_TAB_SHEET_ID, workbookName:'Manager Dashboard', sheetName:'Manager Dashboard', tabName:'Login', targetTab:'Login', username, password, role, name:displayName, active:true });
-    savedToSheet = !(res && res.success === false);
-  } catch(e) { log('registerUser action unavailable', e.message); }
-  if ($('loginUsername')) $('loginUsername').value = username;
-  if ($('loginPassword')) $('loginPassword').value = password;
-  if ($('registerName')) $('registerName').value = '';
-  if ($('registerUsername')) $('registerUsername').value = '';
-  if ($('registerPassword')) $('registerPassword').value = '';
-  if ($('registerConfirmPassword')) $('registerConfirmPassword').value = '';
-  const msg = savedToSheet ? 'User registered successfully and saved to the Login tab.' : 'User registered successfully in the browser. Apps Script registerUser action is still required for Login tab sync.';
-  showLoginFeedback(msg, savedToSheet ? 'success' : 'info', false);
-  toggleRegisterSection(false);
+    if ($('loginUsername')) $('loginUsername').value = username;
+    if ($('loginPassword')) $('loginPassword').value = '';
+    if ($('registerName')) $('registerName').value = '';
+    if ($('registerUsername')) $('registerUsername').value = '';
+    if ($('registerPassword')) $('registerPassword').value = '';
+    if ($('registerConfirmPassword')) $('registerConfirmPassword').value = '';
+    await fetchLoginUsers();
+    showLoginFeedback(res.message || 'User registered successfully and saved to the Login tab.', 'success', false);
+    toggleRegisterSection(false);
+  } catch(e) {
+    showLoginFeedback(e.message || 'Registration failed.', 'error', true);
+  }
 }
 async function handleLogin(){
   const username=text($('loginUsername')?.value);
   const password=text($('loginPassword')?.value);
   if(!username || !password){ showLoginFeedback('Enter username and password.', 'error', true); return; }
-  const users = await fetchLoginUsers();
-  const userExists = users.find(u => lower(u.username)===lower(username));
-  let matched = users.find(u => lower(u.username)===lower(username) && u.password===password && u.isActive);
-  if (!matched) {
-    try {
-      const res = await postAction({ action:'loginUser', targetSpreadsheetId:LOGIN_TAB_SHEET_ID, spreadsheetId:LOGIN_TAB_SHEET_ID, workbookName:'Manager Dashboard', sheetName:'Manager Dashboard', tabName:'Login', targetTab:'Login', username, password });
-      const user = res.user || res.data || res.row || res;
-      if (user && text(user.role || user.Role || user.username || user.Username)) {
-        matched = mapLoginRow(user);
-        mergeLoginUsers([matched]);
-      }
-    } catch(e) { log('loginUser action unavailable', e.message); }
+  try {
+    const res = await postAction({ action:'loginUser', targetSpreadsheetId:LOGIN_TAB_SHEET_ID, spreadsheetId:LOGIN_TAB_SHEET_ID, workbookName:'Manager Dashboard', sheetName:'Manager Dashboard', tabName:'Login', targetTab:'Login', username, password });
+    const user = mapLoginRow(res.user || res.data || res.row || {});
+    if (!user.username) throw new Error('User not registered. Please register the user first.');
+    setCurrentUser({ username:user.username, name:user.displayName, displayName:user.displayName, role:user.role });
+    $('loginOverlay').classList.add('login-hidden');
+    $('logoutBtn').classList.remove('login-hidden');
+    $('loginPassword').value='';
+    showLoginFeedback(`Logged in as ${user.displayName} (${user.role})`, 'success', false);
+    await loadData();
+  } catch(e) {
+    const msg = String(e.message || 'Login failed.');
+    showLoginFeedback(msg, 'error', true);
   }
-  if (!matched) {
-    if (!userExists) {
-      showLoginFeedback('User not registered. Please register the user first.', 'error', true);
-    } else if (userExists && !userExists.isActive) {
-      showLoginFeedback('This user is inactive. Please contact the administrator.', 'error', true);
-    } else {
-      showLoginFeedback('Wrong password. Please try again.', 'error', true);
-    }
-    return;
-  }
-  setCurrentUser({ username:matched.username, name:matched.displayName, displayName:matched.displayName, role:matched.role });
-  $('loginOverlay').classList.add('login-hidden');
-  $('logoutBtn').classList.remove('login-hidden');
-  $('loginPassword').value='';
-  showLoginFeedback(`Logged in as ${matched.displayName} (${matched.role})`, 'success', false);
-  renderAll();
 }
 function logoutUser(){ setCurrentUser(null); $('loginOverlay').classList.remove('login-hidden'); $('logoutBtn').classList.add('login-hidden'); $('loginMessage').textContent='Please sign in to continue.'; renderAll(); }
 function applyRolePermissions(){ const user=currentUserName(); if($('currentUserChip')){ $('currentUserChip').textContent = state.currentUser ? `${user} | ${text(state.currentUser.role)}` : 'Not logged in'; $('currentUserChip').classList.toggle('login-hidden', !state.currentUser); } if($('revPostedByDisplay')) $('revPostedByDisplay').value = user || ''; if($('revStatusDisplay')) $('revStatusDisplay').value = 'Pending Approval'; const revDisabled = !canPostRevenue(); const projDisabled = !canPostProject(); const invDisabled = !canPostInvoice(); const payDisabled = !canPostPayment(); if($('saveRevenueBtn')) $('saveRevenueBtn').disabled = revDisabled; if($('saveProjectBtn')) $('saveProjectBtn').disabled = projDisabled; if($('saveInvoiceBtn')) $('saveInvoiceBtn').disabled = invDisabled; if($('savePaymentBtn')) $('savePaymentBtn').disabled = payDisabled; if($('revQuality')) { $('revQuality').disabled = !canSetQuality(); $('revQuality').title = canSetQuality() ? '' : 'Only safety manager can set quality'; } if($('revManagerSafetyComment')) { $('revManagerSafetyComment').disabled = !canCommentRevenue(); $('revManagerSafetyComment').title = canCommentRevenue() ? '' : 'Only admin manager and safety manager can add this comment'; } if($('projectsPanel')) $('projectsPanel').style.display = ''; }
-async function updateRevenueApproval(entry){ if(!requireRole(canApproveRevenue,'Only admin manager can approve or warn daily revenue entries.')) return; const note = window.prompt('Add approval comment (optional)', entry.ManagerComment || entry.Comment || '') || ''; try { const res = await postAction({ action:'updateRevenueApproval', targetSpreadsheetId:'1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE', spreadsheetId:'1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE', workbookName:'Manager Dashboard', sheetName:'Manager Dashboard', tabName:'Daily Revenue', targetTab:'Daily Revenue', rowId: entry.RowId || entry.ID || entry.Timestamp || entry.CreatedAt || `${entry.Date}|${entry.ProjectName}|${entry.Manager}`, date: entry.Date, manager: entry.Manager, costCenter: entry.CostCenter, projectName: entry.ProjectName, approvalStatus: entry.nextStatus, managerComment: note, approvedBy: currentUserName() }); showToast(res.message || 'Revenue approval updated','success'); await loadData(); } catch(e){ showToast(`Approval update failed: ${e.message}`,'error'); } }
-async function addRevenueComment(entry){ if(!requireRole(canCommentRevenue,'Only admin manager and safety manager can comment on daily revenue entries.')) return; const roleLabel = isSafetyManager() ? 'Safety manager comment' : 'Admin manager comment'; const note = window.prompt(`Enter ${roleLabel.toLowerCase()}`, entry.ManagerComment || entry.SafetyManagerComment || entry.Comment || ''); if(note===null) return; try { const payload = { action:'updateRevenueComment', targetSpreadsheetId:'1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE', spreadsheetId:'1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE', workbookName:'Manager Dashboard', sheetName:'Manager Dashboard', tabName:'Daily Revenue', targetTab:'Daily Revenue', rowId: entry.RowId || entry.ID || entry.Timestamp || entry.CreatedAt || `${entry.Date}|${entry.ProjectName}|${entry.Manager}`, date: entry.Date, manager: entry.Manager, costCenter: entry.CostCenter, projectName: entry.ProjectName }; if (isSafetyManager()) payload.safetyManagerComment = note; else payload.managerComment = note; payload.commentedBy = currentUserName(); const res = await postAction(payload); showToast(res.message || 'Comment saved','success'); await loadData(); } catch(e){ showToast(`Comment save failed: ${e.message}`,'error'); } }
-
+async function updateRevenueApproval(entry){ if(!requireRole(canApproveRevenue,'Only admin manager can approve or warn daily revenue entries.')) return; const note = window.prompt('Add approval comment (optional)', entry.ManagerComment || entry.Comment || '') || ''; try { const res = await postAction({ action:'updateRevenueApproval', targetSpreadsheetId:'1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE', spreadsheetId:'1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE', workbookName:'Manager Dashboard', sheetName:'Manager Dashboard', tabName:'Daily Revenue', targetTab:'Daily Revenue', rowId: entry.RowId || entry.ID || entry.Timestamp || entry.CreatedAt || `${entry.Date}|${entry.ProjectName}|${entry.Manager}`, date: entry.Date, manager: entry.Manager, costCenter: entry.CostCenter, projectName: entry.ProjectName, approvalStatus: entry.nextStatus, managerComment: note, approvedBy: currentUserName() }); showToast(res.message || 'Revenue approval updated','success'); await loadData(); } catch(e){ showToast(`Approval update failed: ${e.message}`,'error'); alert(e.message || 'Approval update failed.'); } }
+async function addRevenueComment(entry){ if(!requireRole(canCommentRevenue,'Only admin manager and safety manager can comment on daily revenue entries.')) return; const roleLabel = isSafetyManager() ? 'Safety manager comment' : 'Admin manager comment'; const note = window.prompt(`Enter ${roleLabel.toLowerCase()}`, entry.ManagerComment || entry.SafetyManagerComment || entry.Comment || ''); if(note===null) return; try { const payload = { action:'updateRevenueComment', targetSpreadsheetId:'1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE', spreadsheetId:'1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE', workbookName:'Manager Dashboard', sheetName:'Manager Dashboard', tabName:'Daily Revenue', targetTab:'Daily Revenue', rowId: entry.RowId || entry.ID || entry.Timestamp || entry.CreatedAt || `${entry.Date}|${entry.ProjectName}|${entry.Manager}`, date: entry.Date, manager: entry.Manager, costCenter: entry.CostCenter, projectName: entry.ProjectName }; if (isSafetyManager()) payload.safetyManagerComment = note; else payload.managerComment = note; payload.commentedBy = currentUserName(); const res = await postAction(payload); showToast(res.message || 'Comment saved','success'); await loadData(); } catch(e){ showToast(`Comment save failed: ${e.message}`,'error'); alert(e.message || 'Comment save failed.'); } }
 function formatDisplayDate(dateValue){
   const iso = normaliseDate(dateValue);
   if (!iso) return text(dateValue) || 'No date';
@@ -2512,7 +2497,7 @@ function wireFilters(){ $('periodFilter').onchange = e => { state.filters.period
 function monthlyStraightlineForRevenue(costCenter, manager, projectName, dateValue){ return monthlyStraightlineBudgetFor(costCenter, manager, projectName); }
 function updateDashboardClock(){ const el = $('dashboardClockTime'); if (!el) return; const now = new Date(); el.textContent = now.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}); }
 function startDashboardClock(){ updateDashboardClock(); if (window.dashboardClockTimer) clearInterval(window.dashboardClockTimer); window.dashboardClockTimer = setInterval(updateDashboardClock, 1000); }
-function init(){ restoreSessionUser(); mergeLoginUsers([]); bindTabs(); wireFilters(); wireProjectAdders(); wireExecutiveExports(); startDashboardClock(); $('testBtn').onclick = () => quickConnectionTest(); $('refreshBtn').onclick = () => loadData(); $('saveRevenueBtn').onclick = saveRevenue; $('saveProjectBtn').onclick = saveProject; $('saveInvoiceBtn').onclick = saveInvoice; $('savePaymentBtn').onclick = savePaymentReceived; if ($('loginBtn')) $('loginBtn').onclick = handleLogin; if ($('registerBtn')) $('registerBtn').onclick = handleRegisterButton; if ($('logoutBtn')) $('logoutBtn').onclick = logoutUser; if ($('loginPassword')) $('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); }); if ($('loginUsername')) $('loginUsername').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); }); ['registerName','registerUsername','registerPassword','registerConfirmPassword'].forEach(id => { if ($(id)) $(id).addEventListener('keydown', e => { if (e.key === 'Enter') registerUser(); }); }); $('revDate').value = $('projCreatedAt').value = $('invDate').value = $('payDate').value = todayISO(); $('periodFilter').innerHTML = PERIODS.map(p=>`<option ${p===state.filters.period?'selected':''}>${p}</option>`).join(''); if ($('revProjectName')) $('revProjectName').addEventListener('change', applyRememberedRevenueBudgets); if ($('revManager')) $('revManager').addEventListener('change', applyRememberedRevenueBudgets); if ($('revCostCenter')) $('revCostCenter').addEventListener('change', applyRememberedRevenueBudgets); $('diagnostics').textContent = 'Waiting for first load...'; applyRolePermissions(); setRegisterButtonState(); loadData().then(() => { if (state.currentUser) $('loginOverlay').classList.add('login-hidden'); }); }
+function init(){ restoreSessionUser(); bindTabs(); wireFilters(); wireProjectAdders(); wireExecutiveExports(); startDashboardClock(); $('testBtn').onclick = () => quickConnectionTest(); $('refreshBtn').onclick = () => loadData(); $('saveRevenueBtn').onclick = saveRevenue; $('saveProjectBtn').onclick = saveProject; $('saveInvoiceBtn').onclick = saveInvoice; $('savePaymentBtn').onclick = savePaymentReceived; if ($('loginBtn')) $('loginBtn').onclick = handleLogin; if ($('registerBtn')) $('registerBtn').onclick = handleRegisterButton; if ($('logoutBtn')) $('logoutBtn').onclick = logoutUser; if ($('loginPassword')) $('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); }); if ($('loginUsername')) $('loginUsername').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); }); ['registerName','registerUsername','registerPassword','registerConfirmPassword'].forEach(id => { if ($(id)) $(id).addEventListener('keydown', e => { if (e.key === 'Enter') registerUser(); }); }); $('revDate').value = $('projCreatedAt').value = $('invDate').value = $('payDate').value = todayISO(); $('periodFilter').innerHTML = PERIODS.map(p=>`<option ${p===state.filters.period?'selected':''}>${p}</option>`).join(''); if ($('revProjectName')) $('revProjectName').addEventListener('change', applyRememberedRevenueBudgets); if ($('revManager')) $('revManager').addEventListener('change', applyRememberedRevenueBudgets); if ($('revCostCenter')) $('revCostCenter').addEventListener('change', applyRememberedRevenueBudgets); $('diagnostics').textContent = 'Waiting for first load...'; applyRolePermissions(); setRegisterButtonState(); loadData().then(() => { if (state.currentUser) $('loginOverlay').classList.add('login-hidden'); }); }
 document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
