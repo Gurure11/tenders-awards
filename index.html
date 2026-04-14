@@ -104,9 +104,9 @@
     @media (max-width:1100px){.reason-grid{grid-template-columns:1fr}}
 
   
-    .auth-overlay{position:fixed;inset:0;background:rgba(11,59,145,.25);backdrop-filter:blur(6px);z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px}
+    .auth-overlay{position:fixed;inset:0;background:rgba(11,59,145,.25);backdrop-filter:blur(6px);z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px;pointer-events:auto}
     .auth-shell{width:min(980px,100%);display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
-    .auth-card{background:#fff;border:1px solid #d7e7ff;border-radius:24px;box-shadow:var(--shadow);padding:24px}
+    .auth-card{background:#fff;border:1px solid #d7e7ff;border-radius:24px;box-shadow:var(--shadow);padding:24px;position:relative;z-index:2;pointer-events:auto}
     .auth-brand{background:linear-gradient(135deg,#0b3b91 0%,#1d4ed8 60%,#60a5fa 100%);color:#fff}
     .auth-brand h2,.auth-brand p,.auth-brand .auth-note{color:#fff}
     .auth-title{margin:0 0 10px;font-size:30px}
@@ -383,8 +383,8 @@
   </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzbeXvGisU2TAKmeapGXUxfUoy9lQGuI3NIIWKZTT6OzS1gyEPuRlVBhRyogTtzZzJnWg/exec';
-const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbzbeXvGisU2TAKmeapGXUxfUoy9lQGuI3NIIWKZTT6OzS1gyEPuRlVBhRyogTtzZzJnWg/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw5OXuG_NyXtkeS0X36xp2v5Hl8E_R_dH-ibPSFt5ke8eR2vgHjoAjISkQ4o7ekFKRH/exec';
+const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbw5OXuG_NyXtkeS0X36xp2v5Hl8E_R_dH-ibPSFt5ke8eR2vgHjoAjISkQ4o7ekFKRH/exec';
 const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
 const EXECUTIVE_AVG_GROSS_MARGIN_PCT = 31.66;
 const EXECUTIVE_PIE_COLORS = ['#0f172a','#1d4ed8','#15803d','#b45309','#b91c1c','#7c3aed','#0891b2','#ea580c','#16a34a','#be185d'];
@@ -1698,9 +1698,9 @@ function executiveReportHtml(){
     @media (max-width:1100px){.reason-grid{grid-template-columns:1fr}}
 
   
-    .auth-overlay{position:fixed;inset:0;background:rgba(11,59,145,.25);backdrop-filter:blur(6px);z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px}
+    .auth-overlay{position:fixed;inset:0;background:rgba(11,59,145,.25);backdrop-filter:blur(6px);z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px;pointer-events:auto}
     .auth-shell{width:min(980px,100%);display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
-    .auth-card{background:#fff;border:1px solid #d7e7ff;border-radius:24px;box-shadow:var(--shadow);padding:24px}
+    .auth-card{background:#fff;border:1px solid #d7e7ff;border-radius:24px;box-shadow:var(--shadow);padding:24px;position:relative;z-index:2;pointer-events:auto}
     .auth-brand{background:linear-gradient(135deg,#0b3b91 0%,#1d4ed8 60%,#60a5fa 100%);color:#fff}
     .auth-brand h2,.auth-brand p,.auth-brand .auth-note{color:#fff}
     .auth-title{margin:0 0 10px;font-size:30px}
@@ -1882,108 +1882,40 @@ function renderSummary(){
 
 function mapProjectRow(r){ return Object.assign({}, r, { CreatedAt: normaliseDate(r.CreatedAt || r.createdAt || r.Date), Division: normalizeCostCenterName(r.Division || r.division || r.CostCenter || r['Cost Center']), Manager: text(r.Manager || r.manager || r['Project Manager'] || r['Project manager'] || r.ProjectManager || r['Manager Name'] || r.PM), ProjectName: text(r.ProjectName || r.projectName || r['Project Name']), Location: text(r.Location || r.location), Status: text(r.Status || r.status || 'Confirmed'), TotalIncome: num(r.TotalIncome || r.totalIncome || r['Total Income'] || r.Amount), Margin: num(r.Margin || r.margin || r['Margin %']), StartDate: normaliseDate(r.StartDate || r.startDate), EndDate: normaliseDate(r.EndDate || r.endDate), Remarks: text(r.Remarks || r.remarks) }); }
 function mapInvoiceRow(r){ return { Date: normaliseDate(r.Date || r.date), Manager: text(r.Manager || r.manager), ProjectName: text(r.ProjectName || r.projectName), InvoiceNumber: text(r.InvoiceNumber || r.invoiceNumber || r['Invoice No']), Amount: num(r.Amount || r.amount), PaymentReceived: String(r.PaymentReceived || r.paymentReceived).toLowerCase()==='true' || r.PaymentReceived===true, PaymentDate: normaliseDate(r.PaymentDate || r.paymentDate), CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Division), Notes: text(r.Notes || r.notes) }; }
-function mapManagerBudgetRow(r){ return { ProjectManager: text(r.ProjectManager || r.Manager || r.manager), CostCenter: normalizeCostCenterName(r.CostCenter || r.Division), Actual: num(r.Actual || r.Actuals || r.Amount), Budget: num(r.Budget || r.Projected || r.projected), StraightlineBudget: num(r.StraightlineBudget || r['Straightline Budget'] || r['Straight-line Budget']), PerformancePct: num(r.PerformancePct || r['% PERFORMANCE'] || r['% PERFOMANCE']) }; }
-function mapStraightlineRow(r){ return { Date: normaliseDate(r.Date || r.date || r.CreatedAt), Manager: text(r.Manager || r.manager || r.ProjectManager || r['Project Manager'] || r['Project manager'] || r['Manager Name'] || r.PM), CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Division || r['Cost Center']), ProjectName: text(r.ProjectName || r.projectName || r['Project Name']), Projected: num(r.Projected || r['Projected Budget'] || r['Projected Amount'] || r.Budget || r.projected || r.Target), StraightlineBudget: num(r.StraightlineBudget || r['Straightline Budget'] || r['Straight-line Budget'] || r['Straight Line Budget'] || r.Straightline || r['Straight Line']) }; }
-function mapOrderRow(r){ return Object.assign({}, r, { Date: normaliseDate(r.Date || r.CreatedAt), Division: normalizeCostCenterName(r.Division || r.CostCenter || r['Cost Center']), Manager: text(r.Manager || r.manager || r['Project Manager']), ProjectName: text(r.ProjectName || r.projectName || r['Project Name']), Status: text(r.Status || r.status), TotalIncome: num(r.TotalIncome || r['Total Income'] || r.Amount || r.OrderValue || r.ConfirmedValue || r.ForecastValue) }); }
-function wireFilters(){ $('periodFilter').onchange = e => { state.filters.period = e.target.value; renderAll(); }; $('divisionFilter').onchange = e => { state.filters.division = e.target.value; renderAll(); }; $('managerFilter').onchange = e => { state.filters.manager = e.target.value; renderAll(); }; $('searchFilter').oninput = e => { state.filters.search = e.target.value; renderAll(); }; }
-
-
-function bindTabs(){ document.querySelectorAll('.tab').forEach(tab => tab.onclick = () => { document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active')); tab.classList.add('active'); $(tab.dataset.panel).classList.add('active'); if (tab.dataset.panel === 'summaryPanel') { renderSummary(); } else if (tab.dataset.panel === 'performancePanel') { renderPerformanceSection(); } else { destroyCharts(); } }); }
-
-
-function mapRevenueRow(r){
-  const actualValue = num(r['Daily Revenue'] || r.DailyRevenue || r.dailyRevenue || r.Actual || r.actual || r.Actuals || r.actuals || r['Actuals'] || r['Actual'] || r['E'] || r.E || rowVal(r,9) || r.Amount || r.amount);
-  const monthlyProjected = num(r['Monthly Projected Budget'] || r.MonthlyProjectedBudget || r.monthlyProjectedBudget || r.Budget || r.budget || r.Projected || r.projected || r['Projected Budget'] || r.ProjectedBudget || r.projectedBudget || r['F'] || r.F || rowVal(r,5));
-  const monthlyStraightline = num(r['Monthly Straightline Budget'] || r.MonthlyStraightlineBudget || r.monthlyStraightlineBudget || r.StraightlineBudget || r['Straightline Budget'] || r['Straight-line Budget'] || rowVal(r,6));
-  const dailyProjected = num(r['Daily Projected Budget'] || r.DailyProjectedBudget || r.dailyProjectedBudget || r.DailyBudget || r['Daily Budget'] || r.dailyBudget || rowVal(r,7));
-  const dailyStraightline = num(r['Daily Straightline Budget'] || r.DailyStraightlineBudget || r.dailyStraightlineBudget || rowVal(r,8));
-  return repairRevenueShape({
-    Date: normaliseDate(r.Date || r.date || r.Timestamp || r.CreatedAt || rowVal(r,0)),
-    Manager: text(r.Manager || r.manager || r['Project Manager'] || r.ProjectManager || rowVal(r,3)),
-    CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Costcenter || r.Division || r['Cost Center'] || rowVal(r,1)),
-    ProjectName: text(r.ProjectName || r.projectName || r['Project Name'] || r.ProjectsName || rowVal(r,4)),
-    Actual: actualValue,
-    Actuals: actualValue,
-    Amount: actualValue,
-    Budget: monthlyProjected,
-    DailyBudget: dailyProjected,
-    MonthlyStraightlineBudget: monthlyStraightline,
-    DailyStraightlineBudget: dailyStraightline,
-    Confirmed: num(r.Confirmed || r.confirmed || rowVal(r,12)),
-    Forecast: num(r.Forecast || r.forecast || rowVal(r,13)),
-    Category: text(r.Category || r.category || rowVal(r,2) || 'Daily Revenue'),
-    InvoicesIssued: num(r['Invoices Issued'] || r.InvoicesIssued || r.invoicesIssued || rowVal(r,10)),
-    PaymentsReceived: num(r['Payments Received'] || r.PaymentsReceived || r.paymentsReceived || rowVal(r,11)),
-    Quality: num(r.Quality || r.quality || 80),
-    Safety: num(r.Safety || r.safety || 0),
-    SubmittedBy: text(r.SubmittedBy || r.submittedBy || r['Submitted By'] || ''),
-    SubmittedRole: text(r.SubmittedRole || r.submittedRole || r['Submitted Role'] || ''),
-    ReasonFlags: text(r.ReasonFlags || r.reasonFlags || ''),
-    QualityComment: text(r.QualityComment || r.qualityComment || r['Quality Comment'] || ''),
-    SafetyComment: text(r.SafetyComment || r.safetyComment || r['Safety Comment'] || ''),
-    ExtraReason: text(r.ExtraReason || r.extraReason || ''),
-    ApprovalStatus: text(r.ApprovalStatus || r.approvalStatus || 'Pending'),
-    ApprovalBy: text(r.ApprovalBy || r.approvalBy || ''),
-    ApprovalDate: normaliseDate(r.ApprovalDate || r.approvalDate || ''),
-    AdminComment: text(r.AdminComment || r.adminComment || ''),
-    RowId: text(r.RowId || r.rowId || ''),
-    CreatedAt: normaliseDate(r.CreatedAt || r.createdAt || rowVal(r,0)),
-    Margin: 0
-  });
+function mapManagerBudgetRow(r){
+  return {
+    Date: normaliseDate(r.Date || r.date || r.BudgetDate || r['Budget Date'] || r.CreatedAt || r.Timestamp || ''),
+    Manager: text(r.Manager || r.manager || r.ProjectManager || r['Project Manager'] || r['Project manager'] || r['Manager Name'] || r.PM),
+    ProjectManager: text(r.ProjectManager || r.Manager || r.manager || r['Project Manager'] || r['Project manager'] || r['Manager Name'] || r.PM),
+    CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Division || r.division || r['Cost Center']),
+    Division: normalizeCostCenterName(r.Division || r.division || r.CostCenter || r.costCenter || r['Cost Center']),
+    ProjectName: text(r.ProjectName || r.projectName || r['Project Name'] || r.ProjectsName),
+    Actual: num(r.Actual || r.Actuals || r.Amount),
+    Budget: num(r.Budget || r['Projected budget'] || r['Projected Budget'] || r['Projected budget for the month'] || r['Projected Budget For The Month'] || r.ProjectedBudget || r.Projected || r.projected),
+    ProjectedBudget: num(r.ProjectedBudget || r['Projected budget'] || r['Projected Budget'] || r['Projected budget for the month'] || r['Projected Budget For The Month'] || r.Budget || r.Projected || r.projected),
+    StraightlineBudget: num(r.StraightlineBudget || r['Straightline budget'] || r['Straightline Budget'] || r['Straight-line Budget'] || r['Straight Line Budget'] || r.MonthlyStraightlineBudget),
+    MonthlyStraightlineBudget: num(r.MonthlyStraightlineBudget || r.StraightlineBudget || r['Straightline budget'] || r['Straightline Budget'] || r['Straight-line Budget'] || r['Straight Line Budget']),
+    PerformancePct: num(r.PerformancePct || r['% PERFORMANCE'] || r['% PERFOMANCE'])
+  };
 }
 
 function mapProjectRow(r){ return Object.assign({}, r, { CreatedAt: normaliseDate(r.CreatedAt || r.createdAt || r.Date), Division: normalizeCostCenterName(r.Division || r.division || r.CostCenter || r['Cost Center']), Manager: text(r.Manager || r.manager || r['Project Manager'] || r['Project manager'] || r.ProjectManager || r['Manager Name'] || r.PM), ProjectName: text(r.ProjectName || r.projectName || r['Project Name']), Location: text(r.Location || r.location), Status: text(r.Status || r.status || 'Confirmed'), TotalIncome: num(r.TotalIncome || r.totalIncome || r['Total Income'] || r.Amount), Margin: num(r.Margin || r.margin || r['Margin %']), StartDate: normaliseDate(r.StartDate || r.startDate), EndDate: normaliseDate(r.EndDate || r.endDate), Remarks: text(r.Remarks || r.remarks) }); }
 function mapInvoiceRow(r){ return { Date: normaliseDate(r.Date || r.date), Manager: text(r.Manager || r.manager), ProjectName: text(r.ProjectName || r.projectName), InvoiceNumber: text(r.InvoiceNumber || r.invoiceNumber || r['Invoice No']), Amount: num(r.Amount || r.amount), PaymentReceived: String(r.PaymentReceived || r.paymentReceived).toLowerCase()==='true' || r.PaymentReceived===true, PaymentDate: normaliseDate(r.PaymentDate || r.paymentDate), CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Division), Notes: text(r.Notes || r.notes) }; }
-function mapManagerBudgetRow(r){ return { ProjectManager: text(r.ProjectManager || r.Manager || r.manager), CostCenter: normalizeCostCenterName(r.CostCenter || r.Division), Actual: num(r.Actual || r.Actuals || r.Amount), Budget: num(r.Budget || r.Projected || r.projected), StraightlineBudget: num(r.StraightlineBudget || r['Straightline Budget'] || r['Straight-line Budget']), PerformancePct: num(r.PerformancePct || r['% PERFORMANCE'] || r['% PERFOMANCE']) }; }
-function mapStraightlineRow(r){ return { Date: normaliseDate(r.Date || r.date || r.CreatedAt), Manager: text(r.Manager || r.manager || r.ProjectManager || r['Project Manager'] || r['Project manager'] || r['Manager Name'] || r.PM), CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Division || r['Cost Center']), ProjectName: text(r.ProjectName || r.projectName || r['Project Name']), Projected: num(r.Projected || r['Projected Budget'] || r['Projected Amount'] || r.Budget || r.projected || r.Target), StraightlineBudget: num(r.StraightlineBudget || r['Straightline Budget'] || r['Straight-line Budget'] || r['Straight Line Budget'] || r.Straightline || r['Straight Line']) }; }
-function mapOrderRow(r){ return Object.assign({}, r, { Date: normaliseDate(r.Date || r.CreatedAt), Division: normalizeCostCenterName(r.Division || r.CostCenter || r['Cost Center']), Manager: text(r.Manager || r.manager || r['Project Manager']), ProjectName: text(r.ProjectName || r.projectName || r['Project Name']), Status: text(r.Status || r.status), TotalIncome: num(r.TotalIncome || r['Total Income'] || r.Amount || r.OrderValue || r.ConfirmedValue || r.ForecastValue) }); }
-function wireFilters(){ $('periodFilter').onchange = e => { state.filters.period = e.target.value; renderAll(); }; $('divisionFilter').onchange = e => { state.filters.division = e.target.value; renderAll(); }; $('managerFilter').onchange = e => { state.filters.manager = e.target.value; renderAll(); }; $('searchFilter').oninput = e => { state.filters.search = e.target.value; renderAll(); }; }
-
-
-function bindTabs(){ document.querySelectorAll('.tab').forEach(tab => tab.onclick = () => { document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active')); tab.classList.add('active'); $(tab.dataset.panel).classList.add('active'); if (tab.dataset.panel === 'summaryPanel') { renderSummary(); } else if (tab.dataset.panel === 'performancePanel') { renderPerformanceSection(); } else { destroyCharts(); } }); }
-
-
-function mapRevenueRow(r){
-  const actualValue = num(r['Daily Revenue'] || r.DailyRevenue || r.dailyRevenue || r.Actual || r.actual || r.Actuals || r.actuals || r['Actuals'] || r['Actual'] || r['E'] || r.E || rowVal(r,9) || r.Amount || r.amount);
-  const monthlyProjected = num(r['Monthly Projected Budget'] || r.MonthlyProjectedBudget || r.monthlyProjectedBudget || r.Budget || r.budget || r.Projected || r.projected || r['Projected Budget'] || r.ProjectedBudget || r.projectedBudget || r['F'] || r.F || rowVal(r,5));
-  const monthlyStraightline = num(r['Monthly Straightline Budget'] || r.MonthlyStraightlineBudget || r.monthlyStraightlineBudget || r.StraightlineBudget || r['Straightline Budget'] || r['Straight-line Budget'] || rowVal(r,6));
-  const dailyProjected = num(r['Daily Projected Budget'] || r.DailyProjectedBudget || r.dailyProjectedBudget || r.DailyBudget || r['Daily Budget'] || r.dailyBudget || rowVal(r,7));
-  const dailyStraightline = num(r['Daily Straightline Budget'] || r.DailyStraightlineBudget || r.dailyStraightlineBudget || rowVal(r,8));
-  return repairRevenueShape({
-    Date: normaliseDate(r.Date || r.date || r.Timestamp || r.CreatedAt || rowVal(r,0)),
-    Manager: text(r.Manager || r.manager || r['Project Manager'] || r.ProjectManager || rowVal(r,3)),
-    CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Costcenter || r.Division || r['Cost Center'] || rowVal(r,1)),
-    ProjectName: text(r.ProjectName || r.projectName || r['Project Name'] || r.ProjectsName || rowVal(r,4)),
-    Actual: actualValue,
-    Actuals: actualValue,
-    Amount: actualValue,
-    Budget: monthlyProjected,
-    DailyBudget: dailyProjected,
-    MonthlyProjectedBudget: monthlyProjected,
-    MonthlyStraightlineBudget: monthlyStraightline,
-    DailyProjectedBudget: dailyProjected,
-    DailyStraightlineBudget: dailyStraightline,
-    Confirmed: num(r.Confirmed || r.confirmed || rowVal(r,12)),
-    Forecast: num(r.Forecast || r.forecast || rowVal(r,13)),
-    Category: text(r.Category || r.category || rowVal(r,2) || 'Daily Revenue'),
-    InvoicesIssued: num(r['Invoices Issued'] || r.InvoicesIssued || r.invoicesIssued || rowVal(r,10)),
-    PaymentsReceived: num(r['Payments Received'] || r.PaymentsReceived || r.paymentsReceived || rowVal(r,11)),
-    Quality: num(r.Quality || r.quality || 80),
-    Safety: num(r.Safety || r.safety || 0),
-    SubmittedBy: text(r.SubmittedBy || r.submittedBy || r['Submitted By'] || ''),
-    SubmittedRole: text(r.SubmittedRole || r.submittedRole || r['Submitted Role'] || ''),
-    ReasonFlags: text(r.ReasonFlags || r.reasonFlags || ''),
-    QualityComment: text(r.QualityComment || r.qualityComment || r['Quality Comment'] || ''),
-    SafetyComment: text(r.SafetyComment || r.safetyComment || r['Safety Comment'] || ''),
-    ExtraReason: text(r.ExtraReason || r.extraReason || ''),
-    ApprovalStatus: text(r.ApprovalStatus || r.approvalStatus || 'Pending'),
-    ApprovalBy: text(r.ApprovalBy || r.approvalBy || ''),
-    ApprovalDate: normaliseDate(r.ApprovalDate || r.approvalDate || ''),
-    AdminComment: text(r.AdminComment || r.adminComment || ''),
-    RowId: text(r.RowId || r.rowId || ''),
-    CreatedAt: normaliseDate(r.CreatedAt || r.createdAt || rowVal(r,0)),
-    Margin: 0
-  });
+function mapManagerBudgetRow(r){
+  return {
+    Date: normaliseDate(r.Date || r.date || r.BudgetDate || r['Budget Date'] || r.CreatedAt || r.Timestamp || ''),
+    Manager: text(r.Manager || r.manager || r.ProjectManager || r['Project Manager'] || r['Project manager'] || r['Manager Name'] || r.PM),
+    ProjectManager: text(r.ProjectManager || r.Manager || r.manager || r['Project Manager'] || r['Project manager'] || r['Manager Name'] || r.PM),
+    CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Division || r.division || r['Cost Center']),
+    Division: normalizeCostCenterName(r.Division || r.division || r.CostCenter || r.costCenter || r['Cost Center']),
+    ProjectName: text(r.ProjectName || r.projectName || r['Project Name'] || r.ProjectsName),
+    Actual: num(r.Actual || r.Actuals || r.Amount),
+    Budget: num(r.Budget || r['Projected budget'] || r['Projected Budget'] || r['Projected budget for the month'] || r['Projected Budget For The Month'] || r.ProjectedBudget || r.Projected || r.projected),
+    ProjectedBudget: num(r.ProjectedBudget || r['Projected budget'] || r['Projected Budget'] || r['Projected budget for the month'] || r['Projected Budget For The Month'] || r.Budget || r.Projected || r.projected),
+    StraightlineBudget: num(r.StraightlineBudget || r['Straightline budget'] || r['Straightline Budget'] || r['Straight-line Budget'] || r['Straight Line Budget'] || r.MonthlyStraightlineBudget),
+    MonthlyStraightlineBudget: num(r.MonthlyStraightlineBudget || r.StraightlineBudget || r['Straightline budget'] || r['Straightline Budget'] || r['Straight-line Budget'] || r['Straight Line Budget']),
+    PerformancePct: num(r.PerformancePct || r['% PERFORMANCE'] || r['% PERFOMANCE'])
+  };
 }
 
 function mapProjectRow(r){
@@ -2463,24 +2395,33 @@ function managerNamesMatch(a, b){
   return managerNameAlias(a) === managerNameAlias(b);
 }
 function managerBudgetSourceRows(){
-  const managerRows = (Array.isArray(state.managerBudgets) ? state.managerBudgets : []).filter(r => num(r.ProjectedBudget || r.Budget || r.Projected) || num(r.StraightlineBudget || r.MonthlyStraightlineBudget) || text(r.ProjectName) || text(r.ProjectManager || r.Manager));
+  const managerRows = (Array.isArray(state.managerBudgets) ? state.managerBudgets : []).filter(r =>
+    num(r.ProjectedBudget || r.Budget || r.Projected)
+    || num(r.StraightlineBudget || r.MonthlyStraightlineBudget)
+    || text(r.ProjectName)
+    || text(r.ProjectManager || r.Manager)
+  );
   if (managerRows.length) return managerRows.map(r => ({
+    Date: normaliseDate(r.Date || r.BudgetDate || r['Budget Date'] || ''),
     Manager: text(r.ProjectManager || r.Manager),
     ProjectManager: text(r.ProjectManager || r.Manager),
     CostCenter: normalizeCostCenterName(r.CostCenter || r.Division),
     Division: normalizeCostCenterName(r.CostCenter || r.Division),
     ProjectName: text(r.ProjectName),
     ProjectedBudget: num(r.ProjectedBudget || r.Budget || r.Projected),
+    Budget: num(r.ProjectedBudget || r.Budget || r.Projected),
     StraightlineBudget: num(r.StraightlineBudget || r.MonthlyStraightlineBudget),
     MonthlyStraightlineBudget: num(r.StraightlineBudget || r.MonthlyStraightlineBudget)
   }));
   return (Array.isArray(state.straightline) ? state.straightline : []).map(r => ({
+    Date: normaliseDate(r.Date || r.BudgetDate || r['Budget Date'] || ''),
     Manager: text(r.Manager || r.ProjectManager),
     ProjectManager: text(r.Manager || r.ProjectManager),
     CostCenter: normalizeCostCenterName(r.CostCenter || r.Division),
     Division: normalizeCostCenterName(r.CostCenter || r.Division),
     ProjectName: text(r.ProjectName),
     ProjectedBudget: num(r.ProjectedBudget || r.Projected || r.Budget || r.MonthlyProjectedBudget),
+    Budget: num(r.ProjectedBudget || r.Projected || r.Budget || r.MonthlyProjectedBudget),
     StraightlineBudget: num(r.StraightlineBudget || r.MonthlyStraightlineBudget),
     MonthlyStraightlineBudget: num(r.StraightlineBudget || r.MonthlyStraightlineBudget)
   }));
@@ -2639,31 +2580,64 @@ function wireFilters(){ $('periodFilter').onchange = e => { state.filters.period
 function monthlyStraightlineForRevenue(costCenter, manager, projectName, dateValue){ return monthlyStraightlineBudgetFor(costCenter, manager, projectName); }
 function updateDashboardClock(){ const el = $('dashboardClockTime'); if (!el) return; const now = new Date(); el.textContent = now.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}); }
 function startDashboardClock(){ updateDashboardClock(); if (window.dashboardClockTimer) clearInterval(window.dashboardClockTimer); window.dashboardClockTimer = setInterval(updateDashboardClock, 1000); }
+function wireAuthHandlers(){
+  if ($('showLoginTabBtn')) {
+    $('showLoginTabBtn').onclick = () => setActiveAuthTab('login');
+    $('showLoginTabBtn').addEventListener('click', () => setActiveAuthTab('login'));
+  }
+  if ($('showRegisterTabBtn')) {
+    $('showRegisterTabBtn').onclick = () => setActiveAuthTab('register');
+    $('showRegisterTabBtn').addEventListener('click', () => setActiveAuthTab('register'));
+  }
+  if ($('loginBtn')) {
+    $('loginBtn').onclick = loginUser;
+    $('loginBtn').addEventListener('click', loginUser);
+  }
+  if ($('registerBtn')) {
+    $('registerBtn').onclick = registerUser;
+    $('registerBtn').addEventListener('click', registerUser);
+  }
+  if ($('logoutBtn')) {
+    $('logoutBtn').onclick = logoutUser;
+    $('logoutBtn').addEventListener('click', logoutUser);
+  }
+  ['loginUsername','loginPassword'].forEach(id => {
+    if ($(id)) $(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); loginUser(); }
+    });
+  });
+  ['registerFullName','registerUsername','registerEmail','registerPassword'].forEach(id => {
+    if ($(id)) $(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); registerUser(); }
+    });
+  });
+}
+
 function init(){ 
   loadRememberedUser();
+  wireAuthHandlers();
   bindTabs(); wireFilters(); wireProjectAdders(); wireExecutiveExports(); startDashboardClock();
-  $('testBtn').onclick = () => quickConnectionTest();
-  $('refreshBtn').onclick = () => loadData();
-  $('saveRevenueBtn').onclick = saveRevenue;
-  $('saveProjectBtn').onclick = saveProject;
-  $('saveInvoiceBtn').onclick = saveInvoice;
-  $('savePaymentBtn').onclick = savePaymentReceived;
-  if ($('logoutBtn')) $('logoutBtn').onclick = logoutUser;
-  if ($('showLoginTabBtn')) $('showLoginTabBtn').onclick = () => setActiveAuthTab('login');
-  if ($('showRegisterTabBtn')) $('showRegisterTabBtn').onclick = () => setActiveAuthTab('register');
-  if ($('loginBtn')) $('loginBtn').onclick = loginUser;
-  if ($('registerBtn')) $('registerBtn').onclick = registerUser;
-  $('revDate').value = $('projCreatedAt').value = $('invDate').value = $('payDate').value = todayISO();
-  $('periodFilter').innerHTML = PERIODS.map(p=>`<option ${p===state.filters.period?'selected':''}>${p}</option>`).join('');
+  if ($('testBtn')) $('testBtn').onclick = () => quickConnectionTest();
+  if ($('refreshBtn')) $('refreshBtn').onclick = () => loadData();
+  if ($('saveRevenueBtn')) $('saveRevenueBtn').onclick = saveRevenue;
+  if ($('saveProjectBtn')) $('saveProjectBtn').onclick = saveProject;
+  if ($('saveInvoiceBtn')) $('saveInvoiceBtn').onclick = saveInvoice;
+  if ($('savePaymentBtn')) $('savePaymentBtn').onclick = savePaymentReceived;
+  if ($('revDate')) $('revDate').value = todayISO();
+  if ($('projCreatedAt')) $('projCreatedAt').value = todayISO();
+  if ($('invDate')) $('invDate').value = todayISO();
+  if ($('payDate')) $('payDate').value = todayISO();
+  if ($('periodFilter')) $('periodFilter').innerHTML = PERIODS.map(p=>`<option ${p===state.filters.period?'selected':''}>${p}</option>`).join('');
   if ($('revProjectName')) $('revProjectName').addEventListener('change', applyRememberedRevenueBudgets);
   if ($('revManager')) $('revManager').addEventListener('change', applyRememberedRevenueBudgets);
   if ($('revCostCenter')) $('revCostCenter').addEventListener('change', applyRememberedRevenueBudgets);
-  $('diagnostics').textContent = 'Waiting for first load...';
+  if ($('diagnostics')) $('diagnostics').textContent = 'Waiting for first load...';
   setActiveAuthTab('login');
   setAuthVisibility();
   if (state.currentUser) loadData();
 }
 document.addEventListener('DOMContentLoaded', init);
+window.addEventListener('load', wireAuthHandlers);
 </script>
 </body>
 </html>
