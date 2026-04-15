@@ -103,62 +103,16 @@
     .subtle-title{margin:0 0 10px;font-size:13px;font-weight:700;color:#0b3b91;text-transform:uppercase;letter-spacing:.06em}
     @media (max-width:1100px){.reason-grid{grid-template-columns:1fr}}
 
-
-    .login-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px}
-    .login-card{width:min(460px,100%);background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:22px}
-    .login-title{margin:0 0 8px;font-size:24px;color:var(--primary)}
-    .login-sub{margin:0 0 16px;color:var(--muted)}
-    .login-actions{display:flex;gap:10px;margin-top:14px}
-    .login-hidden{display:none !important}
-    .user-chip{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:14px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-weight:700}
-    .approval-actions{display:flex;flex-wrap:wrap;gap:8px}
-    .approval-actions button{width:auto;padding:8px 12px;border-radius:10px}
-    .role-note{font-size:12px;color:var(--muted);margin-top:6px}
-    .login-overlay{overflow-y:auto}
-    .login-card{max-height:calc(100vh - 40px);overflow-y:auto;transition:max-width .25s ease,width .25s ease}
-    .login-card.expanded{width:min(760px,100%)}
-    .register-section{max-height:0;overflow:hidden;opacity:0;transition:max-height .25s ease,opacity .2s ease,margin-top .25s ease}
-    .register-section.expanded{max-height:520px;opacity:1;margin-top:10px}
-
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div id="toastWrap" class="toast-wrap"></div>
-  <div id="loginOverlay" class="login-overlay">
-    <div class="login-card" id="loginCard">
-      <h2 class="login-title">Manager Dashboard Login</h2>
-      <p class="login-sub">Login uses the <strong>Login</strong> tab in the Manager Dashboard workbook.</p>
-      <div class="form-grid">
-        <div class="field span-12"><label>Login Username</label><input id="loginUsername" placeholder="Enter username"></div>
-        <div class="field span-12"><label>Login Password</label><input id="loginPassword" type="password" placeholder="Enter password"></div>
-      </div>
-      <div class="login-actions">
-        <button id="loginBtn" type="button">Login</button>
-        <button id="logoutBtn" type="button" class="secondary login-hidden">Logout</button>
-      </div>
-      <div id="registerSection" class="register-section">
-        <div class="role-note" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">Create a new user</div>
-        <div class="form-grid" style="margin-top:10px">
-          <div class="field span-12"><label>Full name</label><input id="registerName" placeholder="Enter full name"></div>
-          <div class="field span-12"><label>Registration Username</label><input id="registerUsername" placeholder="Create username"></div>
-          <div class="field span-12"><label>Registration Password</label><input id="registerPassword" type="password" placeholder="Create password"></div>
-          <div class="field span-12"><label>Confirm Password</label><input id="registerConfirmPassword" type="password" placeholder="Confirm password"></div>
-          <div class="field span-12"><label>Role</label><select id="registerRole"><option value="user">User</option><option value="admin manager">Admin Manager</option><option value="safety manager">Safety Manager</option></select></div>
-        </div>
-      </div>
-      <div class="login-actions">
-        <button id="registerBtn" type="button" class="secondary">Register User</button>
-      </div>
-      <div id="loginMessage" class="role-note">Please sign in to continue. Registration saves directly to the Login tab in the Manager Dashboard workbook.</div>
-    </div>
-  </div>
   <div class="wrap">
     <div class="card topbar">
       <div><div class="muted">Onpoint Group</div><h1 style="margin:4px 0 0;font-size:28px">Dashboard</h1></div>
       <div id="connBadge" class="badge warn">Connecting</div>
       <button id="testBtn" type="button">Test connection</button>
-      <div id="currentUserChip" class="user-chip login-hidden">Not logged in</div>
       <button id="refreshBtn" type="button">Refresh</button>
     </div>
 
@@ -278,9 +232,6 @@
             <div class="field span-2"><label>Daily Budget</label><input id="revDailyBudget" type="number" min="0" step="0.01"></div>
             <div class="field span-2"><label>Quality</label><input id="revQuality" type="number" min="0" max="100" value="80"></div>
             <div class="field span-2"><label>Safety</label><input id="revSafety" type="number" min="0" value="0"></div>
-            <div class="field span-2"><label>Status</label><input id="revStatusDisplay" value="Pending Approval" readonly></div>
-            <div class="field span-4"><label>Logged in user</label><input id="revPostedByDisplay" readonly></div>
-            <div class="field span-6"><label>Manager / Safety Comment</label><input id="revManagerSafetyComment" placeholder="Visible on daily revenue transactions"></div>
             <div class="reason-box">
               <div class="subtle-title">Target not reached comments</div>
               <div class="reason-grid">
@@ -300,7 +251,7 @@
         </div>
       </div>
       <div class="card" style="margin-top:16px"><h3 style="margin-top:0">Revenue Summary</h3><div id="revenueStats" class="stats"></div></div>
-      <div class="card" style="margin-top:16px"><h3 style="margin-top:0">Daily Revenue transactions</h3><div class="muted" style="margin-bottom:12px">Status colors: warning red, pending yellow, approved green. Admin manager and safety manager comments show here.</div><div class="table-wrap"><table id="dailyRevenueTransactionsTable"></table></div></div>
+      <div class="card" style="margin-top:16px"><h3 style="margin-top:0">Daily Revenue transactions</h3><div class="table-wrap"><table id="dailyRevenueTransactionsTable"></table></div></div>
     </div>
 
     <div class="panel" id="projectsPanel">
@@ -360,8 +311,8 @@
   </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzK2cdaZIJKvnYEeG6NlAa6PX1Q4Uy83e97XDRIZO1y7KEdqt6B8crJWkLvadsKzsldLw/exec';
-const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbzK2cdaZIJKvnYEeG6NlAa6PX1Q4Uy83e97XDRIZO1y7KEdqt6B8crJWkLvadsKzsldLw/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw5OXuG_NyXtkeS0X36xp2v5Hl8E_R_dH-ibPSFt5ke8eR2vgHjoAjISkQ4o7ekFKRH/exec';
+const REVENUE_SAVE_URL = 'https://script.google.com/macros/s/AKfycbw5OXuG_NyXtkeS0X36xp2v5Hl8E_R_dH-ibPSFt5ke8eR2vgHjoAjISkQ4o7ekFKRH/exec';
 const PERIODS = ['Daily','Weekly','Monthly','Quarterly','Yearly'];
 const EXECUTIVE_AVG_GROSS_MARGIN_PCT = 31.66;
 const EXECUTIVE_PIE_COLORS = ['#0f172a','#1d4ed8','#15803d','#b45309','#b91c1c','#7c3aed','#0891b2','#ea580c','#16a34a','#be185d'];
@@ -379,7 +330,7 @@ const ONPOINT_OVERRIDE_MONTHLY_PROJECTED = 34220381;
 const ONPOINT_OVERRIDE_MONTHLY_STRAIGHTLINE = 39556824;
 const GROUP_FIXED_MONTHLY_PROJECTED = 34220381;
 const GROUP_FIXED_MONTHLY_STRAIGHTLINE = 39556824;
-const state = { projects:[], revenue:[], invoices:[], payments:[], managerBudgets:[], orders:[], straightline:[], logins:[], currentUser:null, filters:{ period:'Monthly', division:'All', manager:'All', project:'All', search:'' } }; let charts = {};
+const state = { projects:[], revenue:[], invoices:[], payments:[], managerBudgets:[], orders:[], straightline:[], filters:{ period:'Monthly', division:'All', manager:'All', project:'All', search:'' } }; let charts = {};
 const $ = id => document.getElementById(id);
 const log = (...args) => { const msg = args.map(v => typeof v === 'string' ? v : JSON.stringify(v,null,2)).join(' '); $('diagnostics').textContent = `${new Date().toLocaleString()}\n${msg}\n\n` + $('diagnostics').textContent; };
 const num = v => Number(String(v ?? '').replace(/[^0-9.-]/g,'')) || 0;
@@ -388,165 +339,6 @@ const text = v => String(v ?? '').trim();
 const lower = v => text(v).toLowerCase();
 const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
-const LOGIN_TAB_SHEET_ID = '1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE';
-const USER_SESSION_KEY = 'onpoint_dashboard_logged_in_user_v1';
-function mapLoginRow(r){
-  return {
-    username:text(r.Username || r.username || r.UserName || rowVal(r,0)),
-    role:text(r.Role || r.role || rowVal(r,1)),
-    displayName:text(r.Name || r.DisplayName || r.displayName || rowVal(r,2) || r.Username || r.username || rowVal(r,0)),
-    isActive:String(r.Active ?? r.active ?? rowVal(r,3) ?? 'true').toLowerCase() !== 'false',
-    password:''
-  };
-}
-function currentUserName(){ return text(state.currentUser?.displayName || state.currentUser?.name || state.currentUser?.username); }
-function currentUserRole(){ return lower(state.currentUser?.role); }
-function isAdminManager(){ return currentUserRole()==='admin manager' || currentUserRole()==='admin_manager' || currentUserRole()==='admin'; }
-function isSafetyManager(){ return currentUserRole()==='safety manager' || currentUserRole()==='safety_manager'; }
-function isNormalUser(){ return currentUserRole()==='user'; }
-function canPostRevenue(){ return !!state.currentUser && (isAdminManager() || isNormalUser()); }
-function canPostProject(){ return !!state.currentUser && isAdminManager(); }
-function canPostInvoice(){ return !!state.currentUser && (isAdminManager() || isNormalUser()); }
-function canPostPayment(){ return !!state.currentUser && (isAdminManager() || isNormalUser()); }
-function canSetQuality(){ return !!state.currentUser && isSafetyManager(); }
-function canApproveRevenue(){ return !!state.currentUser && isAdminManager(); }
-function canCommentRevenue(){ return !!state.currentUser && (isAdminManager() || isSafetyManager()); }
-function normalizeApprovalStatus(v){ const s=lower(v); if (s.includes('approve')) return 'Approved'; if (s.includes('warn')) return 'Warning'; return 'Pending Approval'; }
-function statusBadgeClass(v){ const s=normalizeApprovalStatus(v); if (s==='Approved') return 'ok'; if (s==='Warning') return 'bad'; return 'warn'; }
-function saveSessionUser(){ try{ localStorage.setItem(USER_SESSION_KEY, JSON.stringify(state.currentUser || null)); }catch(e){} }
-function restoreSessionUser(){ try{ state.currentUser = JSON.parse(localStorage.getItem(USER_SESSION_KEY) || 'null'); }catch(e){ state.currentUser=null; } }
-function setCurrentUser(user){ state.currentUser = user || null; saveSessionUser(); applyRolePermissions(); }
-function requireRole(check, message){ if (!check()) { showToast(message,'error'); alert(message); return false; } return true; }
-function composeRevenueReasonText(){ const reasons=[]; if($('revReasonRainfall')?.checked) reasons.push('Rainfall'); if($('revReasonBadWeather')?.checked) reasons.push('Bad weather'); if($('revReasonShortage')?.checked) reasons.push('Shortage of material'); if($('revReasonDelay')?.checked) reasons.push('Delay in supplies'); if($('revReasonPlanning')?.checked) reasons.push('Poor planning'); if(text($('revReasonOther')?.value)) reasons.push(text($('revReasonOther').value)); return reasons.join(', '); }
-function combinedRevenueComments(){ return [text($('revComment')?.value), text($('revManagerSafetyComment')?.value)].filter(Boolean).join(' | '); }
-async function fetchLoginUsers(){
-  const remoteRows = await fetchActionFirst(['getLoginUsers','getLogins','loginUsers']);
-  state.logins = Array.isArray(remoteRows) ? remoteRows.map(mapLoginRow) : [];
-  return state.logins;
-}
-function isRegisterSectionExpanded(){
-  return $('registerSection')?.classList.contains('expanded');
-}
-function setRegisterButtonState(){
-  const btn = $('registerBtn');
-  if (!btn) return;
-  btn.textContent = isRegisterSectionExpanded() ? 'Submit Registration' : 'Register User';
-}
-function showLoginFeedback(message, type='error', useAlert=false){
-  if ($('loginMessage')) $('loginMessage').textContent = message;
-  showToast(message, type);
-  if (useAlert) alert(message);
-}
-
-function normaliseUserFacingAuthMessage(message, fallback='Request failed.'){
-  const msg = String(message || '').trim();
-  const low = msg.toLowerCase();
-  if (!msg) return fallback;
-  if (low.includes('not registered') || low.includes('no user') || low.includes('user not found')) return 'User not registered. Please create the user first.';
-  if (low.includes('wrong password') || low.includes('invalid password') || low.includes('incorrect password') || low.includes('invalid credentials')) return 'Wrong password.';
-  if (low.includes('inactive')) return 'User inactive. Please contact administrator.';
-  if (low.includes('timeout')) return 'Synchronising timed out. Please try again.';
-  return msg;
-}
-function setButtonBusy(buttonId, busyText, isBusy){
-  const btn = $(buttonId);
-  if (!btn) return () => {};
-  const oldText = btn.dataset.originalText || btn.textContent;
-  if (!btn.dataset.originalText) btn.dataset.originalText = oldText;
-  if (isBusy) {
-    btn.textContent = busyText;
-    btn.disabled = true;
-    btn.classList.add('btn-loading');
-  } else {
-    btn.textContent = oldText;
-    btn.disabled = false;
-    btn.classList.remove('btn-loading');
-  }
-  return () => {
-    btn.textContent = oldText;
-    btn.disabled = false;
-    btn.classList.remove('btn-loading');
-  };
-}
-function toggleRegisterSection(forceState){
-  const section = $('registerSection');
-  const card = $('loginCard');
-  if (!section) return false;
-  const shouldExpand = typeof forceState === 'boolean' ? forceState : !section.classList.contains('expanded');
-  section.classList.toggle('expanded', shouldExpand);
-  if (card) card.classList.toggle('expanded', shouldExpand);
-  setRegisterButtonState();
-  return shouldExpand;
-}
-async function handleRegisterButton(){
-  if (!isRegisterSectionExpanded()) {
-    toggleRegisterSection(true);
-    return;
-  }
-  await registerUser();
-}
-async function registerUser(){
-  const displayName=text($('registerName')?.value);
-  const username=text($('registerUsername')?.value);
-  const password=text($('registerPassword')?.value);
-  const confirmPassword=text($('registerConfirmPassword')?.value);
-  const role=text($('registerRole')?.value || 'user');
-  if(!displayName || !username || !password || !confirmPassword){ showLoginFeedback('Complete all registration fields.', 'error', true); return; }
-  if(password !== confirmPassword){ showLoginFeedback('Passwords do not match.', 'error', true); return; }
-  if(password.length < 6){ showLoginFeedback('Password must be at least 6 characters.', 'error', true); return; }
-  const done = setButtonBusy('registerBtn', '⟳ Synchronising user...', true);
-  showLoginFeedback('Synchronising new user registration...', 'info', false);
-  let users = [];
-  try {
-    users = await fetchLoginUsers();
-    if (users.some(u => lower(u.username)===lower(username))) { showLoginFeedback('That username already exists.', 'error', true); return; }
-    const res = await postAction({ action:'registerUser', targetSpreadsheetId:LOGIN_TAB_SHEET_ID, spreadsheetId:LOGIN_TAB_SHEET_ID, workbookName:'Manager Dashboard', sheetName:'Manager Dashboard', tabName:'Login', targetTab:'Login', username, password, role, name:displayName, active:true });
-    if ($('loginUsername')) $('loginUsername').value = username;
-    if ($('loginPassword')) $('loginPassword').value = '';
-    if ($('registerName')) $('registerName').value = '';
-    if ($('registerUsername')) $('registerUsername').value = '';
-    if ($('registerPassword')) $('registerPassword').value = '';
-    if ($('registerConfirmPassword')) $('registerConfirmPassword').value = '';
-    await fetchLoginUsers();
-    const okMsg = res.message || 'User created successfully. Synchronisation complete.';
-    showLoginFeedback(okMsg, 'success', false);
-    alert(okMsg);
-    toggleRegisterSection(false);
-  } catch(e) {
-    showLoginFeedback(normaliseUserFacingAuthMessage(e.message, 'Registration failed.'), 'error', true);
-  } finally {
-    done();
-    setRegisterButtonState();
-  }
-}
-async function handleLogin(){
-  const username=text($('loginUsername')?.value);
-  const password=text($('loginPassword')?.value);
-  if(!username || !password){ showLoginFeedback('Enter username and password.', 'error', true); return; }
-  const done = setButtonBusy('loginBtn', '⟳ Synchronising login...', true);
-  showLoginFeedback('Synchronising login...', 'info', false);
-  try {
-    const res = await postAction({ action:'loginUser', targetSpreadsheetId:LOGIN_TAB_SHEET_ID, spreadsheetId:LOGIN_TAB_SHEET_ID, workbookName:'Manager Dashboard', sheetName:'Manager Dashboard', tabName:'Login', targetTab:'Login', username, password });
-    const user = mapLoginRow(res.user || res.data || res.row || {});
-    if (!user.username) throw new Error('User not registered. Please create the user first.');
-    setCurrentUser({ username:user.username, name:user.displayName, displayName:user.displayName, role:user.role });
-    $('loginOverlay').classList.add('login-hidden');
-    $('logoutBtn').classList.remove('login-hidden');
-    $('loginPassword').value='';
-    const okMsg = `Logged in as ${user.displayName} (${user.role})`;
-    showLoginFeedback(okMsg, 'success', false);
-    alert(okMsg);
-    await loadData();
-  } catch(e) {
-    showLoginFeedback(normaliseUserFacingAuthMessage(e.message, 'Login failed.'), 'error', true);
-  } finally {
-    done();
-  }
-}
-function logoutUser(){ setCurrentUser(null); $('loginOverlay').classList.remove('login-hidden'); $('logoutBtn').classList.add('login-hidden'); $('loginMessage').textContent='Please sign in to continue.'; renderAll(); }
-function applyRolePermissions(){ const user=currentUserName(); if($('currentUserChip')){ $('currentUserChip').textContent = state.currentUser ? `${user} | ${text(state.currentUser.role)}` : 'Not logged in'; $('currentUserChip').classList.toggle('login-hidden', !state.currentUser); } if($('revPostedByDisplay')) $('revPostedByDisplay').value = user || ''; if($('revStatusDisplay')) $('revStatusDisplay').value = 'Pending Approval'; const revDisabled = !canPostRevenue(); const projDisabled = !canPostProject(); const invDisabled = !canPostInvoice(); const payDisabled = !canPostPayment(); if($('saveRevenueBtn')) $('saveRevenueBtn').disabled = revDisabled; if($('saveProjectBtn')) $('saveProjectBtn').disabled = projDisabled; if($('saveInvoiceBtn')) $('saveInvoiceBtn').disabled = invDisabled; if($('savePaymentBtn')) $('savePaymentBtn').disabled = payDisabled; if($('revQuality')) { $('revQuality').disabled = !canSetQuality(); $('revQuality').title = canSetQuality() ? '' : 'Only safety manager can set quality'; } if($('revManagerSafetyComment')) { $('revManagerSafetyComment').disabled = !canCommentRevenue(); $('revManagerSafetyComment').title = canCommentRevenue() ? '' : 'Only admin manager and safety manager can add this comment'; } if($('projectsPanel')) $('projectsPanel').style.display = ''; }
-async function updateRevenueApproval(entry){ if(!requireRole(canApproveRevenue,'Only admin manager can approve or warn daily revenue entries.')) return; const note = window.prompt('Add approval comment (optional)', entry.ManagerComment || entry.Comment || '') || ''; try { const res = await postAction({ action:'updateRevenueApproval', targetSpreadsheetId:'1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE', spreadsheetId:'1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE', workbookName:'Manager Dashboard', sheetName:'Manager Dashboard', tabName:'Daily Revenue', targetTab:'Daily Revenue', rowId: entry.RowId || entry.ID || entry.Timestamp || entry.CreatedAt || `${entry.Date}|${entry.ProjectName}|${entry.Manager}`, date: entry.Date, manager: entry.Manager, costCenter: entry.CostCenter, projectName: entry.ProjectName, approvalStatus: entry.nextStatus, managerComment: note, approvedBy: currentUserName() }); showToast(res.message || 'Revenue approval updated','success'); await loadData(); } catch(e){ showToast(`Approval update failed: ${e.message}`,'error'); alert(e.message || 'Approval update failed.'); } }
-async function addRevenueComment(entry){ if(!requireRole(canCommentRevenue,'Only admin manager and safety manager can comment on daily revenue entries.')) return; const roleLabel = isSafetyManager() ? 'Safety manager comment' : 'Admin manager comment'; const note = window.prompt(`Enter ${roleLabel.toLowerCase()}`, entry.ManagerComment || entry.SafetyManagerComment || entry.Comment || ''); if(note===null) return; try { const payload = { action:'updateRevenueComment', targetSpreadsheetId:'1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE', spreadsheetId:'1DqbP3DmLjTLWuLY6I4X_Xkpg30IkfPSqNVcbU_5WrEE', workbookName:'Manager Dashboard', sheetName:'Manager Dashboard', tabName:'Daily Revenue', targetTab:'Daily Revenue', rowId: entry.RowId || entry.ID || entry.Timestamp || entry.CreatedAt || `${entry.Date}|${entry.ProjectName}|${entry.Manager}`, date: entry.Date, manager: entry.Manager, costCenter: entry.CostCenter, projectName: entry.ProjectName }; if (isSafetyManager()) payload.safetyManagerComment = note; else payload.managerComment = note; payload.commentedBy = currentUserName(); const res = await postAction(payload); showToast(res.message || 'Comment saved','success'); await loadData(); } catch(e){ showToast(`Comment save failed: ${e.message}`,'error'); alert(e.message || 'Comment save failed.'); } }
 function formatDisplayDate(dateValue){
   const iso = normaliseDate(dateValue);
   if (!iso) return text(dateValue) || 'No date';
@@ -620,6 +412,19 @@ function repairRevenueShape(rec){
     const tmp = out.Manager;
     out.Manager = text(out.CostCenter);
     out.CostCenter = normalizeCostCenterName(tmp);
+  }
+  const projectLooksLikeCostCenter = isKnownCostCenterLike(out.ProjectName);
+  const costCenterLooksWrong = !isKnownCostCenterLike(out.CostCenter) || looksLikeProjectName(out.CostCenter);
+  if (projectLooksLikeCostCenter && costCenterLooksWrong) {
+    const maybeProject = text(out.CostCenter);
+    out.CostCenter = normalizeCostCenterName(out.ProjectName);
+    if (maybeProject && !projectLooksLikeCostCenter) out.ProjectName = maybeProject;
+  }
+  if ((!out.CostCenter || !isKnownCostCenterLike(out.CostCenter)) && out.ProjectName) {
+    const projectMatch = state.projects.find(p => lower(text(p.ProjectName)) === lower(text(out.ProjectName)) && (!out.Manager || lower(text(p.Manager)) === lower(text(out.Manager))));
+    if (projectMatch && isKnownCostCenterLike(projectMatch.Division)) {
+      out.CostCenter = normalizeCostCenterName(projectMatch.Division);
+    }
   }
   out.Date = normaliseDate(out.Date);
   out.Manager = text(out.Manager);
@@ -1720,12 +1525,11 @@ function renderKPIs(){
   const selectedPeriodActual = revenueRows.reduce((s,r)=>s+revenueActualValue(r),0);
   const ytd = yearlyRows.reduce((s,r)=>s+revenueActualValue(r),0);
   const btye = Math.max(0, confirmed - ytd);
-  const selectedMetricLabel = selectedPeriodMetricLabel(state.filters.period) || 'MTD';
   $('headlineKpis').innerHTML = [
     ['Total Confirmed', money(confirmed), `${state.filters.period} / Manager Dashboard`],
     ['Total Forecast', money(forecast), `${state.filters.period} / Manager Dashboard`],
     ['Total Orders', money(totalOrders), `${state.filters.period} / Manager Dashboard`],
-    [selectedMetricLabel, money(selectedPeriodActual), 'Manager Dashboard / Daily Revenue'],
+    [selectedPeriodMetricLabel(state.filters.period), money(selectedPeriodActual), 'Manager Dashboard / Daily Revenue'],
     ['Group YTD', money(ytd), 'Manager Dashboard / Daily Revenue'],
     ['Group BTYD', money(btye), 'Confirmed minus YTD']
   ].map(([a,b,c])=>`<div class="kpi"><div class="label">${a}</div><div class="value">${b}</div><div class="sub">${c}</div></div>`).join('');
@@ -1950,7 +1754,7 @@ function renderSummary(){
     ['Profitability', `${profitability}%`, 'From project margin']
   ].map(([a,b,c])=>`<div class="kpi"><div class="label">${a}</div><div class="value">${b}</div><div class="sub">${c}</div></div>`).join('');
   const dailyRows = state.revenue.slice().sort((a,b)=>(a.Date < b.Date ? 1 : -1)).slice(0,100);
-  if ($('dailyRevenueTransactionsTable')) buildTable($('dailyRevenueTransactionsTable'), [{label:'Date'},{label:'Manager'},{label:'CostCenter'},{label:'ProjectName'},{label:'Posted By'},{label:'Actuals',class:'right'},{label:'Budget',class:'right'},{label:'Daily Budget',class:'right'},{label:'Quality',class:'right'},{label:'Status'},{label:'Comments'},{label:'Actions'}], dailyRows.map(r => { const rowKey = escapeHtml(String(r.RowId || r.CreatedAt || (r.Date+'|'+r.ProjectName+'|'+r.Manager))); return [escapeHtml(r.Date), escapeHtml(r.Manager), escapeHtml(r.CostCenter), escapeHtml(r.ProjectName), escapeHtml(r.PostedBy || r.Manager), money(revenueActualValue(r)), money(revenueProjectedValue(r,'Monthly')), money(revenueProjectedValue(r,'Daily')), escapeHtml(r.Quality === '' ? '' : String(r.Quality)), `<span class="badge ${statusBadgeClass(r.ApprovalStatus || r.Status)}">${escapeHtml(normalizeApprovalStatus(r.ApprovalStatus || r.Status))}</span>`, escapeHtml([r.ManagerComment, r.SafetyManagerComment, r.Comment, r.Reason].filter(Boolean).join(' | ')), `<div class="approval-actions">${canApproveRevenue() ? `<button type="button" data-revenue-action="approve" data-row-key="${rowKey}">Approve</button><button type="button" class="secondary" data-revenue-action="warning" data-row-key="${rowKey}">Warning</button>` : ''}${canCommentRevenue() ? `<button type="button" class="secondary" data-revenue-action="comment" data-row-key="${rowKey}">Comment</button>` : ''}</div>`]; })); bindRevenueActionButtons();
+  if ($('dailyRevenueTransactionsTable')) buildTable($('dailyRevenueTransactionsTable'), [{label:'Date'},{label:'Manager'},{label:'CostCenter'},{label:'ProjectName'},{label:'Actuals',class:'right'},{label:'Budget',class:'right'},{label:'Daily Budget',class:'right'}], dailyRows.map(r => [escapeHtml(r.Date), escapeHtml(r.Manager), escapeHtml(r.CostCenter), escapeHtml(r.ProjectName), money(revenueActualValue(r)), money(revenueProjectedValue(r,'Monthly')), money(revenueProjectedValue(r,'Daily'))]));
   buildTable($('projectsTable'), [{label:'CreatedAt'},{label:'Division'},{label:'Manager'},{label:'ProjectName'},{label:'Status'},{label:'TotalIncome',class:'right'}], filteredProjects().slice(0,100).map(r => [escapeHtml(r.CreatedAt), escapeHtml(r.Division), escapeHtml(r.Manager), escapeHtml(r.ProjectName), escapeHtml(r.Status), money(r.TotalIncome)]));
   buildTable($('invoicesTable'), [{label:'Date'},{label:'Manager'},{label:'ProjectName'},{label:'InvoiceNumber'},{label:'Amount',class:'right'},{label:'Paid'}], filteredInvoices().slice(0,100).map(r => [escapeHtml(r.Date), escapeHtml(r.Manager), escapeHtml(r.ProjectName), escapeHtml(r.InvoiceNumber), money(r.Amount), escapeHtml(r.PaymentReceived ? 'Yes' : 'No')]));
   if ($('paymentsJournalTable')) {
@@ -1994,16 +1798,8 @@ function mapRevenueRow(r){
     Category: text(r.Category || r.category || rowVal(r,2) || 'Daily Revenue'),
     InvoicesIssued: num(r['Invoices Issued'] || r.InvoicesIssued || r.invoicesIssued || rowVal(r,10)),
     PaymentsReceived: num(r['Payments Received'] || r.PaymentsReceived || r.paymentsReceived || rowVal(r,11)),
-    Quality: num(r.Quality || r.quality || rowVal(r,14) || 80),
-    Safety: num(r.Safety || r.safety || rowVal(r,15) || 0),
-    ApprovalStatus: normalizeApprovalStatus(r.ApprovalStatus || r.Status || r.status || rowVal(r,16)),
-    Status: normalizeApprovalStatus(r.Status || r.ApprovalStatus || r.status || rowVal(r,16)),
-    PostedBy: text(r.PostedBy || r.UserName || r.Username || r['User Name'] || rowVal(r,17)),
-    ManagerComment: text(r.ManagerComment || r['Manager Comment'] || rowVal(r,18)),
-    SafetyManagerComment: text(r.SafetyManagerComment || r['Safety Manager Comment'] || rowVal(r,19)),
-    Comment: text(r.Comment || r.comment || rowVal(r,20)),
-    Reason: text(r.Reason || r.reason || rowVal(r,21)),
-    RowId: text(r.RowId || r.ID || r.Id || rowVal(r,22)),
+    Quality: num(r.Quality || r.quality || 80),
+    Safety: num(r.Safety || r.safety || 0),
     CreatedAt: normaliseDate(r.CreatedAt || r.createdAt || rowVal(r,0)),
     Margin: 0
   });
@@ -2021,16 +1817,49 @@ function bindTabs(){ document.querySelectorAll('.tab').forEach(tab => tab.onclic
 
 
 function mapRevenueRow(r){
-  const actualValue = num(r['Daily Revenue'] || r.DailyRevenue || r.dailyRevenue || r.Actual || r.actual || r.Actuals || r.actuals || r['Actuals'] || r['Actual'] || r['E'] || r.E || rowVal(r,9) || r.Amount || r.amount);
-  const monthlyProjected = num(r['Monthly Projected Budget'] || r.MonthlyProjectedBudget || r.monthlyProjectedBudget || r.Budget || r.budget || r.Projected || r.projected || r['Projected Budget'] || r.ProjectedBudget || r.projectedBudget || r['F'] || r.F || rowVal(r,5));
-  const monthlyStraightline = num(r['Monthly Straightline Budget'] || r.MonthlyStraightlineBudget || r.monthlyStraightlineBudget || r.StraightlineBudget || r['Straightline Budget'] || r['Straight-line Budget'] || rowVal(r,6));
-  const dailyProjected = num(r['Daily Projected Budget'] || r.DailyProjectedBudget || r.dailyProjectedBudget || r.DailyBudget || r['Daily Budget'] || r.dailyBudget || rowVal(r,7));
-  const dailyStraightline = num(r['Daily Straightline Budget'] || r.DailyStraightlineBudget || r.dailyStraightlineBudget || rowVal(r,8));
+  const scanValues = [];
+  for (let i = 0; i <= 14; i += 1) scanValues.push(rowVal(r, i));
+  const firstMatching = predicate => scanValues.find(v => predicate(v));
+  const firstNumeric = candidates => {
+    for (const value of candidates) {
+      const n = num(value);
+      if (n !== 0) return n;
+    }
+    return num(candidates[0]);
+  };
+  const arrayDate = firstMatching(v => isDateLike(v));
+  const arrayCostCenter = firstMatching(v => isKnownCostCenterLike(v));
+  const arrayManager = firstMatching(v => looksLikeManager(v));
+  const arrayProject = firstMatching(v => looksLikeProjectName(v) && !isKnownCostCenterLike(v));
+
+  const actualValue = firstNumeric([
+    r['Daily Revenue'], r.DailyRevenue, r.dailyRevenue,
+    r.Actual, r.actual, r.Actuals, r.actuals, r['Actuals'], r['Actual'],
+    r['E'], r.E, r.Amount, r.amount,
+    rowVal(r,9), rowVal(r,8), rowVal(r,10), rowVal(r,7)
+  ]);
+  const monthlyProjected = firstNumeric([
+    r['Monthly Projected Budget'], r.MonthlyProjectedBudget, r.monthlyProjectedBudget,
+    r.Budget, r.budget, r.Projected, r.projected, r['Projected Budget'], r.ProjectedBudget, r.projectedBudget,
+    r['F'], r.F, rowVal(r,5), rowVal(r,6)
+  ]);
+  const monthlyStraightline = firstNumeric([
+    r['Monthly Straightline Budget'], r.MonthlyStraightlineBudget, r.monthlyStraightlineBudget,
+    r.StraightlineBudget, r['Straightline Budget'], r['Straight-line Budget'], rowVal(r,6), rowVal(r,5)
+  ]);
+  const dailyProjected = firstNumeric([
+    r['Daily Projected Budget'], r.DailyProjectedBudget, r.dailyProjectedBudget,
+    r.DailyBudget, r['Daily Budget'], r.dailyBudget, rowVal(r,7), rowVal(r,8)
+  ]);
+  const dailyStraightline = firstNumeric([
+    r['Daily Straightline Budget'], r.DailyStraightlineBudget, r.dailyStraightlineBudget, rowVal(r,8), rowVal(r,7)
+  ]);
+
   return repairRevenueShape({
-    Date: normaliseDate(r.Date || r.date || r.Timestamp || r.CreatedAt || rowVal(r,0)),
-    Manager: text(r.Manager || r.manager || r['Project Manager'] || r.ProjectManager || rowVal(r,3)),
-    CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Costcenter || r.Division || r['Cost Center'] || rowVal(r,1)),
-    ProjectName: text(r.ProjectName || r.projectName || r['Project Name'] || r.ProjectsName || rowVal(r,4)),
+    Date: normaliseDate(r.Date || r.date || r.Timestamp || r.CreatedAt || arrayDate || rowVal(r,0)),
+    Manager: text(r.Manager || r.manager || r['Project Manager'] || r.ProjectManager || arrayManager || rowVal(r,3) || rowVal(r,2)),
+    CostCenter: normalizeCostCenterName(r.CostCenter || r.costCenter || r.Costcenter || r.Division || r['Cost Center'] || arrayCostCenter || rowVal(r,1)),
+    ProjectName: text(r.ProjectName || r.projectName || r['Project Name'] || r.ProjectsName || arrayProject || rowVal(r,4)),
     Actual: actualValue,
     Actuals: actualValue,
     Amount: actualValue,
@@ -2047,7 +1876,7 @@ function mapRevenueRow(r){
     PaymentsReceived: num(r['Payments Received'] || r.PaymentsReceived || r.paymentsReceived || rowVal(r,11)),
     Quality: num(r.Quality || r.quality || 80),
     Safety: num(r.Safety || r.safety || 0),
-    CreatedAt: normaliseDate(r.CreatedAt || r.createdAt || rowVal(r,0)),
+    CreatedAt: normaliseDate(r.CreatedAt || r.createdAt || arrayDate || rowVal(r,0)),
     Margin: 0
   });
 }
@@ -2105,7 +1934,6 @@ async function loadData(){
   if (isPlaceholderUrl(SCRIPT_URL)) {
     setConn('Set Script URL','warn');
     populateFilters();
-    applyRolePermissions();
     renderAll();
     showToast('Paste your deployed Apps Script URL into SCRIPT_URL and REVENUE_SAVE_URL to load live data.','info');
     isLoadingData = false;
@@ -2126,7 +1954,6 @@ async function loadData(){
       ['payments',['getPayments'],mapPaymentRow,false],
       ['straightline',['getStraightline'],mapStraightlineRow,false],
       ['managerBudgets',['getManagerBudgets'],mapManagerBudgetRow,false],
-      ['logins',['getLoginUsers','getLogins'],mapLoginRow,false],
     ];
     const results = await Promise.allSettled(endpointMap.map(([,actions]) => fetchActionFirst(actions)));
     endpointMap.forEach(([stateKey, actions, mapper, required], idx) => {
@@ -2165,8 +1992,7 @@ async function loadData(){
     testBtn.classList.remove('btn-loading'); refreshBtn.classList.remove('btn-loading');
   }
 }
-function bindRevenueActionButtons(){ document.querySelectorAll('[data-revenue-action]').forEach(btn => { btn.onclick = () => { const key = btn.getAttribute('data-row-key'); const entry = state.revenue.find(r => String(r.RowId || r.CreatedAt || (r.Date+'|'+r.ProjectName+'|'+r.Manager)) === key); if (!entry) return; const action = btn.getAttribute('data-revenue-action'); if (action === 'comment') return addRevenueComment(entry); entry.nextStatus = action === 'approve' ? 'Approved' : 'Warning'; return updateRevenueApproval(entry); }; }); }
-function renderAll(){ try{ applyRolePermissions(); renderKPIs(); renderProgressCards(); renderSummary(); renderPerformanceSection(); } catch(e){ log('Render error', e.message || e); } }
+function renderAll(){ renderKPIs(); renderProgressCards(); renderSummary(); renderPerformanceSection(); }
 function managerDashboardRevenueMeta(manager, costCenter, projectName){
   const rows = state.revenue.filter(r => (!manager || text(r.Manager)===manager) && (!projectName || text(r.ProjectName)===projectName) && (!costCenter || normalizeCostCenterName(r.CostCenter)===normalizeCostCenterName(costCenter)));
   const confirmed = rows.reduce((s,r)=>s+num(r.Confirmed),0);
@@ -2189,7 +2015,6 @@ async function postJsonToUrl(url, payload){
   return await parseJsonResponse(resp);
 }
 async function saveRevenue(){
-  if (!requireRole(canPostRevenue,'Only admin manager and users can save daily revenue.')) return;
   const date = $('revDate').value || todayISO();
   const manager = $('revManager').value;
   const costCenter = $('revCostCenter').value;
@@ -2217,16 +2042,7 @@ async function saveRevenue(){
     invoicesIssued: 0,
     paymentsReceived: 0,
     confirmed: meta.confirmed,
-    forecast: meta.forecast,
-    quality: canSetQuality() ? num($('revQuality').value) : '',
-    safety: num($('revSafety').value),
-    approvalStatus: 'Pending Approval',
-    status: 'Pending Approval',
-    postedBy: currentUserName(),
-    managerComment: isAdminManager() ? text($('revManagerSafetyComment').value) : '',
-    safetyManagerComment: isSafetyManager() ? text($('revManagerSafetyComment').value) : '',
-    comment: combinedRevenueComments(),
-    reason: composeRevenueReasonText()
+    forecast: meta.forecast
   };
   saveRevenueBudgetsForProject(projectName, monthlyProjectedBudget, dailyProjectedBudget);
 
@@ -2252,9 +2068,8 @@ ${e.message}`);
     btn.textContent=old; btn.classList.remove('btn-loading');
   }
 }
-async function saveProject(){ if (!requireRole(canPostProject,'Only admin manager can add projects.')) return; const payload = { action:'addProject', createdAt:$('projCreatedAt').value || todayISO(), division:$('projDivision').value, manager:$('projManager').value, projectName:$('projName').value, location:$('projLocation').value, status:$('projStatus').value, totalIncome:num($('projIncome').value), margin:num($('projMargin').value), startDate:$('projStartDate').value, endDate:$('projEndDate').value, remarks:$('projRemarks').value }; if (!payload.projectName || !payload.division || !payload.manager) return alert('Enter Project Name, Division and Manager first.'); const btn=$('saveProjectBtn'); const old=btn.textContent; btn.textContent='⟳ Synchronising...'; btn.classList.add('btn-loading'); try { saveCustomProject(payload.projectName); const res = await postAction(payload); await loadData(); $('projName').value=''; $('projLocation').value=''; $('projIncome').value=''; $('projMargin').value=''; $('projStartDate').value=''; $('projEndDate').value=''; $('projRemarks').value=''; showToast(res.message || 'Project has been successfully saved','success'); alert(res.message || 'Project has been successfully saved'); } catch (e) { showToast(`Project was not saved: ${e.message}`,'error'); alert(`Project was not saved.\n\n${e.message}`); } finally { btn.textContent=old; btn.classList.remove('btn-loading'); } }
+async function saveProject(){ const payload = { action:'addProject', createdAt:$('projCreatedAt').value || todayISO(), division:$('projDivision').value, manager:$('projManager').value, projectName:$('projName').value, location:$('projLocation').value, status:$('projStatus').value, totalIncome:num($('projIncome').value), margin:num($('projMargin').value), startDate:$('projStartDate').value, endDate:$('projEndDate').value, remarks:$('projRemarks').value }; if (!payload.projectName || !payload.division || !payload.manager) return alert('Enter Project Name, Division and Manager first.'); const btn=$('saveProjectBtn'); const old=btn.textContent; btn.textContent='⟳ Synchronising...'; btn.classList.add('btn-loading'); try { saveCustomProject(payload.projectName); const res = await postAction(payload); await loadData(); $('projName').value=''; $('projLocation').value=''; $('projIncome').value=''; $('projMargin').value=''; $('projStartDate').value=''; $('projEndDate').value=''; $('projRemarks').value=''; showToast(res.message || 'Project has been successfully saved','success'); alert(res.message || 'Project has been successfully saved'); } catch (e) { showToast(`Project was not saved: ${e.message}`,'error'); alert(`Project was not saved.\n\n${e.message}`); } finally { btn.textContent=old; btn.classList.remove('btn-loading'); } }
 async function saveInvoice(){
-  if (!requireRole(canPostInvoice,'Only admin manager and users can save invoices.')) return;
   const date = $('invDate').value || todayISO();
   const manager = $('invManager').value;
   const projectName = $('invProjectName').value;
@@ -2277,8 +2092,7 @@ async function saveInvoice(){
     paymentReceived:false,
     paymentDate:'',
     costCenter,
-    notes:$('invNotes').value,
-    postedBy: currentUserName()
+    notes:$('invNotes').value
   };
   if (!payload.projectName || !payload.manager || !payload.costCenter || payload.amount <= 0) return alert('Complete the invoice fields first.');
   const btn=$('saveInvoiceBtn'); const old=btn.textContent;
@@ -2299,7 +2113,6 @@ ${e.message}`);
   }
 }
 async function savePaymentReceived(){
-  if (!requireRole(canPostPayment,'Only admin manager and users can save payments received.')) return;
   const date = $('payDate').value || todayISO();
   const projectName = $('payProjectName').value;
   const manager = $('payManager').value;
@@ -2332,7 +2145,6 @@ async function savePaymentReceived(){
     paymentDate: date,
     costCenter,
     notes,
-    postedBy: currentUserName()
   };
   if (!payload.date || !payload.projectName || !payload.manager || !payload.invoiceNumber || payload.amountPaid <= 0) return alert('Complete the payment received fields first.');
   const btn=$('savePaymentBtn'); const old=btn.textContent;
@@ -2459,22 +2271,29 @@ function costCenterPeriodRows(period = state.filters.period){
   const revenueRows = revenueRowsForPeriod(period);
   const budgetRows = budgetRowsFiltered();
   const map = {};
+  const canonicalCostCenter = row => {
+    const direct = normalizeCostCenterName(row.CostCenter || row.Division);
+    if (isKnownCostCenterLike(direct) && !looksLikeProjectName(direct)) return direct;
+    const projectMatch = state.projects.find(p => lower(text(p.ProjectName)) === lower(text(row.ProjectName)) && (!text(row.Manager) || lower(text(p.Manager)) === lower(text(row.Manager))));
+    if (projectMatch && isKnownCostCenterLike(projectMatch.Division)) return normalizeCostCenterName(projectMatch.Division);
+    return isKnownCostCenterLike(direct) ? direct : 'Unassigned';
+  };
   [...revenueRows, ...budgetRows].forEach(r => {
-    const key = normalizeCostCenterName(r.CostCenter || r.Division) || 'Unassigned';
+    const key = canonicalCostCenter(r);
     if (!map[key]) map[key] = { CostCenter:key, Actual:0, Projected:0, Straightline:0 };
   });
   revenueRows.forEach(r => {
-    const key = normalizeCostCenterName(r.CostCenter) || 'Unassigned';
+    const key = canonicalCostCenter(r);
     if (!map[key]) map[key] = { CostCenter:key, Actual:0, Projected:0, Straightline:0 };
     map[key].Actual += revenueActualValue(r);
   });
   budgetRows.forEach(r => {
-    const key = normalizeCostCenterName(r.CostCenter || r.Division) || 'Unassigned';
+    const key = canonicalCostCenter(r);
     if (!map[key]) map[key] = { CostCenter:key, Actual:0, Projected:0, Straightline:0 };
     map[key].Projected += scaleMonthlyBudgetForDashboard(num(r.ProjectedBudget || r.Projected || r.Budget), period);
     map[key].Straightline += scaleMonthlyBudgetForDashboard(num(r.StraightlineBudget || r.MonthlyStraightlineBudget), period);
   });
-  return Object.values(map).sort((a,b)=>b.Actual-a.Actual || a.CostCenter.localeCompare(b.CostCenter));
+  return Object.values(map).filter(r => r.CostCenter !== 'Unassigned' || r.Actual || r.Projected || r.Straightline).sort((a,b)=>b.Actual-a.Actual || a.CostCenter.localeCompare(b.CostCenter));
 }
 function managerPerformanceRows(period = state.filters.period){
   const revenueRows = revenueRowsForPeriod(period);
@@ -2540,164 +2359,7 @@ function wireFilters(){ $('periodFilter').onchange = e => { state.filters.period
 function monthlyStraightlineForRevenue(costCenter, manager, projectName, dateValue){ return monthlyStraightlineBudgetFor(costCenter, manager, projectName); }
 function updateDashboardClock(){ const el = $('dashboardClockTime'); if (!el) return; const now = new Date(); el.textContent = now.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}); }
 function startDashboardClock(){ updateDashboardClock(); if (window.dashboardClockTimer) clearInterval(window.dashboardClockTimer); window.dashboardClockTimer = setInterval(updateDashboardClock, 1000); }
-
-
-/* === Patched revenue and budget formulas === */
-function mapRevenueRow(r){
-  const actualValue = num(r['Daily Revenue'] ?? r.DailyRevenue ?? r.dailyRevenue ?? rowVal(r,9));
-  return repairRevenueShape({
-    Date: normaliseDate(r.Date ?? rowVal(r,0)),
-    CostCenter: normalizeCostCenterName(r['Cost Center'] ?? r.CostCenter ?? rowVal(r,1)),
-    Category: text(r.Category ?? rowVal(r,2) ?? 'Daily Revenue'),
-    Manager: text(r['Project Manager'] ?? r.ProjectManager ?? r.Manager ?? rowVal(r,3)),
-    ProjectName: text(r['Project Name'] ?? r.ProjectName ?? rowVal(r,4)),
-    MonthlyProjectedBudget: num(r['Monthly Projected Budget'] ?? r.MonthlyProjectedBudget ?? rowVal(r,5)),
-    MonthlyStraightlineBudget: num(r['Monthly Straightline Budget'] ?? r.MonthlyStraightlineBudget ?? rowVal(r,6)),
-    DailyProjectedBudget: num(r['Daily Projected Budget'] ?? r.DailyProjectedBudget ?? rowVal(r,7)),
-    DailyStraightlineBudget: num(r['Daily Straightline Budget'] ?? r.DailyStraightlineBudget ?? rowVal(r,8)),
-    DailyRevenue: actualValue,
-    Actual: actualValue,
-    Actuals: actualValue,
-    Amount: actualValue,
-    Budget: num(r['Monthly Projected Budget'] ?? r.MonthlyProjectedBudget ?? rowVal(r,5)),
-    DailyBudget: num(r['Daily Projected Budget'] ?? r.DailyProjectedBudget ?? rowVal(r,7)),
-    ApprovalStatus: normalizeApprovalStatus(r.ApprovalStatus || r.Status || r.status || rowVal(r,16)),
-    Status: normalizeApprovalStatus(r.Status || r.ApprovalStatus || r.status || rowVal(r,16)),
-    PostedBy: text(r.PostedBy || r.UserName || r.Username || rowVal(r,17)),
-    ManagerComment: text(r.ManagerComment || rowVal(r,18)),
-    SafetyManagerComment: text(r.SafetyManagerComment || rowVal(r,19)),
-    Comment: text(r.Comment || rowVal(r,20)),
-    Reason: text(r.Reason || rowVal(r,21)),
-    RowId: text(r.RowId || r.ID || rowVal(r,22)),
-    Margin: 0
-  });
-}
-function mapManagerBudgetRow(r){
-  return {
-    Date: normaliseDate(r.Date ?? rowVal(r,0)),
-    CostCenter: normalizeCostCenterName(r['Cost Center'] ?? r.CostCenter ?? r.Division ?? rowVal(r,0)),
-    ProjectManager: text(r['Project Manager'] ?? r.ProjectManager ?? r.Manager ?? rowVal(r,1)),
-    ProjectName: text(r['Project Name'] ?? r.ProjectName ?? rowVal(r,2)),
-    MonthlyProjectedBudget: num(r['Monthly Projected Budget'] ?? r.ProjectedBudget ?? r.Projected ?? r.Budget ?? rowVal(r,3)),
-    MonthlyStraightlineBudget: num(r['Monthly Straightline Budget'] ?? r.StraightlineBudget ?? rowVal(r,4)),
-    DailyProjectedBudget: num(r['Daily Projected Budget'] ?? rowVal(r,5)),
-    DailyStraightlineBudget: num(r['Daily Straightline Budget'] ?? rowVal(r,6))
-  };
-}
-function getBudgetRecordForRevenue(r){
-  const project = lower(r.ProjectName);
-  const manager = lower(r.Manager);
-  const cc = lower(normalizeCostCenterName(r.CostCenter));
-  const rows = Array.isArray(state.managerBudgets) ? state.managerBudgets : [];
-  return rows.find(b => lower(text(b.ProjectName)) === project && lower(text(b.ProjectManager)) === manager)
-    || rows.find(b => lower(text(b.ProjectName)) === project)
-    || rows.find(b => lower(text(b.ProjectManager)) === manager && lower(normalizeCostCenterName(b.CostCenter)) === cc)
-    || rows.find(b => lower(normalizeCostCenterName(b.CostCenter)) === cc);
-}
-function revenueProjectedValue(r, period = state.filters.period){
-  const b = getBudgetRecordForRevenue(r) || {};
-  const monthly = num(b.MonthlyProjectedBudget ?? r.MonthlyProjectedBudget ?? r.Budget);
-  const daily = num(b.DailyProjectedBudget ?? r.DailyProjectedBudget ?? r.DailyBudget);
-  if (period === 'Daily') return daily || scaleProjectedBudgetValue(monthly, 'Daily');
-  return scaleProjectedBudgetValue(monthly, period);
-}
-function revenueStraightlineValue(r, period = state.filters.period){
-  const b = getBudgetRecordForRevenue(r) || {};
-  const monthly = num(b.MonthlyStraightlineBudget ?? r.MonthlyStraightlineBudget);
-  const daily = num(b.DailyStraightlineBudget ?? r.DailyStraightlineBudget);
-  if (period === 'Daily') return daily || scaleStraightlineBudgetValue(monthly, 'Daily', r.Date || todayISO());
-  return scaleStraightlineBudgetValue(monthly, period, r.Date || todayISO());
-}
-function applyOnpointCostCenterOverrides(rows, period){ return rows; }
-function applyManagerOverrideTotals(rows, period){ return rows; }
-function useGroupFixedBudgetOverride(){ return false; }
-function replaceOnpointConfirmedTotal(total, orders){ return total; }
-function costCenterPeriodRows(period = state.filters.period){
-  const revenueRows = revenueRowsForPeriod(period);
-  const map = {};
-  revenueRows.forEach(r => {
-    const key = normalizeCostCenterName(r.CostCenter) || 'Unassigned';
-    if (!map[key]) map[key] = { CostCenter:key, Actual:0, Projected:0, Straightline:0 };
-    map[key].Actual += revenueActualValue(r);
-    map[key].Projected += revenueProjectedValue(r, period);
-    map[key].Straightline += revenueStraightlineValue(r, period);
-  });
-  return Object.values(map).sort((a,b)=>b.Actual-a.Actual || a.CostCenter.localeCompare(b.CostCenter));
-}
-function renderKPIs(){
-  const monthRows = revenueRowsForPeriod('Monthly');
-  const yearRows = revenueRowsForPeriod('Yearly');
-  const selectedRows = revenueRowsForPeriod(state.filters.period);
-  const mtd = monthRows.reduce((s,r)=>s + revenueActualValue(r), 0);
-  const ytd = yearRows.reduce((s,r)=>s + revenueActualValue(r), 0);
-  const actual = selectedRows.reduce((s,r)=>s + revenueActualValue(r), 0);
-  const projected = selectedRows.reduce((s,r)=>s + revenueProjectedValue(r, state.filters.period), 0);
-  const straightline = selectedRows.reduce((s,r)=>s + revenueStraightlineValue(r, state.filters.period), 0);
-  const selectedMetricLabel = selectedPeriodMetricLabel(state.filters.period) || 'MTD';
-  $('headlineKpis').innerHTML = [
-    ['Projected Budget', money(projected), `${state.filters.period} / Budgets`],
-    ['Straightline Budget', money(straightline), `${state.filters.period} / Budgets`],
-    ['Actual', money(actual), `${state.filters.period} / Daily Revenue`],
-    ['MTD', money(mtd), 'Manager Dashboard / Daily Revenue'],
-    ['Group YTD', money(ytd), 'Manager Dashboard / Daily Revenue'],
-    [selectedMetricLabel, money(actual), 'Selected period total daily revenue']
-  ].map(([a,b,c])=>`<div class="kpi"><div class="label">${a}</div><div class="value">${b}</div><div class="sub">${c}</div></div>`).join('');
-}
-async function loadData(){
-  if (isLoadingData) return;
-  isLoadingData = true;
-  if (isPlaceholderUrl(SCRIPT_URL)) {
-    setConn('Set Script URL','warn');
-    populateFilters();
-    applyRolePermissions();
-    renderAll();
-    isLoadingData = false;
-    return;
-  }
-  setConn('Connecting','warn');
-  const testBtn=$('testBtn'), refreshBtn=$('refreshBtn');
-  const t1=testBtn.textContent, t2=refreshBtn.textContent;
-  testBtn.textContent='Loading...'; refreshBtn.textContent='Loading...';
-  testBtn.classList.add('btn-loading'); refreshBtn.classList.add('btn-loading');
-  const failures=[];
-  try {
-    const endpointMap = [
-      ['projects',['getProjects'],mapProjectRow,false],
-      ['revenue',['getManagerDashboardRevenue','getRevenue'],mapRevenueRow,true],
-      ['invoices',['getInvoices'],mapInvoiceRow,false],
-      ['payments',['getPayments'],mapPaymentRow,false],
-      ['managerBudgets',['getBudgets','getManagerBudgets'],mapManagerBudgetRow,true],
-      ['logins',['getLoginUsers','getLogins'],mapLoginRow,false],
-    ];
-    const results = await Promise.allSettled(endpointMap.map(([,actions]) => fetchActionFirst(actions)));
-    endpointMap.forEach(([stateKey, actions, mapper, required], idx) => {
-      const res = results[idx];
-      const actionLabel = Array.isArray(actions) ? actions.join(' -> ') : String(actions);
-      if (res.status === 'fulfilled') state[stateKey] = (Array.isArray(res.value) ? res.value : []).map(mapper);
-      else { state[stateKey] = []; if (required) failures.push(`${actionLabel}: ${res.reason.message}`); }
-    });
-    state.orders = [];
-    state.straightline = [];
-    populateFilters();
-    renderAll();
-    if (failures.length) {
-      setConn('Partially Connected','warn');
-      showToast(`Some data failed to load: ${failures.join(' | ')}`,'info');
-    } else {
-      setConn('Live Connected','ok');
-    }
-  } catch (e) {
-    setConn('Connection Failed','bad');
-    showToast(`Load failed: ${e.message}`,'error');
-    log('Load failed', e.message);
-  } finally {
-    isLoadingData = false;
-    testBtn.textContent=t1; refreshBtn.textContent=t2;
-    testBtn.classList.remove('btn-loading'); refreshBtn.classList.remove('btn-loading');
-  }
-}
-/* === End patched formulas === */
-function init(){ restoreSessionUser(); bindTabs(); wireFilters(); wireProjectAdders(); wireExecutiveExports(); startDashboardClock(); $('testBtn').onclick = () => quickConnectionTest(); $('refreshBtn').onclick = () => loadData(); $('saveRevenueBtn').onclick = saveRevenue; $('saveProjectBtn').onclick = saveProject; $('saveInvoiceBtn').onclick = saveInvoice; $('savePaymentBtn').onclick = savePaymentReceived; if ($('loginBtn')) $('loginBtn').onclick = handleLogin; if ($('registerBtn')) $('registerBtn').onclick = handleRegisterButton; if ($('logoutBtn')) $('logoutBtn').onclick = logoutUser; if ($('loginPassword')) $('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); }); if ($('loginUsername')) $('loginUsername').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); }); ['registerName','registerUsername','registerPassword','registerConfirmPassword'].forEach(id => { if ($(id)) $(id).addEventListener('keydown', e => { if (e.key === 'Enter') registerUser(); }); }); $('revDate').value = $('projCreatedAt').value = $('invDate').value = $('payDate').value = todayISO(); $('periodFilter').innerHTML = PERIODS.map(p=>`<option ${p===state.filters.period?'selected':''}>${p}</option>`).join(''); if ($('revProjectName')) $('revProjectName').addEventListener('change', applyRememberedRevenueBudgets); if ($('revManager')) $('revManager').addEventListener('change', applyRememberedRevenueBudgets); if ($('revCostCenter')) $('revCostCenter').addEventListener('change', applyRememberedRevenueBudgets); $('diagnostics').textContent = 'Waiting for first load...'; applyRolePermissions(); setRegisterButtonState(); loadData().then(() => { if (state.currentUser) $('loginOverlay').classList.add('login-hidden'); }); }
+function init(){ bindTabs(); wireFilters(); wireProjectAdders(); wireExecutiveExports(); startDashboardClock(); $('testBtn').onclick = () => quickConnectionTest(); $('refreshBtn').onclick = () => loadData(); $('saveRevenueBtn').onclick = saveRevenue; $('saveProjectBtn').onclick = saveProject; $('saveInvoiceBtn').onclick = saveInvoice; $('savePaymentBtn').onclick = savePaymentReceived; $('revDate').value = $('projCreatedAt').value = $('invDate').value = $('payDate').value = todayISO(); $('periodFilter').innerHTML = PERIODS.map(p=>`<option ${p===state.filters.period?'selected':''}>${p}</option>`).join(''); if ($('revProjectName')) $('revProjectName').addEventListener('change', applyRememberedRevenueBudgets); if ($('revManager')) $('revManager').addEventListener('change', applyRememberedRevenueBudgets); if ($('revCostCenter')) $('revCostCenter').addEventListener('change', applyRememberedRevenueBudgets); $('diagnostics').textContent = 'Waiting for first load...'; loadData(); }
 document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
