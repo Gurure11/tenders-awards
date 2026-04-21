@@ -134,6 +134,7 @@
       <div class="tab" data-panel="capturePanel">Capture Tender</div>
       <div class="tab" data-panel="contractsPanel">Contracts % Rate</div>
       <div class="tab" data-panel="summaryPanel">Targets & Variance</div>
+      <div class="tab" data-panel="awardsPanel">Tendering & Awards</div>
     </div>
 
     <div class="panel active" id="dashboardPanel">
@@ -153,6 +154,25 @@
               <option value="businessUnit">Cost Center</option>
               <option value="clientName">Company</option>
             </select>
+          </div>
+          <div class="field">
+            <label>Current Date & Time</label>
+            <div id="dashboardDateTime" style="padding:12px 13px;border:1px solid #cfe0ff;border-radius:14px;background:#fff;min-height:46px;display:flex;align-items:center;font-weight:700;color:var(--primary);"></div>
+          </div>
+        </div>
+        <div style="margin-top:16px;border:1px solid var(--line);border-radius:18px;padding:16px;background:linear-gradient(180deg,#fff 0%,#f8fbff 100%);">
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+            <div>
+              <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;">Tendered Amount vs Total Target</div>
+              <div id="progressHeadline" style="font-size:24px;font-weight:700;color:var(--primary);margin-top:6px;">R0 / R0</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;">Variance</div>
+              <div id="progressVariance" style="font-size:18px;font-weight:700;color:var(--text);margin-top:6px;">0.00% (R0)</div>
+            </div>
+          </div>
+          <div style="margin-top:14px;height:16px;border-radius:999px;background:#e8f0ff;overflow:hidden;border:1px solid var(--line);">
+            <div id="targetProgressBar" style="height:100%;width:0%;background:linear-gradient(135deg,var(--primary) 0%,var(--primary2) 100%);border-radius:999px;"></div>
           </div>
         </div>
       </div>
@@ -258,7 +278,29 @@
       </div>
     </div>
 
-    <div class="panel" id="summaryPanel">
+    
+    <div class="panel" id="awardsPanel">
+      <div class="card">
+        <div class="section-chip">Store directly to Google Sheet tab Awards</div>
+        <h3 style="margin-top:0">Tendering & Awards Dashboard</h3>
+        <div class="form-grid">
+          <div class="field span-3"><label>Entity</label><select id="awardEntity"></select></div>
+          <div class="field span-2"><label>Month</label><select id="awardMonth">
+            <option>MAR</option><option>APR</option><option>MAY</option><option>JUNE</option><option>JUL</option><option>AUG</option><option>SEP</option><option>OCT</option><option>NOV</option><option>DEC</option><option>JAN</option><option>FEB</option>
+          </select></div>
+          <div class="field span-2"><label>Tenders</label><input id="awardTenders" placeholder="0"></div>
+          <div class="field span-2"><label>RFQs</label><input id="awardRfqs" placeholder="0"></div>
+          <div class="field span-2"><label>Awards</label><input id="awardAwards" placeholder="0"></div>
+          <div class="field span-12"><button id="saveAwardBtn" type="button">Save Tendering & Awards</button></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px;">
+        <h3 style="margin-top:0">Tendering & Awards Dashboard</h3>
+        <div class="table-wrap"><table id="awardsTable"></table></div>
+      </div>
+    </div>
+
+<div class="panel" id="summaryPanel">
       <div class="grid two">
         <div class="card">
           <h3 style="margin-top:0">Summary totals from Tenders tab</h3>
@@ -276,12 +318,13 @@
 const APP_CONFIG = {
   rfqTab: "RFQ",
   loginTab: "Login",
-  appsScriptUrl: "https://script.google.com/macros/s/AKfycbws7rS5ZJsREoE95yudsW2Gya4SfyHSanZSV9vbbQUreoKNYnxCWEuVMsnKYlRmWTCS/exec", // Paste your deployed Apps Script web app URL here after deploying Code.gs
+  appsScriptUrl: "https://script.google.com/macros/s/AKfycbxHJzwKMsW80r9aQ1rT0ucV-KkHWvweLhWUBPTVHBdqwe5nmUkjJRgX0kBQ6TCiJ3o/exec", // Paste your deployed Apps Script web app URL here after deploying Code.gs
   spreadsheetId: "1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0",
   driveFileId: "1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0",
   spreadsheetName: "Performance Tracker - Tendering(Pipeline)",
   pipelineTab: "Tenders",
-  contractsTab: "Contracts"
+  contractsTab: "Contracts",
+  awardsTab: "Awards"
 };
 const APPS_SCRIPT_URL = APP_CONFIG.appsScriptUrl;
 const COST_CENTER_OPTIONS = ["Onpoint Ontime","Nkanyezi","Aqua Telecoms","Distinct Hire"];
@@ -293,6 +336,7 @@ const CUSTOM_PROJECT_OPTIONS_KEY = "onpoint_tendering_feed_custom_projects_v1";
 const LOCAL_STORAGE_KEY = "onpoint_tendering_feed_local_v1";
 const LOCAL_RFQ_STORAGE_KEY = "onpoint_tendering_feed_rfq_local_v1";
 const LOCAL_CONTRACTS_STORAGE_KEY = "onpoint_tendering_feed_contracts_local_v1";
+const LOCAL_AWARDS_STORAGE_KEY = "onpoint_tendering_feed_awards_local_v1";
 const SESSION_USER_KEY = "onpoint_tendering_feed_session_user_v1";
 const SEED_DATA = {
   "pipeline": [
@@ -443,6 +487,7 @@ const state = {
   rows: [],
   rfqs: [],
   contracts: [],
+  awards: [],
   summary: SEED_DATA.summary,
   currentUser: null,
   filters: { unit:"All", scope:"All", status:"All", search:"", project:"All" }
@@ -559,6 +604,12 @@ function loadLocalContracts() {
 function saveLocalContracts(rows) {
   localStorage.setItem(LOCAL_CONTRACTS_STORAGE_KEY, JSON.stringify(rows));
 }
+function loadLocalAwards() {
+  try { return JSON.parse(localStorage.getItem(LOCAL_AWARDS_STORAGE_KEY) || "[]"); } catch { return []; }
+}
+function saveLocalAwards(rows) {
+  localStorage.setItem(LOCAL_AWARDS_STORAGE_KEY, JSON.stringify(rows));
+}
 
 function normaliseRow(row) {
   return {
@@ -596,6 +647,18 @@ function normaliseContractRow(row) {
     performancePercent: text(row.performancePercent || row["% Performance"] || row.performance || ""),
     tendersSubmitted: text(row.tendersSubmitted || row["Tenders Submitted"] || 0),
     winRate: text(row.winRate || row["Win Rate"] || ""),
+    createdBy: text(row.createdBy || row["Created By"] || ""),
+    createdAt: text(row.createdAt || row["Created At"] || "")
+  };
+}
+
+function normaliseAwardRow(row) {
+  return {
+    entity: text(row.entity || row.businessUnit || row.costCenter || row["Entity"] || ""),
+    month: text(row.month || row["Month"] || ""),
+    tenders: text(row.tenders || row["Tenders"] || 0),
+    rfqs: text(row.rfqs || row["RFQs"] || row["Rfqs"] || 0),
+    awards: text(row.awards || row["Awards"] || 0),
     createdBy: text(row.createdBy || row["Created By"] || ""),
     createdAt: text(row.createdAt || row["Created At"] || "")
   };
@@ -647,9 +710,11 @@ async function loadData(showAlert = false) {
     const localRows = loadLocalRows().map(normaliseRow);
     const localRfqs = loadLocalRfqs().map(normaliseRfqRow);
     const localContracts = loadLocalContracts().map(normaliseContractRow);
+    const localAwards = loadLocalAwards().map(normaliseAwardRow);
     state.rows = [...SEED_DATA.pipeline.map(normaliseRow), ...localRows];
     state.rfqs = [...localRfqs];
     state.contracts = [...localContracts];
+    state.awards = [...localAwards];
     state.summary = computeSummaryFromRows(state.rows);
     if (APPS_SCRIPT_URL) {
       try {
@@ -657,6 +722,7 @@ async function loadData(showAlert = false) {
         if (Array.isArray(payload.rows)) state.rows = payload.rows.map(normaliseRow);
         if (Array.isArray(payload.rfqs)) state.rfqs = payload.rfqs.map(normaliseRfqRow);
         if (Array.isArray(payload.contracts)) state.contracts = payload.contracts.map(normaliseContractRow);
+        if (Array.isArray(payload.awards)) state.awards = payload.awards.map(normaliseAwardRow);
         state.summary = payload.summary || computeSummaryFromRows(state.rows);
         if (payload.currentUser && !state.currentUser) setCurrentUser(payload.currentUser);
         setConn("Connected", "ok");
@@ -732,6 +798,7 @@ function populateFilters() {
   populateSelect("formBusinessUnit", COST_CENTER_OPTIONS, "Onpoint Ontime");
   populateSelect("rfqBusinessUnit", COST_CENTER_OPTIONS, "Onpoint Ontime");
   populateSelect("contractEntity", COST_CENTER_OPTIONS, "Onpoint Ontime");
+  populateSelect("awardEntity", COST_CENTER_OPTIONS, "Onpoint Ontime");
   populateSelect("formScopeType", SCOPE_OPTIONS, "CIVIL");
   populateSelect("rfqScopeType", SCOPE_OPTIONS, "CIVIL");
   populateSelectWithAdd("formClientName", clientOptions, clientOptions[0] || "ETHEKWINI", "Add new name");
@@ -951,6 +1018,39 @@ function renderContractsTable() {
   );
 }
 
+function renderAwardsTable() {
+  if (!$("awardsTable")) return;
+  const entities = ["Onpoint Ontime","Aqua Telecoms","Nkanyezi","Distinct Hire"];
+  const rows = entities.map(entity => {
+    const list = state.awards.filter(r => text(r.entity) === entity);
+    const tenders = list.reduce((s,r) => s + num(r.tenders), 0);
+    const rfqs = list.reduce((s,r) => s + num(r.rfqs), 0);
+    const awards = list.reduce((s,r) => s + num(r.awards), 0);
+    return [entity, tenders, rfqs, awards];
+  });
+  buildTable($("awardsTable"),
+    [{label:"Entity"},{label:"Tenders",className:"right"},{label:"RFQs",className:"right"},{label:"Awards",className:"right"}],
+    rows.map(r => [r[0], String(r[1]), String(r[2]), String(r[3])])
+  );
+}
+
+function renderProgressBlock() {
+  const actual = num(state.summary?.total?.overall);
+  const target = num(state.summary?.target?.overall);
+  const variance = actual - target;
+  const variancePct = target ? ((variance / target) * 100) : 0;
+  const progressPct = target ? Math.max(0, Math.min((actual / target) * 100, 100)) : 0;
+  if ($("progressHeadline")) $("progressHeadline").textContent = `${money(actual)} / ${money(target)}`;
+  if ($("progressVariance")) $("progressVariance").textContent = `${variancePct.toFixed(2)}% (${money(variance)})`;
+  if ($("targetProgressBar")) $("targetProgressBar").style.width = `${progressPct}%`;
+}
+
+function updateDashboardDateTime() {
+  if (!$("dashboardDateTime")) return;
+  const now = new Date();
+  $("dashboardDateTime").textContent = new Intl.DateTimeFormat('en-ZA',{dateStyle:'medium', timeStyle:'medium'}).format(now);
+}
+
 function renderSummaryTable() {
   const s = state.summary || {};
   const variancePercent = s.variancePercent || {};
@@ -982,10 +1082,13 @@ function renderSummaryTable() {
 function renderAll() {
   renderKPIs();
   renderDashboardTables();
+  renderProgressBlock();
   renderContractsDashboardTable();
   renderRfqTable();
   renderContractsTable();
+  renderAwardsTable();
   renderSummaryTable();
+  updateDashboardDateTime();
   scheduleChartsRender();
 }
 async function saveRfq() {
@@ -1147,6 +1250,52 @@ async function saveContract() {
   }
 }
 
+async function saveAward() {
+  if (!state.currentUser) {
+    alert("Please login first.");
+    return;
+  }
+  const row = {
+    entity: $("awardEntity").value,
+    month: $("awardMonth").value,
+    tenders: $("awardTenders").value,
+    rfqs: $("awardRfqs").value,
+    awards: $("awardAwards").value,
+    createdBy: state.currentUser.username
+  };
+  const saveBtn = $("saveAwardBtn");
+  const oldText = saveBtn.textContent;
+  saveBtn.disabled = true;
+  saveBtn.textContent = "Synchronising...";
+  setConn("Synchronising", "warn");
+  setLoading(true, "Saving tendering & awards...");
+  try {
+    if (APPS_SCRIPT_URL) {
+      const res = await fetchJson(APPS_SCRIPT_URL, {
+        method:"POST",
+        headers:{"Content-Type":"text/plain;charset=utf-8"},
+        body: JSON.stringify({ action:"saveAwardRow", row, currentUser: state.currentUser })
+      });
+      if (res.success === false) throw new Error(res.error || "Save failed");
+      alert("Tendering & Awards saved successfully.");
+      await loadData(false);
+      return;
+    }
+    const localRows = loadLocalAwards();
+    localRows.unshift(row);
+    saveLocalAwards(localRows);
+    alert("Tendering & Awards saved successfully.");
+    await loadData(false);
+  } catch (e) {
+    console.error(e);
+    alert("Tendering & Awards save failed. Please check the Apps Script connection.");
+  } finally {
+    setLoading(false);
+    saveBtn.disabled = false;
+    saveBtn.textContent = oldText;
+  }
+}
+
 async function loginUser() {
   const username = text($("loginUsername")?.value);
   const password = text($("loginPassword")?.value);
@@ -1214,6 +1363,8 @@ async function registerUser() {
 
 function logoutUser() {
   setCurrentUser(null);
+updateDashboardDateTime();
+setInterval(updateDashboardDateTime, 1000);
   if ($("loginMessage")) $("loginMessage").textContent = "Please sign in to continue.";
 }
 function wireEvents() {
@@ -1236,6 +1387,7 @@ function wireEvents() {
   if ($("saveTenderBtn")) $("saveTenderBtn").onclick = saveTender;
   if ($("saveRfqBtn")) $("saveRfqBtn").onclick = saveRfq;
   if ($("saveContractBtn")) $("saveContractBtn").onclick = saveContract;
+  if ($("saveAwardBtn")) $("saveAwardBtn").onclick = saveAward;
   if ($("refreshBtn")) $("refreshBtn").onclick = () => loadData(true);
   if ($("loginBtn")) $("loginBtn").onclick = loginUser;
   if ($("registerBtn")) $("registerBtn").onclick = registerUser;
@@ -1250,6 +1402,8 @@ waitForChartJs().then(() => {
   scheduleChartsRender();
 }).catch(() => {});
 setCurrentUser(null);
+updateDashboardDateTime();
+setInterval(updateDashboardDateTime, 1000);
 </script>
 </body>
 </html>
