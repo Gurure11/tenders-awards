@@ -66,6 +66,41 @@
   </style>
 </head>
 <body>
+
+  <div id="loginOverlay" style="position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;">
+    <div class="card" style="width:min(760px,100%);max-height:calc(100vh - 40px);overflow:auto;">
+      <h2 style="margin:0 0 8px;color:#0b3b91;">Onpoint Tendering Feed Login</h2>
+      <div class="muted" style="margin-bottom:14px;">Login and registration are stored on the same spreadsheet in the <strong>Login</strong> tab.</div>
+      <div class="grid two">
+        <div class="card" style="padding:16px;">
+          <h3 style="margin-top:0">Login</h3>
+          <div class="form-grid">
+            <div class="field span-12"><label>Username</label><input id="loginUsername" autocomplete="username"></div>
+            <div class="field span-12"><label>Password</label><input id="loginPassword" type="password" autocomplete="current-password"></div>
+            <div class="field span-12"><button id="loginBtn" type="button">Login</button></div>
+          </div>
+        </div>
+        <div class="card" style="padding:16px;">
+          <h3 style="margin-top:0">Register New User</h3>
+          <div class="form-grid">
+            <div class="field span-12"><label>Full Name</label><input id="registerName"></div>
+            <div class="field span-12"><label>Username</label><input id="registerUsername"></div>
+            <div class="field span-12"><label>Password</label><input id="registerPassword" type="password"></div>
+            <div class="field span-12"><label>Role</label><select id="registerRole"><option>User</option><option>Admin</option></select></div>
+            <div class="field span-12"><button id="registerBtn" type="button">Register User</button></div>
+          </div>
+        </div>
+      </div>
+      <div id="loginMessage" class="footer-note">Please sign in to continue.</div>
+    </div>
+  </div>
+  <div id="loadingOverlay" style="position:fixed;inset:0;background:rgba(255,255,255,.78);display:none;align-items:center;justify-content:center;z-index:9998;">
+    <div class="card" style="padding:22px 28px;text-align:center;min-width:280px;">
+      <div style="font-size:18px;font-weight:700;color:#0b3b91;" id="loadingText">Loading data...</div>
+      <div class="footer-note">Please wait while the dashboard synchronises.</div>
+    </div>
+  </div>
+
   <div class="wrap">
     <div class="card topbar">
       <div>
@@ -73,8 +108,10 @@
         <h1>Onpoint (Tendering Feed)</h1>
       </div>
       <div id="connBadge" class="badge warn">Using seed data</div>
-      <div style="display:flex; gap:10px;">
+      <div style="display:flex; gap:10px; align-items:center;">
+        <div id="currentUserChip" class="badge warn">Not logged in</div>
         <button id="refreshBtn" type="button">Refresh</button>
+        <button id="logoutBtn" type="button" class="secondary">Logout</button>
       </div>
     </div>
 
@@ -197,7 +234,8 @@
 <script>
 const APP_CONFIG = {
   rfqTab: "RFQ",
-  appsScriptUrl: "https://script.google.com/macros/s/AKfycbw22p93eMG-5xj__KkasAkbUcI9Eutk8MyXdctGK05txuXBHIPfeOdicrugpK3Sglzn/exec", // Paste your deployed Apps Script web app URL here after deploying Code.gs
+  loginTab: "Login",
+  appsScriptUrl: "https://script.google.com/macros/s/AKfycbyzQ1BaNxzAuxXLgAccH1ci62TG1jt6Ow2KI_JuJgZMreXcr4gVKYEhKn6yThvenUI/exec", // Paste your deployed Apps Script web app URL here after deploying Code.gs
   spreadsheetId: "1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0",
   driveFileId: "1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0",
   spreadsheetName: "Performance Tracker - Tendering(Pipeline)",
@@ -212,6 +250,7 @@ const CUSTOM_CLIENT_OPTIONS_KEY = "onpoint_tendering_feed_custom_clients_v1";
 const CUSTOM_PROJECT_OPTIONS_KEY = "onpoint_tendering_feed_custom_projects_v1";
 const LOCAL_STORAGE_KEY = "onpoint_tendering_feed_local_v1";
 const LOCAL_RFQ_STORAGE_KEY = "onpoint_tendering_feed_rfq_local_v1";
+const SESSION_USER_KEY = "onpoint_tendering_feed_session_user_v1";
 const SEED_DATA = {
   "pipeline": [
     {
@@ -361,6 +400,7 @@ const state = {
   rows: [],
   rfqs: [],
   summary: SEED_DATA.summary,
+  currentUser: null,
   filters: { unit:"All", scope:"All", status:"All", search:"" }
 };
 let charts = {};
@@ -373,6 +413,33 @@ const num = v => {
   return Number.isFinite(n) ? n : 0;
 };
 const money = v => new Intl.NumberFormat("en-ZA",{style:"currency",currency:"ZAR",maximumFractionDigits:0}).format(num(v));
+
+function setLoading(show, message) {
+  const overlay = $("loadingOverlay");
+  const textEl = $("loadingText");
+  if (textEl && message) textEl.textContent = message;
+  if (overlay) overlay.style.display = show ? "flex" : "none";
+}
+function notifyLoaded(message) {
+  alert(message || "Data loaded successfully.");
+}
+function saveSessionUser(user) {
+  try { localStorage.setItem(SESSION_USER_KEY, JSON.stringify(user || null)); } catch (e) {}
+}
+function restoreSessionUser() {
+  try { return JSON.parse(localStorage.getItem(SESSION_USER_KEY) || "null"); } catch (e) { return null; }
+}
+function setCurrentUser(user) {
+  state.currentUser = user || null;
+  saveSessionUser(state.currentUser);
+  const chip = $("currentUserChip");
+  if (chip) {
+    chip.textContent = state.currentUser ? `${state.currentUser.name || state.currentUser.username} | ${state.currentUser.role || "User"}` : "Not logged in";
+    chip.className = `badge ${state.currentUser ? "ok" : "warn"}`;
+  }
+  if ($("loginOverlay")) $("loginOverlay").style.display = state.currentUser ? "none" : "flex";
+}
+
 const badgeClass = status => {
   const s = text(status).toLowerCase();
   if (s === "completed") return "ok";
@@ -452,23 +519,33 @@ function computeSummaryFromRows(rows) {
   return { total, target: zeroes, variance: zeroes };
 }
 async function fetchJson(url, options={}) {
-  const res = await fetch(url, options);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return await res.json();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  try {
+    const res = await fetch(url, Object.assign({}, options, { signal: controller.signal }));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
-async function loadData() {
+async function loadData(showAlert = false) {
+  setLoading(true, "Loading data...");
   const localRows = loadLocalRows().map(normaliseRow);
   const localRfqs = loadLocalRfqs().map(normaliseRfqRow);
   state.rows = [...SEED_DATA.pipeline.map(normaliseRow), ...localRows];
   state.rfqs = [...localRfqs];
   state.summary = computeSummaryFromRows(state.rows);
+  let loadedFromServer = false;
   if (APPS_SCRIPT_URL) {
     try {
       const payload = await fetchJson(`${APPS_SCRIPT_URL}?action=getAllData`);
       if (Array.isArray(payload.rows)) state.rows = payload.rows.map(normaliseRow);
       if (Array.isArray(payload.rfqs)) state.rfqs = payload.rfqs.map(normaliseRfqRow);
       state.summary = computeSummaryFromRows(state.rows);
+      if (payload.currentUser && !state.currentUser) setCurrentUser(payload.currentUser);
       setConn("Connected", "ok");
+      loadedFromServer = true;
     } catch (e) {
       console.error(e);
       setConn("Connection failed", "bad");
@@ -479,6 +556,8 @@ async function loadData() {
   }
   populateFilters();
   renderAll();
+  setLoading(false);
+  if (showAlert) notifyLoaded(loadedFromServer ? "Data loaded successfully." : "Loaded local/seed data. Google Sheets connection was not available.");
 }
 function unique(values) {
   return [...new Set(values.map(text).filter(Boolean))];
@@ -710,6 +789,10 @@ function renderAll() {
   renderSummaryTable();
 }
 async function saveRfq() {
+  if (!state.currentUser) {
+    alert("Please login first.");
+    return;
+  }
   const row = {
     businessUnit: $("rfqBusinessUnit").value,
     companyName: $("rfqCompanyName").value,
@@ -717,7 +800,8 @@ async function saveRfq() {
     tenderAmount: $("rfqTenderAmount").value,
     contactPerson: $("rfqContactPerson").value,
     status: $("rfqStatus").value,
-    notes: $("rfqNotes").value
+    notes: $("rfqNotes").value,
+    createdBy: state.currentUser.username
   };
   if (!text(row.companyName) || !text(row.scopeType)) {
     alert("Please complete at least Company Name and Scope.");
@@ -728,33 +812,38 @@ async function saveRfq() {
   saveBtn.disabled = true;
   saveBtn.textContent = "Synchronising...";
   setConn("Synchronising", "warn");
+  setLoading(true, "Saving RFQ...");
   try {
     if (APPS_SCRIPT_URL) {
       const res = await fetchJson(APPS_SCRIPT_URL, {
         method:"POST",
         headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body: JSON.stringify({ action:"saveRfqRow", row })
+        body: JSON.stringify({ action:"saveRfqRow", row, currentUser: state.currentUser })
       });
       if (res.success === false) throw new Error(res.error || "Save failed");
       alert("RFQ saved successfully.");
-      await loadData();
+      await loadData(false);
       return;
     }
     const localRows = loadLocalRfqs();
     localRows.unshift(row);
     saveLocalRfqs(localRows);
     alert("RFQ saved successfully.");
-    await loadData();
+    await loadData(false);
   } catch (e) {
     console.error(e);
     alert("RFQ save failed. Please check the Apps Script connection.");
-    await loadData();
   } finally {
+    setLoading(false);
     saveBtn.disabled = false;
     saveBtn.textContent = oldText;
   }
 }
 async function saveTender() {
+  if (!state.currentUser) {
+    alert("Please login first.");
+    return;
+  }
   const row = {
     businessUnit: $("formBusinessUnit").value,
     clientName: $("formClientName").value,
@@ -766,47 +855,113 @@ async function saveTender() {
     status: $("formStatus").value,
     probability: Number($("formProbability").value || 0),
     closeMonth: $("formCloseMonth").value,
-    notes: $("formNotes").value
+    notes: $("formNotes").value,
+    createdBy: state.currentUser.username
   };
   if (!text(row.clientName) || !text(row.contractDescription)) {
     alert("Please complete at least Client Name and Contract Description.");
     return;
   }
-
   const saveBtn = $("saveTenderBtn");
   const oldText = saveBtn.textContent;
   saveBtn.disabled = true;
   saveBtn.textContent = "Synchronising...";
   setConn("Synchronising", "warn");
-
+  setLoading(true, "Saving tender...");
   try {
     if (APPS_SCRIPT_URL) {
       const res = await fetchJson(APPS_SCRIPT_URL, {
         method:"POST",
         headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body: JSON.stringify({ action:"savePipelineRow", row })
+        body: JSON.stringify({ action:"savePipelineRow", row, currentUser: state.currentUser })
       });
       if (res.success === false) throw new Error(res.error || "Save failed");
       alert("Tender saved successfully.");
-      await loadData();
+      await loadData(false);
       return;
     }
-
     const localRows = loadLocalRows();
     localRows.unshift(row);
     saveLocalRows(localRows);
     alert("Tender saved successfully.");
-    await loadData();
+    await loadData(false);
   } catch (e) {
     console.error(e);
     alert("Save failed. Please check the Apps Script connection.");
-    await loadData();
   } finally {
+    setLoading(false);
     saveBtn.disabled = false;
     saveBtn.textContent = oldText;
   }
 }
 
+
+async function loginUser() {
+  const username = text($("loginUsername")?.value);
+  const password = text($("loginPassword")?.value);
+  if (!username || !password) {
+    alert("Enter username and password.");
+    return;
+  }
+  if (!APPS_SCRIPT_URL) {
+    alert("Apps Script URL is missing in the HTML. Add it first.");
+    return;
+  }
+  setLoading(true, "Signing in...");
+  try {
+    const res = await fetchJson(APPS_SCRIPT_URL, {
+      method:"POST",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body: JSON.stringify({ action:"loginUser", username, password })
+    });
+    if (res.success === false || !res.user) throw new Error(res.error || "Login failed");
+    setCurrentUser(res.user);
+    if ($("loginMessage")) $("loginMessage").textContent = `Logged in as ${res.user.name || res.user.username}`;
+    alert("Login successful.");
+    await loadData(true);
+  } catch (e) {
+    console.error(e);
+    alert(e.message || "Login failed.");
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function registerUser() {
+  const name = text($("registerName")?.value);
+  const username = text($("registerUsername")?.value);
+  const password = text($("registerPassword")?.value);
+  const role = text($("registerRole")?.value || "User");
+  if (!name || !username || !password) {
+    alert("Complete all registration fields.");
+    return;
+  }
+  if (!APPS_SCRIPT_URL) {
+    alert("Apps Script URL is missing in the HTML. Add it first.");
+    return;
+  }
+  setLoading(true, "Registering user...");
+  try {
+    const res = await fetchJson(APPS_SCRIPT_URL, {
+      method:"POST",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body: JSON.stringify({ action:"registerUser", row:{ name, username, password, role } })
+    });
+    if (res.success === false) throw new Error(res.error || "Registration failed");
+    alert("User registered successfully.");
+    if ($("loginUsername")) $("loginUsername").value = username;
+  } catch (e) {
+    console.error(e);
+    alert(e.message || "Registration failed.");
+  } finally {
+    setLoading(false);
+  }
+}
+
+function logoutUser() {
+  setCurrentUser(null);
+  if ($("loginMessage")) $("loginMessage").textContent = "Please sign in to continue.";
+}
 function wireEvents() {
   document.querySelectorAll(".tab").forEach(tab => {
     tab.onclick = () => {
@@ -823,13 +978,17 @@ function wireEvents() {
   if ($("searchFilter")) $("searchFilter").oninput = e => { state.filters.search = e.target.value; renderAll(); };
   if ($("saveTenderBtn")) $("saveTenderBtn").onclick = saveTender;
   if ($("saveRfqBtn")) $("saveRfqBtn").onclick = saveRfq;
-  if ($("refreshBtn")) $("refreshBtn").onclick = loadData;
+  if ($("refreshBtn")) $("refreshBtn").onclick = () => loadData(true);
+  if ($("loginBtn")) $("loginBtn").onclick = loginUser;
+  if ($("registerBtn")) $("registerBtn").onclick = registerUser;
+  if ($("logoutBtn")) $("logoutBtn").onclick = logoutUser;
   if ($("formClientName")) $("formClientName").onchange = () => handleAddableSelect("formClientName", CUSTOM_CLIENT_OPTIONS_KEY, "Add new name");
   if ($("rfqCompanyName")) $("rfqCompanyName").onchange = () => handleAddableSelect("rfqCompanyName", CUSTOM_CLIENT_OPTIONS_KEY, "Add new name");
   if ($("formProjectName")) $("formProjectName").onchange = () => handleAddableSelect("formProjectName", CUSTOM_PROJECT_OPTIONS_KEY, "Add new project name");
 }
 wireEvents();
-loadData();
+setCurrentUser(restoreSessionUser());
+if (state.currentUser) { loadData(true); }
 </script>
 </body>
 </html>
