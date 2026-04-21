@@ -132,6 +132,7 @@
       <div class="tab active" data-panel="dashboardPanel">Dashboard</div>
       <div class="tab" data-panel="rfqPanel">RFQ</div>
       <div class="tab" data-panel="capturePanel">Capture Tender</div>
+      <div class="tab" data-panel="contractsPanel">Contracts % Rate</div>
       <div class="tab" data-panel="summaryPanel">Targets & Variance</div>
     </div>
 
@@ -175,7 +176,11 @@
           <div class="table-wrap"><table id="openTendersTable"></table></div>
         </div>
       </div>
-    </div>
+          <div class="card" style="margin-top:16px;">
+        <h3 style="margin-top:0">Contracts % Rate</h3>
+        <div class="table-wrap"><table id="contractsDashboardTable"></table></div>
+      </div>
+</div>
 
     
     <div class="panel" id="rfqPanel">
@@ -232,6 +237,27 @@
       </div>
     </div>
 
+    <div class="panel" id="contractsPanel">
+      <div class="card">
+        <div class="section-chip">Store directly to Google Sheet tab Contracts</div>
+        <h3 style="margin-top:0">Contracts % Rate</h3>
+        <div class="form-grid">
+          <div class="field span-2"><label>Entity</label><select id="contractEntity"></select></div>
+          <div class="field span-2"><label>Target</label><input id="contractTarget" placeholder="50"></div>
+          <div class="field span-2"><label>Actual Achieved</label><input id="contractActualAchieved" placeholder="1"></div>
+          <div class="field span-2"><label>% Performance</label><input id="contractPerformancePercent" placeholder="2.00%"></div>
+          <div class="field span-2"><label>Tenders Submitted</label><input id="contractTendersSubmitted" placeholder="145"></div>
+          <div class="field span-2"><label>Win Rate</label><input id="contractWinRate" placeholder="0.69%"></div>
+          <div class="field span-12"><button id="saveContractBtn" type="button">Save Contracts % Rate</button></div>
+        </div>
+        <div class="save-note">Contracts % Rate saves to tab <strong>Contracts</strong> in spreadsheet <strong>Performance Tracker - Tendering(Pipeline)</strong>.</div>
+      </div>
+      <div class="card" style="margin-top:16px;">
+        <h3 style="margin-top:0">Contracts % Rate Journal</h3>
+        <div class="table-wrap"><table id="contractsTable"></table></div>
+      </div>
+    </div>
+
     <div class="panel" id="summaryPanel">
       <div class="grid two">
         <div class="card">
@@ -250,11 +276,12 @@
 const APP_CONFIG = {
   rfqTab: "RFQ",
   loginTab: "Login",
-  appsScriptUrl: "https://script.google.com/macros/s/AKfycbwzaWVJpH3KQa9gBWc6Dcl1gFZoWGvcDdf5Wn1wFODEdcupCBlXNhXbCjTNFKgFeTCz/exec", // Paste your deployed Apps Script web app URL here after deploying Code.gs
+  appsScriptUrl: "https://script.google.com/macros/s/AKfycbws7rS5ZJsREoE95yudsW2Gya4SfyHSanZSV9vbbQUreoKNYnxCWEuVMsnKYlRmWTCS/exec", // Paste your deployed Apps Script web app URL here after deploying Code.gs
   spreadsheetId: "1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0",
   driveFileId: "1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0",
   spreadsheetName: "Performance Tracker - Tendering(Pipeline)",
-  pipelineTab: "Tenders"
+  pipelineTab: "Tenders",
+  contractsTab: "Contracts"
 };
 const APPS_SCRIPT_URL = APP_CONFIG.appsScriptUrl;
 const COST_CENTER_OPTIONS = ["Onpoint Ontime","Nkanyezi","Aqua Telecoms","Distinct Hire"];
@@ -265,6 +292,7 @@ const CUSTOM_CLIENT_OPTIONS_KEY = "onpoint_tendering_feed_custom_clients_v1";
 const CUSTOM_PROJECT_OPTIONS_KEY = "onpoint_tendering_feed_custom_projects_v1";
 const LOCAL_STORAGE_KEY = "onpoint_tendering_feed_local_v1";
 const LOCAL_RFQ_STORAGE_KEY = "onpoint_tendering_feed_rfq_local_v1";
+const LOCAL_CONTRACTS_STORAGE_KEY = "onpoint_tendering_feed_contracts_local_v1";
 const SESSION_USER_KEY = "onpoint_tendering_feed_session_user_v1";
 const SEED_DATA = {
   "pipeline": [
@@ -414,6 +442,7 @@ const SEED_DATA = {
 const state = {
   rows: [],
   rfqs: [],
+  contracts: [],
   summary: SEED_DATA.summary,
   currentUser: null,
   filters: { unit:"All", scope:"All", status:"All", search:"", project:"All" }
@@ -430,6 +459,20 @@ const num = v => {
   return Number.isFinite(n) ? n : 0;
 };
 const money = v => new Intl.NumberFormat("en-ZA",{style:"currency",currency:"ZAR",maximumFractionDigits:0}).format(num(v));
+function percentText(value, decimals = 2) {
+  const raw = text(value);
+  if (!raw) return "0.00%";
+  if (raw.includes("%")) return raw;
+  const n = Number(raw.toString().replace(",", "."));
+  if (!Number.isFinite(n)) return raw;
+  return `${n.toFixed(decimals)}%`;
+}
+function derivePercent(part, whole) {
+  const p = num(part);
+  const w = num(whole);
+  if (!w) return "0.00%";
+  return `${((p / w) * 100).toFixed(2)}%`;
+}
 
 function isChartJsReady() {
   return typeof window.Chart !== 'undefined';
@@ -510,6 +553,12 @@ function loadLocalRfqs() {
 function saveLocalRfqs(rows) {
   localStorage.setItem(LOCAL_RFQ_STORAGE_KEY, JSON.stringify(rows));
 }
+function loadLocalContracts() {
+  try { return JSON.parse(localStorage.getItem(LOCAL_CONTRACTS_STORAGE_KEY) || "[]"); } catch { return []; }
+}
+function saveLocalContracts(rows) {
+  localStorage.setItem(LOCAL_CONTRACTS_STORAGE_KEY, JSON.stringify(rows));
+}
 
 function normaliseRow(row) {
   return {
@@ -535,6 +584,19 @@ function normaliseRfqRow(row) {
     contactPerson: text(row.contactPerson || row["Contact Person"] || ""),
     status: text(row.status || row["RFQ Status"] || "Forecast"),
     notes: text(row.notes || row["Comments"] || ""),
+    createdAt: text(row.createdAt || row["Created At"] || "")
+  };
+}
+
+function normaliseContractRow(row) {
+  return {
+    entity: text(row.entity || row.businessUnit || row.costCenter || row["Entity"] || row["Cost Center"]),
+    target: text(row.target || row["Target"] || 0),
+    actualAchieved: text(row.actualAchieved || row.actual || row["Actual Achieved"] || 0),
+    performancePercent: text(row.performancePercent || row["% Performance"] || row.performance || ""),
+    tendersSubmitted: text(row.tendersSubmitted || row["Tenders Submitted"] || 0),
+    winRate: text(row.winRate || row["Win Rate"] || ""),
+    createdBy: text(row.createdBy || row["Created By"] || ""),
     createdAt: text(row.createdAt || row["Created At"] || "")
   };
 }
@@ -584,14 +646,17 @@ async function loadData(showAlert = false) {
   try {
     const localRows = loadLocalRows().map(normaliseRow);
     const localRfqs = loadLocalRfqs().map(normaliseRfqRow);
+    const localContracts = loadLocalContracts().map(normaliseContractRow);
     state.rows = [...SEED_DATA.pipeline.map(normaliseRow), ...localRows];
     state.rfqs = [...localRfqs];
+    state.contracts = [...localContracts];
     state.summary = computeSummaryFromRows(state.rows);
     if (APPS_SCRIPT_URL) {
       try {
         const payload = await fetchJson(`${APPS_SCRIPT_URL}?action=getAllData`);
         if (Array.isArray(payload.rows)) state.rows = payload.rows.map(normaliseRow);
         if (Array.isArray(payload.rfqs)) state.rfqs = payload.rfqs.map(normaliseRfqRow);
+        if (Array.isArray(payload.contracts)) state.contracts = payload.contracts.map(normaliseContractRow);
         state.summary = payload.summary || computeSummaryFromRows(state.rows);
         if (payload.currentUser && !state.currentUser) setCurrentUser(payload.currentUser);
         setConn("Connected", "ok");
@@ -666,6 +731,7 @@ function populateFilters() {
   populateSelect("dashboardProjectFilter", ["All", ...projectOptions], state.filters.project);
   populateSelect("formBusinessUnit", COST_CENTER_OPTIONS, "Onpoint Ontime");
   populateSelect("rfqBusinessUnit", COST_CENTER_OPTIONS, "Onpoint Ontime");
+  populateSelect("contractEntity", COST_CENTER_OPTIONS, "Onpoint Ontime");
   populateSelect("formScopeType", SCOPE_OPTIONS, "CIVIL");
   populateSelect("rfqScopeType", SCOPE_OPTIONS, "CIVIL");
   populateSelectWithAdd("formClientName", clientOptions, clientOptions[0] || "ETHEKWINI", "Add new name");
@@ -696,6 +762,12 @@ function filteredRows() {
     if (state.filters.project !== "All" && projectName !== state.filters.project) return false;
     const hay = `${text(r.clientName)} ${text(r.contractDescription)} ${projectName}`.toLowerCase();
     if (state.filters.search && !hay.includes(state.filters.search.toLowerCase())) return false;
+    return true;
+  });
+}
+function filteredContractsRows() {
+  return state.contracts.filter(r => {
+    if (state.filters.unit !== "All" && text(r.entity) !== state.filters.unit) return false;
     return true;
   });
 }
@@ -847,6 +919,38 @@ function formatVarianceWithPercent(value, percent) {
   return `${money(value)} (${pctText})`;
 }
 
+function renderContractsDashboardTable() {
+  if (!$("contractsDashboardTable")) return;
+  const rows = filteredContractsRows();
+  buildTable($("contractsDashboardTable"),
+    [{label:"Entity"},{label:"Target",className:"right"},{label:"Actual Achieved",className:"right"},{label:"% Performance",className:"right"},{label:"Tenders Submitted",className:"right"},{label:"Win Rate",className:"right"}],
+    rows.map(r => [
+      r.entity,
+      text(r.target),
+      text(r.actualAchieved),
+      percentText(r.performancePercent),
+      text(r.tendersSubmitted),
+      percentText(r.winRate)
+    ])
+  );
+}
+
+function renderContractsTable() {
+  if (!$("contractsTable")) return;
+  const rows = [...state.contracts].reverse();
+  buildTable($("contractsTable"),
+    [{label:"Entity"},{label:"Target",className:"right"},{label:"Actual Achieved",className:"right"},{label:"% Performance",className:"right"},{label:"Tenders Submitted",className:"right"},{label:"Win Rate",className:"right"}],
+    rows.map(r => [
+      r.entity,
+      text(r.target),
+      text(r.actualAchieved),
+      percentText(r.performancePercent),
+      text(r.tendersSubmitted),
+      percentText(r.winRate)
+    ])
+  );
+}
+
 function renderSummaryTable() {
   const s = state.summary || {};
   const variancePercent = s.variancePercent || {};
@@ -878,7 +982,9 @@ function renderSummaryTable() {
 function renderAll() {
   renderKPIs();
   renderDashboardTables();
+  renderContractsDashboardTable();
   renderRfqTable();
+  renderContractsTable();
   renderSummaryTable();
   scheduleChartsRender();
 }
@@ -990,6 +1096,57 @@ async function saveTender() {
 }
 
 
+async function saveContract() {
+  if (!state.currentUser) {
+    alert("Please login first.");
+    return;
+  }
+  const row = {
+    entity: $("contractEntity").value,
+    target: $("contractTarget").value,
+    actualAchieved: $("contractActualAchieved").value,
+    performancePercent: $("contractPerformancePercent").value || derivePercent($("contractActualAchieved").value, $("contractTarget").value),
+    tendersSubmitted: $("contractTendersSubmitted").value,
+    winRate: $("contractWinRate").value || derivePercent($("contractActualAchieved").value, $("contractTendersSubmitted").value),
+    createdBy: state.currentUser.username
+  };
+  if (!text(row.entity)) {
+    alert("Please select Entity.");
+    return;
+  }
+  const saveBtn = $("saveContractBtn");
+  const oldText = saveBtn.textContent;
+  saveBtn.disabled = true;
+  saveBtn.textContent = "Synchronising...";
+  setConn("Synchronising", "warn");
+  setLoading(true, "Saving contracts % rate...");
+  try {
+    if (APPS_SCRIPT_URL) {
+      const res = await fetchJson(APPS_SCRIPT_URL, {
+        method:"POST",
+        headers:{"Content-Type":"text/plain;charset=utf-8"},
+        body: JSON.stringify({ action:"saveContractRow", row, currentUser: state.currentUser })
+      });
+      if (res.success === false) throw new Error(res.error || "Save failed");
+      alert("Contracts % Rate saved successfully.");
+      await loadData(false);
+      return;
+    }
+    const localRows = loadLocalContracts();
+    localRows.unshift(row);
+    saveLocalContracts(localRows);
+    alert("Contracts % Rate saved successfully.");
+    await loadData(false);
+  } catch (e) {
+    console.error(e);
+    alert("Contracts % Rate save failed. Please check the Apps Script connection.");
+  } finally {
+    setLoading(false);
+    saveBtn.disabled = false;
+    saveBtn.textContent = oldText;
+  }
+}
+
 async function loginUser() {
   const username = text($("loginUsername")?.value);
   const password = text($("loginPassword")?.value);
@@ -1078,6 +1235,7 @@ function wireEvents() {
   if ($("dashboardGroupBy")) $("dashboardGroupBy").onchange = () => { renderAll(); };
   if ($("saveTenderBtn")) $("saveTenderBtn").onclick = saveTender;
   if ($("saveRfqBtn")) $("saveRfqBtn").onclick = saveRfq;
+  if ($("saveContractBtn")) $("saveContractBtn").onclick = saveContract;
   if ($("refreshBtn")) $("refreshBtn").onclick = () => loadData(true);
   if ($("loginBtn")) $("loginBtn").onclick = loginUser;
   if ($("registerBtn")) $("registerBtn").onclick = registerUser;
