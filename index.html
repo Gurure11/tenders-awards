@@ -79,14 +79,14 @@
       <div>
         <div class="section-chip">Tender pipeline dashboard</div>
         <div class="hero-title">Pipeline, targets, variance and tender capture in one place</div>
-        <div class="muted">Built from the uploaded tendering pipeline structure. Configured for Google Sheet <strong>Tendes</strong> using spreadsheet ID <strong>17A8yevqcBxPa5a0FZuKsCE0gvQvoiq3O</strong> and tab <strong>Tendes</strong>. The app fetches through Apps Script and falls back to seed data until the script URL is configured.</div>
-        <div class="footer-note">Linked Google Sheet: <strong>Tendes</strong>. Primary tab for this build: <strong>Tendes</strong>.</div>
+        <div class="muted">Built from the uploaded tendering pipeline structure. Configured for Google Sheet <strong>Tendes</strong> using spreadsheet ID <strong>1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0</strong> and tab <strong>Tenders</strong>. The app fetches through Apps Script and falls back to seed data until the script URL is configured.</div>
+        <div class="footer-note">Linked Google Sheet: <strong>Performance Tracker - Tendering(Pipeline)</strong>. Primary tab for this build: <strong>Tenders</strong>.</div>
       </div>
       <div class="callout">
         <div style="font-size:13px; text-transform:uppercase; color:var(--muted); font-weight:700;">Current view</div>
         <div style="font-size:22px; font-weight:700; margin-top:8px;">Tendering overview</div>
         <div class="footer-note">Use the dashboard tab for executive view, then add or edit tenders in the Capture tab. Everything is designed to store back to the Google Sheet using the included Apps Script.</div>
-        <div class="footer-note"><strong>Configured sheet:</strong> Tendes | <strong>Tab:</strong> Tendes | <strong>Spreadsheet ID:</strong> 17A8yevqcBxPa5a0FZuKsCE0gvQvoiq3O</div>
+        <div class="footer-note"><strong>Configured sheet:</strong> Performance Tracker - Tendering(Pipeline) | <strong>Tab:</strong> Tenders | <strong>Spreadsheet ID:</strong> 1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0</div>
       </div>
     </div>
 
@@ -102,11 +102,11 @@
     <div class="panel active" id="dashboardPanel">
       <div class="grid two">
         <div class="card">
-          <h3 style="margin-top:0">Pipeline value by business unit</h3>
+          <h3 style="margin-top:0">Tender count by cost center</h3>
           <div class="chart-box"><canvas id="businessUnitChart"></canvas></div>
         </div>
         <div class="card">
-          <h3 style="margin-top:0">Pipeline by scope type</h3>
+          <h3 style="margin-top:0">Tender count by scope type</h3>
           <div class="chart-box"><canvas id="scopeChart"></canvas></div>
         </div>
       </div>
@@ -125,7 +125,7 @@
     <div class="panel" id="pipelinePanel">
       <div class="card">
         <div class="toolbar">
-          <div class="field"><label>Business Unit</label><select id="unitFilter"></select></div>
+          <div class="field"><label>Cost Center</label><select id="unitFilter"></select></div>
           <div class="field"><label>Scope Type</label><select id="scopeFilter"></select></div>
           <div class="field"><label>Status</label><select id="statusFilter"></select></div>
           <div class="field"><label>Search</label><input id="searchFilter" placeholder="Client or description"></div>
@@ -143,26 +143,26 @@
         <div class="section-chip">Store directly to Google Sheet</div>
         <h3 style="margin-top:0">Capture Tender</h3>
         <div class="form-grid">
-          <div class="field span-3"><label>Business Unit</label><select id="formBusinessUnit"></select></div>
+          <div class="field span-3"><label>Cost Center / Business Unit</label><select id="formBusinessUnit"></select></div>
           <div class="field span-3"><label>Client Name</label><input id="formClientName"></div>
           <div class="field span-6"><label>Contract Description</label><input id="formContractDescription"></div>
           <div class="field span-3"><label>Scope Type</label><select id="formScopeType"></select></div>
           <div class="field span-3"><label>Scope Value</label><input id="formScopeValue" placeholder="R0.00 or RATES-PANEL"></div>
           <div class="field span-3"><label>Total Value</label><input id="formTotalValue" placeholder="R0.00"></div>
-          <div class="field span-3"><label>Status</label><select id="formStatus"><option>Open</option><option>Submitted</option><option>Awarded</option><option>Lost</option><option>On Hold</option></select></div>
+          <div class="field span-3"><label>Status</label><select id="formStatus"><option>Ongoing</option><option>On-hold</option><option>Completed</option></select></div>
           <div class="field span-3"><label>Probability %</label><input id="formProbability" type="number" min="0" max="100" value="50"></div>
           <div class="field span-3"><label>Expected Close Month</label><input id="formCloseMonth" type="month"></div>
           <div class="field span-6"><label>Notes</label><textarea id="formNotes" rows="3"></textarea></div>
           <div class="field span-12"><button id="saveTenderBtn" type="button">Save Tender</button></div>
         </div>
-        <div class="footer-note">This build is configured for spreadsheet ID <strong>17A8yevqcBxPa5a0FZuKsCE0gvQvoiq3O</strong> and tab <strong>Tendes</strong>. Until your deployed Apps Script URL is added, save will store locally in the browser so you can still test the interface.</div>
+        <div class="footer-note">This build is configured for spreadsheet ID <strong>1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0</strong> and tab <strong>Tenders</strong>. Until your deployed Apps Script URL is added, save will store locally in the browser so you can still test the interface.</div>
       </div>
     </div>
 
     <div class="panel" id="summaryPanel">
       <div class="grid two">
         <div class="card">
-          <h3 style="margin-top:0">Summary totals from source structure</h3>
+          <h3 style="margin-top:0">Summary totals from Tenders tab</h3>
           <div class="table-wrap"><table id="summaryTotalsTable"></table></div>
         </div>
         <div class="card">
@@ -175,96 +175,98 @@
 
 <script>
 const APP_CONFIG = {
-  appsScriptUrl: "https://script.google.com/macros/s/AKfycbz-ghZcGkSejhx0kda2vO4VNR86FMEPSk-KrGYpAJnDR1YYs4ev0wd71_k3PJSJ7nM3/exec", // Paste your deployed Apps Script web app URL here after deploying Code.gs
-  spreadsheetId: "17A8yevqcBxPa5a0FZuKsCE0gvQvoiq3O",
+  appsScriptUrl: "https://script.google.com/macros/s/AKfycbzwJA1iTmUKiCi41g11R7EKQ6I57il1JFvwKfE-eeyMMq5qFAmZhtGwnJHrX4qcGLQq/exec", // Paste your deployed Apps Script web app URL here after deploying Code.gs
+  spreadsheetId: "1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0",
   driveFileId: "1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0",
-  spreadsheetName: "Tenders",
+  spreadsheetName: "Performance Tracker - Tendering(Pipeline)",
   pipelineTab: "Tenders"
 };
 const APPS_SCRIPT_URL = APP_CONFIG.appsScriptUrl;
+const COST_CENTER_OPTIONS = ["Onpoint Ontime","Nkanyezi","Aqua Telecoms","Distinct Hire"];
+const STATUS_OPTIONS = ["Ongoing","On-hold","Completed"];
 const LOCAL_STORAGE_KEY = "onpoint_tendering_feed_local_v1";
 const SEED_DATA = {
   "pipeline": [
     {
-      "businessUnit": "On Point",
+      "businessUnit": "Onpoint Ontime",
       "clientName": "ETHEKWINI",
       "contractDescription": "VERULAM WASTE WATER TREATMENT WORKS REHABILITATION",
       "scopeType": "Civil",
       "scopeValue": "R29,800,000.00",
       "totalValue": "R29,800,000.00",
-      "status": "Open",
+      "status": "Ongoing",
       "probability": 70,
       "closeMonth": "",
       "notes": ""
     },
     {
-      "businessUnit": "On Point",
+      "businessUnit": "Onpoint Ontime",
       "clientName": "COEGA",
       "contractDescription": "STORM DAMAGE REPAIRS TO  SCHOOL",
       "scopeType": "Building",
       "scopeValue": "R25,000,000.00",
       "totalValue": "R25,000,000.00",
-      "status": "Open",
+      "status": "Ongoing",
       "probability": 70,
       "closeMonth": "",
       "notes": ""
     },
     {
-      "businessUnit": "On Point",
+      "businessUnit": "Onpoint Ontime",
       "clientName": "ESKOM-LOU",
       "contractDescription": "EPHRAIM MOGALE SUBSTATION EXPANSION",
       "scopeType": "Civil",
       "scopeValue": "R30,137,219.00",
       "totalValue": "R30,137,219.00",
-      "status": "Open",
+      "status": "Ongoing",
       "probability": 70,
       "closeMonth": "",
       "notes": ""
     },
     {
-      "businessUnit": "On Point",
+      "businessUnit": "Onpoint Ontime",
       "clientName": "ESKOM-LOU",
       "contractDescription": "CONSTRUCTION & DISMANTLING OF MV & HV SUBSTATIONS & SWITCHING STATIONS",
       "scopeType": "Electrical",
       "scopeValue": "RATES-PANEL",
       "totalValue": "R0.00",
-      "status": "Open",
+      "status": "Ongoing",
       "probability": 50,
       "closeMonth": "",
       "notes": ""
     },
     {
-      "businessUnit": "On Point",
+      "businessUnit": "Onpoint Ontime",
       "clientName": "ESKOM-LOU",
       "contractDescription": "CONSTRUCTION & DISMANTLING OF HV DISTRIBUTION WITHIN THE MPUMALANGA AREA",
       "scopeType": "Electrical",
       "scopeValue": "RATES-PANEL",
       "totalValue": "R0.00",
-      "status": "Open",
+      "status": "Ongoing",
       "probability": 50,
       "closeMonth": "",
       "notes": ""
     },
     {
-      "businessUnit": "On Point",
+      "businessUnit": "Onpoint Ontime",
       "clientName": "JRA",
       "contractDescription": "CONSTRUCTION OF STORMWATER INFRASTRUCTURE",
       "scopeType": "Civil",
       "scopeValue": "RATES - PANEL",
       "totalValue": "R0.00",
-      "status": "Open",
+      "status": "Ongoing",
       "probability": 50,
       "closeMonth": "",
       "notes": ""
     },
     {
-      "businessUnit": "On Point",
+      "businessUnit": "Onpoint Ontime",
       "clientName": "MSUNDUZI",
       "contractDescription": "E50 of 2025: REPAIRS AND MAINTENANCE OF HIGH VOLTAGE 33KV OILE FILLED AND 132KV XLPE UNDERGROUND CABLES",
       "scopeType": "Civil",
       "scopeValue": "RATES - PANEL",
       "totalValue": "R0.00",
-      "status": "Open",
+      "status": "Ongoing",
       "probability": 50,
       "closeMonth": "",
       "notes": ""
@@ -276,7 +278,7 @@ const SEED_DATA = {
       "scopeType": "Electrical",
       "scopeValue": "RATES-PANEL",
       "totalValue": "R0.00",
-      "status": "Open",
+      "status": "Ongoing",
       "probability": 50,
       "closeMonth": "",
       "notes": ""
@@ -288,7 +290,7 @@ const SEED_DATA = {
       "scopeType": "Electrical",
       "scopeValue": "RATES-PANEL",
       "totalValue": "R0.00",
-      "status": "Open",
+      "status": "Ongoing",
       "probability": 50,
       "closeMonth": "",
       "notes": ""
@@ -345,8 +347,8 @@ const num = v => {
 const money = v => new Intl.NumberFormat("en-ZA",{style:"currency",currency:"ZAR",maximumFractionDigits:0}).format(num(v));
 const badgeClass = status => {
   const s = text(status).toLowerCase();
-  if (s === "awarded") return "ok";
-  if (s === "lost") return "bad";
+  if (s === "completed") return "ok";
+  if (s === "on-hold") return "bad";
   return "warn";
 };
 function setConn(label, cls) {
@@ -360,19 +362,61 @@ function loadLocalRows() {
 function saveLocalRows(rows) {
   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(rows));
 }
+
+function normaliseRow(row) {
+  return {
+    businessUnit: text(row.businessUnit || row.costCenter || row["Business Unit"] || row["Cost Center"]),
+    clientName: text(row.clientName || row["Client Name"] || row.Client || row.client),
+    contractDescription: text(row.contractDescription || row["Contract Description"] || row["Tender Name"] || row.tenderName),
+    scopeType: text(row.scopeType || row.Scope || row.scope || "Unspecified"),
+    scopeValue: text(row.scopeValue || row["Scope Value"] || ""),
+    totalValue: text(row.totalValue || row["Tender Value"] || row["Total Value"] || row["Projected Revenue"] || 0),
+    status: text(row.status || row["Tender Status"] || "Ongoing"),
+    probability: Number(row.probability || row["Probability %"] || 0),
+    closeMonth: text(row.closeMonth || row["Closing Date"] || ""),
+    notes: text(row.notes || row["Comments"] || "")
+  };
+}
+function computeSummaryFromRows(rows) {
+  const keys = {
+    civil: "Civil",
+    building: "Building",
+    electrical: "Electrical",
+    telecoms: "Telecoms",
+    mechanical: "Mechanical",
+    roads: "Roads",
+    plantHire: "Plant Hire"
+  };
+  const total = {civil:0, building:0, electrical:0, telecoms:0, mechanical:0, roads:0, plantHire:0, overall:0};
+  rows.forEach(r => {
+    const scope = text(r.scopeType).toLowerCase();
+    const value = num(r.totalValue);
+    if (scope === "civil") total.civil += value;
+    else if (scope === "building") total.building += value;
+    else if (scope === "electrical") total.electrical += value;
+    else if (scope === "telecoms") total.telecoms += value;
+    else if (scope === "mechanical") total.mechanical += value;
+    else if (scope === "roads") total.roads += value;
+    else if (scope === "plant hire" || scope === "planthire") total.plantHire += value;
+    total.overall += value;
+  });
+  const zeroes = {civil:0, building:0, electrical:0, telecoms:0, mechanical:0, roads:0, plantHire:0, overall:0};
+  return { total, target: zeroes, variance: zeroes };
+}
 async function fetchJson(url, options={}) {
   const res = await fetch(url, options);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return await res.json();
 }
 async function loadData() {
-  const localRows = loadLocalRows();
-  state.rows = [...SEED_DATA.pipeline, ...localRows];
+  const localRows = loadLocalRows().map(normaliseRow);
+  state.rows = [...SEED_DATA.pipeline.map(normaliseRow), ...localRows];
+  state.summary = computeSummaryFromRows(state.rows);
   if (APPS_SCRIPT_URL) {
     try {
       const payload = await fetchJson(`${APPS_SCRIPT_URL}?action=getPipeline`);
-      if (Array.isArray(payload.rows)) state.rows = payload.rows;
-      if (payload.summary) state.summary = payload.summary;
+      if (Array.isArray(payload.rows)) state.rows = payload.rows.map(normaliseRow);
+      state.summary = computeSummaryFromRows(state.rows);
       setConn("Connected", "ok");
     } catch (e) {
       console.error(e);
@@ -392,20 +436,23 @@ function populateSelect(id, values, selected) {
   el.innerHTML = values.map(v => `<option value="${v}" ${v===selected?"selected":""}>${v}</option>`).join("");
 }
 function populateFilters() {
-  const units = ["All", ...unique(state.rows.map(r => r.businessUnit))];
-  const scopes = ["All", ...unique(state.rows.map(r => r.scopeType))];
-  const statuses = ["All", ...unique(state.rows.map(r => r.status || "Open"))];
+  const units = ["All", ...COST_CENTER_OPTIONS];
+  const scopes = ["All", ...unique(state.rows.map(r => r.scopeType || "Unspecified"))];
+  const statuses = ["All", ...STATUS_OPTIONS];
+  if (!units.includes(state.filters.unit)) state.filters.unit = "All";
+  if (!scopes.includes(state.filters.scope)) state.filters.scope = "All";
+  if (!statuses.includes(state.filters.status)) state.filters.status = "All";
   populateSelect("unitFilter", units, state.filters.unit);
   populateSelect("scopeFilter", scopes, state.filters.scope);
   populateSelect("statusFilter", statuses, state.filters.status);
-  populateSelect("formBusinessUnit", unique(state.rows.map(r => r.businessUnit)).length ? unique(state.rows.map(r => r.businessUnit)) : ["On Point","Nkanyezi","Distinct","Aqua Telecoms"], "On Point");
+  populateSelect("formBusinessUnit", COST_CENTER_OPTIONS, "Onpoint Ontime");
   populateSelect("formScopeType", ["Civil","Building","Electrical","Telecoms","Mechanical","Roads","Plant Hire","Unspecified"], "Civil");
 }
 function filteredRows() {
   return state.rows.filter(r => {
     if (state.filters.unit !== "All" && text(r.businessUnit) !== state.filters.unit) return false;
     if (state.filters.scope !== "All" && text(r.scopeType) !== state.filters.scope) return false;
-    if (state.filters.status !== "All" && text(r.status || "Open") !== state.filters.status) return false;
+    if (state.filters.status !== "All" && text(r.status || "Ongoing") !== state.filters.status) return false;
     const hay = `${text(r.clientName)} ${text(r.contractDescription)}`.toLowerCase();
     if (state.filters.search && !hay.includes(state.filters.search.toLowerCase())) return false;
     return true;
@@ -413,18 +460,15 @@ function filteredRows() {
 }
 function kpiRows() {
   const rows = filteredRows();
-  const liveValue = rows.reduce((s,r)=>s+num(r.totalValue),0);
-  const weighted = rows.reduce((s,r)=>s+(num(r.totalValue) * ((Number(r.probability)||0)/100)),0);
-  const open = rows.filter(r => text(r.status || "Open") === "Open").length;
-  const awarded = rows.filter(r => text(r.status || "Open") === "Awarded").length;
-  const target = num(state.summary?.target?.overall);
-  const achievement = target ? Math.round((liveValue / target) * 100) : 0;
+  const totalTenders = rows.length;
+  const totalRfqs = rows.filter(r => num(r.totalValue) === 0 || /rates/i.test(text(r.scopeValue))).length;
+  const awarded = rows.filter(r => text(r.status || "Ongoing") === "Completed").length;
+  const open = rows.filter(r => text(r.status || "Ongoing") === "Ongoing").length;
   return [
-    ["Pipeline Value", money(liveValue), "Filtered tenders"],
-    ["Weighted Pipeline", money(weighted), "Value × probability"],
-    ["Open Tenders", String(open), "Current pipeline"],
-    ["Awarded", String(awarded), "Won opportunities"],
-    ["Target Achievement", `${achievement}%`, "Against overall target"]
+    ["Total Tenders", String(totalTenders), "All filtered tenders"],
+    ["Total RFQs", String(totalRfqs), "Rate or zero-value RFQs"],
+    ["Awarded Tenders", String(awarded), "Completed tenders"],
+    ["Open Tenders", String(open), "Ongoing tenders"]
   ];
 }
 function renderKPIs() {
@@ -442,7 +486,8 @@ function aggregateBy(key, valueKey="totalValue") {
   const map = new Map();
   filteredRows().forEach(r => {
     const k = text(r[key]) || "Unspecified";
-    map.set(k, (map.get(k)||0) + num(r[valueKey]));
+    const increment = valueKey === "__count__" ? 1 : num(r[valueKey]);
+    map.set(k, (map.get(k)||0) + increment);
   });
   return [...map.entries()].map(([label,value]) => ({label, value})).sort((a,b)=>b.value-a.value);
 }
@@ -451,12 +496,12 @@ function destroyChart(name) {
 }
 function renderCharts() {
   destroyChart("businessUnitChart"); destroyChart("scopeChart"); destroyChart("targetChart");
-  const unitAgg = aggregateBy("businessUnit");
-  const scopeAgg = aggregateBy("scopeType");
+  const unitAgg = aggregateBy("businessUnit", "__count__");
+  const scopeAgg = aggregateBy("scopeType", "__count__");
 
   charts.businessUnitChart = new Chart($("businessUnitChart"), {
     type:"bar",
-    data:{ labels: unitAgg.map(x=>x.label), datasets:[{ label:"Pipeline Value", data: unitAgg.map(x=>Math.round(x.value)) }] },
+    data:{ labels: unitAgg.map(x=>x.label), datasets:[{ label:"Tender Count", data: unitAgg.map(x=>Math.round(x.value)) }] },
     options:{ responsive:true, maintainAspectRatio:false, animation:false, plugins:{legend:{display:false}} }
   });
 
@@ -469,10 +514,9 @@ function renderCharts() {
   const summary = state.summary || {};
   const labels = ["Civil","Building","Electrical","Telecoms","Mechanical","Roads","Plant Hire"];
   const actual = [summary.total?.civil,summary.total?.building,summary.total?.electrical,summary.total?.telecoms,summary.total?.mechanical,summary.total?.roads,summary.total?.plantHire].map(num);
-  const target = [summary.target?.civil,summary.target?.building,summary.target?.electrical,summary.target?.telecoms,summary.target?.mechanical,summary.target?.roads,summary.target?.plantHire].map(num);
   charts.targetChart = new Chart($("targetChart"), {
     type:"bar",
-    data:{ labels, datasets:[{label:"Actual Pipeline", data: actual}, {label:"Target", data: target}] },
+    data:{ labels, datasets:[{label:"Totals from Tenders tab", data: actual}] },
     options:{ responsive:true, maintainAspectRatio:false, animation:false }
   });
 }
@@ -483,7 +527,7 @@ function renderDashboardTables() {
     clientAgg.slice(0,10).map(r => [r.label, money(r.value)])
   );
 
-  const rows = filteredRows().filter(r => text(r.status||"Open") !== "Lost").slice(0,10);
+  const rows = filteredRows().slice(0,10);
   buildTable($("openTendersTable"),
     [{label:"Business Unit"},{label:"Client"},{label:"Description"},{label:"Value",className:"right"},{label:"Status"}],
     rows.map(r => [r.businessUnit, r.clientName, r.contractDescription, money(r.totalValue), `<span class="badge ${badgeClass(r.status)}">${r.status||"Open"}</span>`])
@@ -543,27 +587,38 @@ async function saveTender() {
     return;
   }
 
-  if (APPS_SCRIPT_URL) {
-    try {
+  const saveBtn = $("saveTenderBtn");
+  const oldText = saveBtn.textContent;
+  saveBtn.disabled = true;
+  saveBtn.textContent = "Synchronising...";
+  setConn("Synchronising", "warn");
+
+  try {
+    if (APPS_SCRIPT_URL) {
       const res = await fetchJson(APPS_SCRIPT_URL, {
         method:"POST",
         headers:{"Content-Type":"text/plain;charset=utf-8"},
         body: JSON.stringify({ action:"savePipelineRow", row })
       });
       if (res.success === false) throw new Error(res.error || "Save failed");
-      alert("Tender saved to Google Sheet.");
+      alert("Tender saved successfully.");
       await loadData();
       return;
-    } catch (e) {
-      console.error(e);
-      alert("Google Sheet save failed, so the row was stored locally instead.");
     }
-  }
 
-  const localRows = loadLocalRows();
-  localRows.unshift(row);
-  saveLocalRows(localRows);
-  await loadData();
+    const localRows = loadLocalRows();
+    localRows.unshift(row);
+    saveLocalRows(localRows);
+    alert("Tender saved successfully.");
+    await loadData();
+  } catch (e) {
+    console.error(e);
+    alert("Save failed. Please check the Apps Script connection.");
+    await loadData();
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = oldText;
+  }
 }
 function exportCsv() {
   const rows = filteredRows();
