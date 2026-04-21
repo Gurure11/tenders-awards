@@ -235,7 +235,7 @@
 const APP_CONFIG = {
   rfqTab: "RFQ",
   loginTab: "Login",
-  appsScriptUrl: "https://script.google.com/macros/s/AKfycbyGwYN0_Lr0KPCirkJTRVne3sZ9HZXcemW4HkOQ-xLWW3fQmN1MXzrDP5PXeEOxhlki/exec", // Paste your deployed Apps Script web app URL here after deploying Code.gs
+  appsScriptUrl: "https://script.google.com/macros/s/AKfycbwzaWVJpH3KQa9gBWc6Dcl1gFZoWGvcDdf5Wn1wFODEdcupCBlXNhXbCjTNFKgFeTCz/exec", // Paste your deployed Apps Script web app URL here after deploying Code.gs
   spreadsheetId: "1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0",
   driveFileId: "1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0",
   spreadsheetName: "Performance Tracker - Tendering(Pipeline)",
@@ -525,15 +525,6 @@ function normaliseRfqRow(row) {
 }
 
 function computeSummaryFromRows(rows) {
-  const keys = {
-    civil: "Civil",
-    building: "Building",
-    electrical: "Electrical",
-    telecoms: "Telecoms",
-    mechanical: "Mechanical",
-    roads: "Roads",
-    plantHire: "Plant Hire"
-  };
   const total = {civil:0, building:0, electrical:0, telecoms:0, mechanical:0, roads:0, plantHire:0, overall:0};
   rows.forEach(r => {
     const scope = text(r.scopeType).toLowerCase();
@@ -548,7 +539,18 @@ function computeSummaryFromRows(rows) {
     total.overall += value;
   });
   const zeroes = {civil:0, building:0, electrical:0, telecoms:0, mechanical:0, roads:0, plantHire:0, overall:0};
-  return { total, target: zeroes, variance: zeroes };
+  const variance = {
+    civil: total.civil - zeroes.civil,
+    building: total.building - zeroes.building,
+    electrical: total.electrical - zeroes.electrical,
+    telecoms: total.telecoms - zeroes.telecoms,
+    mechanical: total.mechanical - zeroes.mechanical,
+    roads: total.roads - zeroes.roads,
+    plantHire: total.plantHire - zeroes.plantHire,
+    overall: total.overall - zeroes.overall
+  };
+  const variancePercent = {civil:0, building:0, electrical:0, telecoms:0, mechanical:0, roads:0, plantHire:0, overall:0};
+  return { total, target: zeroes, variance, variancePercent };
 }
 async function fetchJson(url, options={}) {
   const controller = new AbortController();
@@ -575,7 +577,7 @@ async function loadData(showAlert = false) {
         const payload = await fetchJson(`${APPS_SCRIPT_URL}?action=getAllData`);
         if (Array.isArray(payload.rows)) state.rows = payload.rows.map(normaliseRow);
         if (Array.isArray(payload.rfqs)) state.rfqs = payload.rfqs.map(normaliseRfqRow);
-        state.summary = computeSummaryFromRows(state.rows);
+        state.summary = payload.summary || computeSummaryFromRows(state.rows);
         if (payload.currentUser && !state.currentUser) setCurrentUser(payload.currentUser);
         setConn("Connected", "ok");
         loadedFromServer = true;
@@ -805,8 +807,15 @@ function renderRfqTable() {
     ])
   );
 }
+function formatVarianceWithPercent(value, percent) {
+  const pct = Number(percent || 0);
+  const pctText = `${pct.toFixed(1)}%`;
+  return `${money(value)} (${pctText})`;
+}
+
 function renderSummaryTable() {
   const s = state.summary || {};
+  const variancePercent = s.variancePercent || {};
   const rows = [
     ["Total", s.total?.civil, s.total?.building, s.total?.electrical, s.total?.telecoms, s.total?.mechanical, s.total?.roads, s.total?.plantHire, s.total?.overall],
     ["Target", s.target?.civil, s.target?.building, s.target?.electrical, s.target?.telecoms, s.target?.mechanical, s.target?.roads, s.target?.plantHire, s.target?.overall],
@@ -814,7 +823,22 @@ function renderSummaryTable() {
   ];
   buildTable($("summaryTotalsTable"),
     [{label:"Metric"},{label:"Civil",className:"right"},{label:"Building",className:"right"},{label:"Electrical",className:"right"},{label:"Telecoms",className:"right"},{label:"Mechanical",className:"right"},{label:"Roads",className:"right"},{label:"Plant Hire",className:"right"},{label:"Overall",className:"right"}],
-    rows.map(r => [r[0], money(r[1]), money(r[2]), money(r[3]), money(r[4]), money(r[5]), money(r[6]), money(r[7]), money(r[8])])
+    rows.map(r => {
+      if (r[0] === "Variance") {
+        return [
+          r[0],
+          formatVarianceWithPercent(r[1], variancePercent.civil),
+          formatVarianceWithPercent(r[2], variancePercent.building),
+          formatVarianceWithPercent(r[3], variancePercent.electrical),
+          formatVarianceWithPercent(r[4], variancePercent.telecoms),
+          formatVarianceWithPercent(r[5], variancePercent.mechanical),
+          formatVarianceWithPercent(r[6], variancePercent.roads),
+          formatVarianceWithPercent(r[7], variancePercent.plantHire),
+          formatVarianceWithPercent(r[8], variancePercent.overall)
+        ];
+      }
+      return [r[0], money(r[1]), money(r[2]), money(r[3]), money(r[4]), money(r[5]), money(r[6]), money(r[7]), money(r[8])];
+    })
   );
 }
 function renderAll() {
