@@ -79,14 +79,14 @@
       <div>
         <div class="section-chip">Tender pipeline dashboard</div>
         <div class="hero-title">Pipeline, targets, variance and tender capture in one place</div>
-        <div class="muted">Built from the uploaded tendering pipeline structure. Configured for Google Sheet <strong>Performance Tracker - Tendering(Pipeline)</strong> using spreadsheet ID <strong>17A8yevqcBxPa5a0FZuKsCE0gvQvoiq3O</strong> and tab <strong>Performance Tracker - Tendering(Pipeline)</strong>. The app fetches through Apps Script and falls back to seed data until the script URL is configured.</div>
-        <div class="footer-note">Linked Google Sheet: <strong>Performance Tracker - Tendering(Pipeline)</strong>. Primary tab for this build: <strong>Performance Tracker - Tendering(Pipeline)</strong>.</div>
+        <div class="muted">Built from the uploaded tendering pipeline structure. Configured for Google Sheet <strong>Tendes</strong> using spreadsheet ID <strong>17A8yevqcBxPa5a0FZuKsCE0gvQvoiq3O</strong> and tab <strong>Tendes</strong>. The app fetches through Apps Script and falls back to seed data until the script URL is configured.</div>
+        <div class="footer-note">Linked Google Sheet: <strong>Tendes</strong>. Primary tab for this build: <strong>Tendes</strong>.</div>
       </div>
       <div class="callout">
         <div style="font-size:13px; text-transform:uppercase; color:var(--muted); font-weight:700;">Current view</div>
         <div style="font-size:22px; font-weight:700; margin-top:8px;">Tendering overview</div>
         <div class="footer-note">Use the dashboard tab for executive view, then add or edit tenders in the Capture tab. Everything is designed to store back to the Google Sheet using the included Apps Script.</div>
-        <div class="footer-note"><strong>Configured sheet:</strong> Performance Tracker - Tendering(Pipeline) | <strong>Tab:</strong> Performance Tracker - Tendering(Pipeline) | <strong>Spreadsheet ID:</strong> 17A8yevqcBxPa5a0FZuKsCE0gvQvoiq3O</div>
+        <div class="footer-note"><strong>Configured sheet:</strong> Tendes | <strong>Tab:</strong> Tendes | <strong>Spreadsheet ID:</strong> 17A8yevqcBxPa5a0FZuKsCE0gvQvoiq3O</div>
       </div>
     </div>
 
@@ -155,7 +155,7 @@
           <div class="field span-6"><label>Notes</label><textarea id="formNotes" rows="3"></textarea></div>
           <div class="field span-12"><button id="saveTenderBtn" type="button">Save Tender</button></div>
         </div>
-        <div class="footer-note">This build is configured for spreadsheet ID <strong>17A8yevqcBxPa5a0FZuKsCE0gvQvoiq3O</strong> and tab <strong>Performance Tracker - Tendering(Pipeline)</strong>. Until your deployed Apps Script URL is added, save will store locally in the browser so you can still test the interface.</div>
+        <div class="footer-note">This build is configured for spreadsheet ID <strong>17A8yevqcBxPa5a0FZuKsCE0gvQvoiq3O</strong> and tab <strong>Tendes</strong>. Until your deployed Apps Script URL is added, save will store locally in the browser so you can still test the interface.</div>
       </div>
     </div>
 
@@ -175,11 +175,11 @@
 
 <script>
 const APP_CONFIG = {
-  appsScriptUrl: "https://script.google.com/macros/s/AKfycby3lFWSk8v-eF309YR1NutkXkts5sedZ3VDa8C_PPVqFM1OqXXN_VyibEg030eIOsWp/exec", // Paste your deployed Apps Script web app URL here after deploying Code.gs
+  appsScriptUrl: "https://script.google.com/macros/s/AKfycbz-ghZcGkSejhx0kda2vO4VNR86FMEPSk-KrGYpAJnDR1YYs4ev0wd71_k3PJSJ7nM3/exec", // Paste your deployed Apps Script web app URL here after deploying Code.gs
   spreadsheetId: "17A8yevqcBxPa5a0FZuKsCE0gvQvoiq3O",
   driveFileId: "1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0",
-  spreadsheetName: "Performance Tracker - Tendering(Pipeline)",
-  pipelineTab: "Performance Tracker - Tendering(Pipeline)"
+  spreadsheetName: "Tenders",
+  pipelineTab: "Tenders"
 };
 const APPS_SCRIPT_URL = APP_CONFIG.appsScriptUrl;
 const LOCAL_STORAGE_KEY = "onpoint_tendering_feed_local_v1";
