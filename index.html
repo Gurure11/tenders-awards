@@ -119,14 +119,10 @@
       <div>
         <div class="section-chip">Tender pipeline dashboard</div>
         <div class="hero-title">Pipeline, targets, variance and tender capture in one place</div>
-        <div class="muted">Built from the uploaded tendering pipeline structure. Configured for Google Sheet <strong>Tendes</strong> using spreadsheet ID <strong>1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0</strong> and tab <strong>Tenders</strong>. The app fetches through Apps Script and falls back to seed data until the script URL is configured.</div>
-        <div class="footer-note">Linked Google Sheet: <strong>Performance Tracker - Tendering(Pipeline)</strong>. Primary tab for this build: <strong>Tenders</strong>.</div>
       </div>
       <div class="callout">
         <div style="font-size:13px; text-transform:uppercase; color:var(--muted); font-weight:700;">Current view</div>
         <div style="font-size:22px; font-weight:700; margin-top:8px;">Tendering overview</div>
-        <div class="footer-note">Use the dashboard tab for executive view, then add or edit tenders in the Capture tab. Everything is designed to store back to the Google Sheet using the included Apps Script.</div>
-        <div class="footer-note"><strong>Configured sheet:</strong> Performance Tracker - Tendering(Pipeline) | <strong>Tab:</strong> Tenders | <strong>Spreadsheet ID:</strong> 1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0</div><div class="footer-note"><strong>Important:</strong> paste your deployed Apps Script web app URL into <code>appsScriptUrl</code> in this HTML, otherwise it cannot connect to Google Sheets.</div>
       </div>
     </div>
 
@@ -140,19 +136,38 @@
     </div>
 
     <div class="panel active" id="dashboardPanel">
+      <div class="card" style="margin-bottom:16px;">
+        <div class="toolbar">
+          <div class="field">
+            <label>Cost Center</label>
+            <select id="dashboardCostCenterFilter"></select>
+          </div>
+          <div class="field">
+            <label>Project Name</label>
+            <select id="dashboardProjectFilter"></select>
+          </div>
+          <div class="field">
+            <label>Chart View</label>
+            <select id="dashboardGroupBy">
+              <option value="businessUnit">Cost Center</option>
+              <option value="clientName">Company</option>
+            </select>
+          </div>
+        </div>
+      </div>
       <div class="grid two">
         <div class="card">
-          <h3 style="margin-top:0">RFQ vs Awarded by cost center</h3>
+          <h3 style="margin-top:0">Target totals by scope</h3>
           <div class="chart-box"><canvas id="businessUnitChart"></canvas></div>
         </div>
         <div class="card">
-          <h3 style="margin-top:0">RFQ vs Awarded by scope</h3>
+          <h3 style="margin-top:0">Tender value by cost center / company</h3>
           <div class="chart-box"><canvas id="scopeChart"></canvas></div>
         </div>
       </div>
       <div class="grid two" style="margin-top:16px;">
         <div class="card">
-          <h3 style="margin-top:0">Top clients by tender value</h3>
+          <h3 style="margin-top:0">Target totals by scope</h3>
           <div class="table-wrap"><table id="topClientsTable"></table></div>
         </div>
         <div class="card">
@@ -401,7 +416,7 @@ const state = {
   rfqs: [],
   summary: SEED_DATA.summary,
   currentUser: null,
-  filters: { unit:"All", scope:"All", status:"All", search:"" }
+  filters: { unit:"All", scope:"All", status:"All", search:"", project:"All" }
 };
 let charts = {};
 let chartsReady = false;
@@ -632,17 +647,23 @@ function handleAddableSelect(selectId, storageKey, addLabel) {
   if ($(selectId)) $(selectId).value = name;
 }
 function populateFilters() {
-  const units = ["All", ...COST_CENTER_OPTIONS];
+  const units = ["All", ...unique([...COST_CENTER_OPTIONS, ...state.rows.map(r => r.businessUnit)])];
   const scopes = ["All", ...SCOPE_OPTIONS];
   const statuses = ["All", ...STATUS_OPTIONS];
   const clientOptions = [...new Set([...CLIENT_NAME_OPTIONS, ...getCustomOptions(CUSTOM_CLIENT_OPTIONS_KEY)])];
-  const projectOptions = [...new Set([...getCustomOptions(CUSTOM_PROJECT_OPTIONS_KEY)])];
+  const projectOptions = unique([
+    ...getCustomOptions(CUSTOM_PROJECT_OPTIONS_KEY),
+    ...state.rows.map(r => r.projectName || r.contractDescription)
+  ]);
   if (!units.includes(state.filters.unit)) state.filters.unit = "All";
   if (!scopes.includes(state.filters.scope)) state.filters.scope = "All";
   if (!statuses.includes(state.filters.status)) state.filters.status = "All";
+  if (!["All", ...projectOptions].includes(state.filters.project)) state.filters.project = "All";
   populateSelect("unitFilter", units, state.filters.unit);
   populateSelect("scopeFilter", scopes, state.filters.scope);
   populateSelect("statusFilter", statuses, state.filters.status);
+  populateSelect("dashboardCostCenterFilter", units, state.filters.unit);
+  populateSelect("dashboardProjectFilter", ["All", ...projectOptions], state.filters.project);
   populateSelect("formBusinessUnit", COST_CENTER_OPTIONS, "Onpoint Ontime");
   populateSelect("rfqBusinessUnit", COST_CENTER_OPTIONS, "Onpoint Ontime");
   populateSelect("formScopeType", SCOPE_OPTIONS, "CIVIL");
@@ -671,7 +692,9 @@ function filteredRows() {
     if (state.filters.unit !== "All" && text(r.businessUnit) !== state.filters.unit) return false;
     if (state.filters.scope !== "All" && text(r.scopeType) !== state.filters.scope) return false;
     if (state.filters.status !== "All" && text(r.status || "Ongoing") !== state.filters.status) return false;
-    const hay = `${text(r.clientName)} ${text(r.contractDescription)}`.toLowerCase();
+    const projectName = text(r.projectName || r.contractDescription);
+    if (state.filters.project !== "All" && projectName !== state.filters.project) return false;
+    const hay = `${text(r.clientName)} ${text(r.contractDescription)} ${projectName}`.toLowerCase();
     if (state.filters.search && !hay.includes(state.filters.search.toLowerCase())) return false;
     return true;
   });
@@ -681,13 +704,13 @@ function kpiRows() {
   const filteredRfqs = filteredRfqsRows();
   const totalTenders = rows.length;
   const totalRfqs = filteredRfqs.length;
-  const awarded = rows.filter(r => text(r.status || "Ongoing") === "Completed").length;
+  const totalTarget = num(state.summary?.target?.overall);
   const open = rows.filter(r => text(r.status || "Ongoing") === "Ongoing").length;
   const totalTenderAmount = rows.reduce((s,r)=>s+num(r.totalValue),0);
   return [
     ["Total Tenders", String(totalTenders), "All filtered tenders"],
     ["Total RFQs", String(totalRfqs), "From RFQ tab"],
-    ["Awarded Tenders", String(awarded), "Completed tenders"],
+    ["Total Target", money(totalTarget), "Overall target from Target tab"],
     ["Open Tenders", String(open), "Ongoing tenders"],
     ["Tender Amount Total", money(totalTenderAmount), "Running total amount"]
   ];
@@ -717,38 +740,36 @@ function destroyChart(name) {
 }
 function renderCharts() {
   destroyChart("businessUnitChart"); destroyChart("scopeChart"); destroyChart("targetChart"); destroyChart("rfqAwardedChart"); destroyChart("rfqScopeByCostCenterChart");
-  const filteredRfqs = filteredRfqsRows();
   const rows = filteredRows();
-
-  const ccLabels = COST_CENTER_OPTIONS;
-  const rfqCounts = ccLabels.map(cc => filteredRfqs.filter(r => text(r.businessUnit) === cc).length);
-  const awardedCounts = ccLabels.map(cc => rows.filter(r => text(r.businessUnit) === cc && text(r.status) === "Completed").length);
-
-  charts.businessUnitChart = new Chart($("businessUnitChart"), {
-    type:"bar",
-    data:{ labels: ccLabels, datasets:[{ label:"RFQs", data: rfqCounts }, { label:"Awarded Tenders", data: awardedCounts }] },
-    options:{ responsive:true, maintainAspectRatio:false, animation:false }
-  });
-
-  const scopes = ["Civil","Building","Electrical","Telecoms","Mechanical","Roads","Plant Hire","Unspecified"];
-  const scopeRfq = scopes.map(sc => filteredRfqs.filter(r => text(r.scopeType) === sc).length);
-  const scopeAwarded = scopes.map(sc => rows.filter(r => text(r.scopeType) === sc && text(r.status) === "Completed").length);
-  charts.scopeChart = new Chart($("scopeChart"), {
-    type:"doughnut",
-    data:{ labels: scopes, datasets:[{ data: scopeRfq.map((v,i)=>v + scopeAwarded[i]) }] },
-    options:{ responsive:true, maintainAspectRatio:false, animation:false }
-  });
-
   const summary = state.summary || {};
-  const labels = ["Civil","Building","Electrical","Telecoms","Mechanical","Roads","Plant Hire"];
-  const actual = [summary.total?.civil,summary.total?.building,summary.total?.electrical,summary.total?.telecoms,summary.total?.mechanical,summary.total?.roads,summary.total?.plantHire].map(num);
-  charts.targetChart = new Chart($("targetChart"), {
-    type:"bar",
-    data:{ labels, datasets:[{label:"Totals from Tenders tab", data: actual}] },
+
+  const scopeLabels = ["Civil","Building","Electrical","Telecoms","Mechanical","Roads","Plant Hire"];
+  const targetTotals = [summary.target?.civil, summary.target?.building, summary.target?.electrical, summary.target?.telecoms, summary.target?.mechanical, summary.target?.roads, summary.target?.plantHire].map(num);
+  charts.businessUnitChart = new Chart($("businessUnitChart"), {
+    type:"pie",
+    data:{ labels: scopeLabels, datasets:[{ label:"Target", data: targetTotals }] },
     options:{ responsive:true, maintainAspectRatio:false, animation:false }
   });
+
+  const groupBy = $("dashboardGroupBy") ? $("dashboardGroupBy").value : "businessUnit";
+  const grouped = aggregateBy(groupBy);
+  charts.scopeChart = new Chart($("scopeChart"), {
+    type:"pie",
+    data:{ labels: grouped.map(r => r.label), datasets:[{ label:"Tender Value", data: grouped.map(r => r.value) }] },
+    options:{ responsive:true, maintainAspectRatio:false, animation:false }
+  });
+
+  if ($("targetChart")) {
+    const actual = [summary.total?.civil,summary.total?.building,summary.total?.electrical,summary.total?.telecoms,summary.total?.mechanical,summary.total?.roads,summary.total?.plantHire].map(num);
+    charts.targetChart = new Chart($("targetChart"), {
+      type:"bar",
+      data:{ labels: scopeLabels, datasets:[{label:"Totals from Tenders tab", data: actual}] },
+      options:{ responsive:true, maintainAspectRatio:false, animation:false }
+    });
+  }
 
   if ($("rfqAwardedChart")) {
+    const filteredRfqs = filteredRfqsRows();
     const totalRfqs = filteredRfqs.length;
     const totalAwarded = rows.filter(r => text(r.status) === "Completed").length;
     const percent = totalRfqs ? ((totalAwarded / totalRfqs) * 100) : 0;
@@ -760,12 +781,15 @@ function renderCharts() {
   }
 
   if ($("rfqScopeByCostCenterChart")) {
+    const filteredRfqs = filteredRfqsRows();
     const selectedCenters = state.filters.unit === "All" ? COST_CENTER_OPTIONS : [state.filters.unit];
     const labels2 = [];
     const rfqData = [];
     const awardedData = [];
+    scopeLabels.concat(["Unspecified"]).forEach(() => {});
+    const rfqScopes = ["Civil","Building","Electrical","Telecoms","Mechanical","Roads","Plant Hire","Unspecified"];
     selectedCenters.forEach(cc => {
-      scopes.forEach(sc => {
+      rfqScopes.forEach(sc => {
         labels2.push(`${cc} - ${sc}`);
         rfqData.push(filteredRfqs.filter(r => text(r.businessUnit) === cc && text(r.scopeType) === sc).length);
         awardedData.push(rows.filter(r => text(r.businessUnit) === cc && text(r.scopeType) === sc && text(r.status) === "Completed").length);
@@ -779,10 +803,20 @@ function renderCharts() {
   }
 }
 function renderDashboardTables() {
-  const clientAgg = aggregateBy("clientName");
+  const s = state.summary || {};
+  const scopeRows = [
+    ["Civil", s.target?.civil],
+    ["Building", s.target?.building],
+    ["Electrical", s.target?.electrical],
+    ["Telecoms", s.target?.telecoms],
+    ["Mechanical", s.target?.mechanical],
+    ["Roads", s.target?.roads],
+    ["Plant Hire", s.target?.plantHire],
+    ["Overall", s.target?.overall]
+  ];
   buildTable($("topClientsTable"),
-    [{label:"Client"},{label:"Value",className:"right"}],
-    clientAgg.slice(0,10).map(r => [r.label, money(r.value)])
+    [{label:"Scope"},{label:"Target",className:"right"}],
+    scopeRows.map(r => [r[0], money(r[1])])
   );
 
   const rows = filteredRows().slice(0,10);
@@ -1039,6 +1073,9 @@ function wireEvents() {
   if ($("scopeFilter")) $("scopeFilter").onchange = e => { state.filters.scope = e.target.value; renderAll(); };
   if ($("statusFilter")) $("statusFilter").onchange = e => { state.filters.status = e.target.value; renderAll(); };
   if ($("searchFilter")) $("searchFilter").oninput = e => { state.filters.search = e.target.value; renderAll(); };
+  if ($("dashboardCostCenterFilter")) $("dashboardCostCenterFilter").onchange = e => { state.filters.unit = e.target.value; renderAll(); };
+  if ($("dashboardProjectFilter")) $("dashboardProjectFilter").onchange = e => { state.filters.project = e.target.value; renderAll(); };
+  if ($("dashboardGroupBy")) $("dashboardGroupBy").onchange = () => { renderAll(); };
   if ($("saveTenderBtn")) $("saveTenderBtn").onclick = saveTender;
   if ($("saveRfqBtn")) $("saveRfqBtn").onclick = saveRfq;
   if ($("refreshBtn")) $("refreshBtn").onclick = () => loadData(true);
