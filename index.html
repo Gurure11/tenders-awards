@@ -563,39 +563,43 @@ async function fetchJson(url, options={}) {
 }
 async function loadData(showAlert = false) {
   setLoading(true, "Loading data...");
-  const localRows = loadLocalRows().map(normaliseRow);
-  const localRfqs = loadLocalRfqs().map(normaliseRfqRow);
-  state.rows = [...SEED_DATA.pipeline.map(normaliseRow), ...localRows];
-  state.rfqs = [...localRfqs];
-  state.summary = computeSummaryFromRows(state.rows);
   let loadedFromServer = false;
-  if (APPS_SCRIPT_URL) {
-    try {
-      const payload = await fetchJson(`${APPS_SCRIPT_URL}?action=getAllData`);
-      if (Array.isArray(payload.rows)) state.rows = payload.rows.map(normaliseRow);
-      if (Array.isArray(payload.rfqs)) state.rfqs = payload.rfqs.map(normaliseRfqRow);
-      state.summary = computeSummaryFromRows(state.rows);
-      if (payload.currentUser && !state.currentUser) setCurrentUser(payload.currentUser);
-      setConn("Connected", "ok");
-      loadedFromServer = true;
-    } catch (e) {
-      console.error(e);
-      setConn("Connection failed", "bad");
-      console.log("Apps Script connection failed:", e);
+  try {
+    const localRows = loadLocalRows().map(normaliseRow);
+    const localRfqs = loadLocalRfqs().map(normaliseRfqRow);
+    state.rows = [...SEED_DATA.pipeline.map(normaliseRow), ...localRows];
+    state.rfqs = [...localRfqs];
+    state.summary = computeSummaryFromRows(state.rows);
+    if (APPS_SCRIPT_URL) {
+      try {
+        const payload = await fetchJson(`${APPS_SCRIPT_URL}?action=getAllData`);
+        if (Array.isArray(payload.rows)) state.rows = payload.rows.map(normaliseRow);
+        if (Array.isArray(payload.rfqs)) state.rfqs = payload.rfqs.map(normaliseRfqRow);
+        state.summary = computeSummaryFromRows(state.rows);
+        if (payload.currentUser && !state.currentUser) setCurrentUser(payload.currentUser);
+        setConn("Connected", "ok");
+        loadedFromServer = true;
+      } catch (e) {
+        console.error(e);
+        setConn("Connection failed", "bad");
+        console.log("Apps Script connection failed:", e);
+      }
+    } else {
+      setConn("Apps Script URL missing", "bad");
     }
-  } else {
-    setConn("Apps Script URL missing", "bad");
+    populateFilters();
+    renderAll();
+    if (showAlert) notifyLoaded(loadedFromServer ? "Data loaded successfully." : "Loaded local/seed data. Google Sheets connection was not available.");
+  } finally {
+    setLoading(false);
   }
-  populateFilters();
-  renderAll();
-  setLoading(false);
-  if (showAlert) notifyLoaded(loadedFromServer ? "Data loaded successfully." : "Loaded local/seed data. Google Sheets connection was not available.");
 }
 function unique(values) {
   return [...new Set(values.map(text).filter(Boolean))];
 }
 function populateSelect(id, values, selected) {
   const el = $(id);
+  if (!el) return;
   el.innerHTML = values.map(v => `<option value="${v}" ${v===selected?"selected":""}>${v}</option>`).join("");
 }
 
@@ -1026,8 +1030,7 @@ waitForChartJs().then(() => {
   chartsReady = true;
   scheduleChartsRender();
 }).catch(() => {});
-setCurrentUser(restoreSessionUser());
-if (state.currentUser) { loadData(false); }
+setCurrentUser(null);
 </script>
 </body>
 </html>
