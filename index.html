@@ -89,7 +89,7 @@
         <div style="font-size:13px; text-transform:uppercase; color:var(--muted); font-weight:700;">Current view</div>
         <div style="font-size:22px; font-weight:700; margin-top:8px;">Tendering overview</div>
         <div class="footer-note">Use the dashboard tab for executive view, then add or edit tenders in the Capture tab. Everything is designed to store back to the Google Sheet using the included Apps Script.</div>
-        <div class="footer-note"><strong>Configured sheet:</strong> Performance Tracker - Tendering(Pipeline) | <strong>Tab:</strong> Tenders | <strong>Spreadsheet ID:</strong> 1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0</div>
+        <div class="footer-note"><strong>Configured sheet:</strong> Performance Tracker - Tendering(Pipeline) | <strong>Tab:</strong> Tenders | <strong>Spreadsheet ID:</strong> 1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0</div><div class="footer-note"><strong>Important:</strong> paste your deployed Apps Script web app URL into <code>appsScriptUrl</code> in this HTML, otherwise it cannot connect to Google Sheets.</div>
       </div>
     </div>
 
@@ -405,6 +405,7 @@ function normaliseRow(row) {
     closeMonth: text(row.closeMonth || row["Closing Date"] || ""),
     notes: text(row.notes || row["Comments"] || "")
   };
+}
 
 function normaliseRfqRow(row) {
   return {
@@ -418,7 +419,7 @@ function normaliseRfqRow(row) {
     createdAt: text(row.createdAt || row["Created At"] || "")
   };
 }
-}
+
 function computeSummaryFromRows(rows) {
   const keys = {
     civil: "Civil",
@@ -465,10 +466,11 @@ async function loadData() {
       setConn("Connected", "ok");
     } catch (e) {
       console.error(e);
-      setConn("Seed/local data", "warn");
+      setConn("Connection failed", "bad");
+      console.log("Apps Script connection failed:", e);
     }
   } else {
-    setConn("Seed/local data", "warn");
+    setConn("Apps Script URL missing", "bad");
   }
   populateFilters();
   renderAll();
@@ -611,8 +613,8 @@ function renderCharts() {
     selectedCenters.forEach(cc => {
       scopes.forEach(sc => {
         labels2.push(`${cc} - ${sc}`);
-        rfqData.push(filteredRfqs.filter(r => text(r.businessUnit) === cc && text(r.scopeType) === sc).length)
-      awardedData.push(rows.filter(r => text(r.businessUnit) === cc && text(r.scopeType) === sc && text(r.status) === "Completed").length);
+        rfqData.push(filteredRfqs.filter(r => text(r.businessUnit) === cc && text(r.scopeType) === sc).length);
+        awardedData.push(rows.filter(r => text(r.businessUnit) === cc && text(r.scopeType) === sc && text(r.status) === "Completed").length);
       });
     });
     charts.rfqScopeByCostCenterChart = new Chart($("rfqScopeByCostCenterChart"), {
@@ -635,23 +637,7 @@ function renderDashboardTables() {
     rows.map(r => [r.businessUnit, r.clientName, r.contractDescription, money(r.totalValue), `<span class="badge ${badgeClass(r.status)}">${r.status||"Open"}</span>`])
   );
 }
-function renderPipelineTable() {
-  buildTable($("pipelineTable"),
-    [{label:"Business Unit"},{label:"Client"},{label:"Contract Description"},{label:"Scope"},{label:"Scope Value",className:"right"},{label:"Total Value",className:"right"},{label:"Status"},{label:"Probability",className:"right"},{label:"Close Month"},{label:"Notes"}],
-    filteredRows().map(r => [
-      r.businessUnit,
-      r.clientName,
-      r.contractDescription,
-      r.scopeType,
-      text(r.scopeValue || ""),
-      money(r.totalValue),
-      `<span class="badge ${badgeClass(r.status)}">${r.status || "Open"}</span>`,
-      `${Number(r.probability)||0}%`,
-      text(r.closeMonth || ""),
-      text(r.notes || "")
-    ])
-  );
-}
+
 function renderRfqTable() {
   if (!$("rfqTable")) return;
   buildTable($("rfqTable"),
@@ -683,7 +669,6 @@ function renderAll() {
   renderKPIs();
   renderCharts();
   renderDashboardTables();
-  renderPipelineTable();
   renderRfqTable();
   renderSummaryTable();
 }
@@ -783,22 +768,7 @@ async function saveTender() {
     saveBtn.textContent = oldText;
   }
 }
-function exportCsv() {
-  const rows = filteredRows();
-  const headers = ["Business Unit","Client Name","Contract Description","Scope Type","Scope Value","Total Value","Status","Probability","Close Month","Notes"];
-  const csv = [
-    headers.join(","),
-    ...rows.map(r => [
-      r.businessUnit,r.clientName,r.contractDescription,r.scopeType,r.scopeValue,r.totalValue,r.status,r.probability,r.closeMonth,r.notes
-    ].map(v => `"${String(v ?? "").replace(/"/g,'""')}"`).join(","))
-  ].join("\n");
-  const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "onpoint-tendering-feed.csv";
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
+
 function wireEvents() {
   document.querySelectorAll(".tab").forEach(tab => {
     tab.onclick = () => {
@@ -809,14 +779,13 @@ function wireEvents() {
       renderAll();
     };
   });
-  $("unitFilter").onchange = e => { state.filters.unit = e.target.value; renderAll(); };
-  $("scopeFilter").onchange = e => { state.filters.scope = e.target.value; renderAll(); };
-  $("statusFilter").onchange = e => { state.filters.status = e.target.value; renderAll(); };
-  $("searchFilter").oninput = e => { state.filters.search = e.target.value; renderAll(); };
-  $("saveTenderBtn").onclick = saveTender;
+  if ($("unitFilter")) $("unitFilter").onchange = e => { state.filters.unit = e.target.value; renderAll(); };
+  if ($("scopeFilter")) $("scopeFilter").onchange = e => { state.filters.scope = e.target.value; renderAll(); };
+  if ($("statusFilter")) $("statusFilter").onchange = e => { state.filters.status = e.target.value; renderAll(); };
+  if ($("searchFilter")) $("searchFilter").oninput = e => { state.filters.search = e.target.value; renderAll(); };
+  if ($("saveTenderBtn")) $("saveTenderBtn").onclick = saveTender;
   if ($("saveRfqBtn")) $("saveRfqBtn").onclick = saveRfq;
-  $("exportCsvBtn").onclick = exportCsv;
-  $("refreshBtn").onclick = loadData;
+  if ($("refreshBtn")) $("refreshBtn").onclick = loadData;
 }
 wireEvents();
 loadData();
