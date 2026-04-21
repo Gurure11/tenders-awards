@@ -55,6 +55,9 @@
     .hero-title { font-size:30px; margin:4px 0 8px; }
     .callout { padding:16px; border:1px solid var(--line); border-radius:18px; background:linear-gradient(180deg,#ffffff 0%, #f5f9ff 100%); }
     .footer-note { margin-top:12px; font-size:12px; color:var(--muted); }
+.save-note{font-size:12px;color:var(--muted);margin-top:8px}
+.mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:1100px){.mini-grid{grid-template-columns:1fr;}}
     @media (max-width:1100px) {
       .hero,.toolbar,.kpis,.grid.two,.grid.three,.tabs { grid-template-columns:1fr; }
       .form-grid { grid-template-columns:1fr; }
@@ -94,7 +97,7 @@
 
     <div class="tabs">
       <div class="tab active" data-panel="dashboardPanel">Dashboard</div>
-      <div class="tab" data-panel="pipelinePanel">Pipeline</div>
+      <div class="tab" data-panel="rfqPanel">RFQ</div>
       <div class="tab" data-panel="capturePanel">Capture Tender</div>
       <div class="tab" data-panel="summaryPanel">Targets & Variance</div>
     </div>
@@ -102,11 +105,11 @@
     <div class="panel active" id="dashboardPanel">
       <div class="grid two">
         <div class="card">
-          <h3 style="margin-top:0">Tender count by cost center</h3>
+          <h3 style="margin-top:0">RFQ vs Awarded by cost center</h3>
           <div class="chart-box"><canvas id="businessUnitChart"></canvas></div>
         </div>
         <div class="card">
-          <h3 style="margin-top:0">Tender count by scope type</h3>
+          <h3 style="margin-top:0">RFQ vs Awarded by scope</h3>
           <div class="chart-box"><canvas id="scopeChart"></canvas></div>
         </div>
       </div>
@@ -122,19 +125,36 @@
       </div>
     </div>
 
-    <div class="panel" id="pipelinePanel">
+    
+    <div class="panel" id="rfqPanel">
       <div class="card">
-        <div class="toolbar">
-          <div class="field"><label>Cost Center</label><select id="unitFilter"></select></div>
-          <div class="field"><label>Scope Type</label><select id="scopeFilter"></select></div>
-          <div class="field"><label>Status</label><select id="statusFilter"></select></div>
-          <div class="field"><label>Search</label><input id="searchFilter" placeholder="Client or description"></div>
-          <button id="exportCsvBtn" type="button">Export CSV</button>
+        <div class="section-chip">Store RFQs directly to Google Sheet tab RFQ</div>
+        <h3 style="margin-top:0">Capture RFQ</h3>
+        <div class="form-grid">
+          <div class="field span-3"><label>Cost Center / Business Unit</label><select id="rfqBusinessUnit"></select></div>
+          <div class="field span-3"><label>Company Name</label><input id="rfqCompanyName"></div>
+          <div class="field span-3"><label>Scope</label><select id="rfqScopeType"></select></div>
+          <div class="field span-3"><label>Tender Amount</label><input id="rfqTenderAmount" placeholder="R0.00"></div>
+          <div class="field span-4"><label>Contact Person</label><input id="rfqContactPerson"></div>
+          <div class="field span-4"><label>RFQ Status</label><select id="rfqStatus"><option>Forecast</option><option>Confirmed</option></select></div>
+          <div class="field span-4"><label>Notes</label><input id="rfqNotes"></div>
+          <div class="field span-12"><button id="saveRfqBtn" type="button">Save RFQ</button></div>
+        </div>
+        <div class="save-note">RFQs save to tab <strong>RFQ</strong> in spreadsheet <strong>Performance Tracker - Tendering(Pipeline)</strong>.</div>
+      </div>
+      <div class="grid two" style="margin-top:16px;">
+        <div class="card">
+          <h3 style="margin-top:0">RFQ vs Awarded Tenders journal</h3>
+          <div class="chart-box"><canvas id="rfqAwardedChart"></canvas></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">Each cost center RFQ vs Awarded by scope</h3>
+          <div class="chart-box"><canvas id="rfqScopeByCostCenterChart"></canvas></div>
         </div>
       </div>
       <div class="card" style="margin-top:16px;">
-        <h3 style="margin-top:0">Pipeline register</h3>
-        <div class="table-wrap"><table id="pipelineTable"></table></div>
+        <h3 style="margin-top:0">RFQ transaction journal</h3>
+        <div class="table-wrap"><table id="rfqTable"></table></div>
       </div>
     </div>
 
@@ -175,7 +195,8 @@
 
 <script>
 const APP_CONFIG = {
-  appsScriptUrl: "https://script.google.com/macros/s/AKfycbzwJA1iTmUKiCi41g11R7EKQ6I57il1JFvwKfE-eeyMMq5qFAmZhtGwnJHrX4qcGLQq/exec", // Paste your deployed Apps Script web app URL here after deploying Code.gs
+  rfqTab: "RFQ",
+  appsScriptUrl: "https://script.google.com/macros/s/AKfycbw22p93eMG-5xj__KkasAkbUcI9Eutk8MyXdctGK05txuXBHIPfeOdicrugpK3Sglzn/exec", // Paste your deployed Apps Script web app URL here after deploying Code.gs
   spreadsheetId: "1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0",
   driveFileId: "1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0",
   spreadsheetName: "Performance Tracker - Tendering(Pipeline)",
@@ -185,6 +206,7 @@ const APPS_SCRIPT_URL = APP_CONFIG.appsScriptUrl;
 const COST_CENTER_OPTIONS = ["Onpoint Ontime","Nkanyezi","Aqua Telecoms","Distinct Hire"];
 const STATUS_OPTIONS = ["Ongoing","On-hold","Completed"];
 const LOCAL_STORAGE_KEY = "onpoint_tendering_feed_local_v1";
+const LOCAL_RFQ_STORAGE_KEY = "onpoint_tendering_feed_rfq_local_v1";
 const SEED_DATA = {
   "pipeline": [
     {
@@ -332,6 +354,7 @@ const SEED_DATA = {
 
 const state = {
   rows: [],
+  rfqs: [],
   summary: SEED_DATA.summary,
   filters: { unit:"All", scope:"All", status:"All", search:"" }
 };
@@ -362,6 +385,12 @@ function loadLocalRows() {
 function saveLocalRows(rows) {
   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(rows));
 }
+function loadLocalRfqs() {
+  try { return JSON.parse(localStorage.getItem(LOCAL_RFQ_STORAGE_KEY) || "[]"); } catch { return []; }
+}
+function saveLocalRfqs(rows) {
+  localStorage.setItem(LOCAL_RFQ_STORAGE_KEY, JSON.stringify(rows));
+}
 
 function normaliseRow(row) {
   return {
@@ -376,6 +405,19 @@ function normaliseRow(row) {
     closeMonth: text(row.closeMonth || row["Closing Date"] || ""),
     notes: text(row.notes || row["Comments"] || "")
   };
+
+function normaliseRfqRow(row) {
+  return {
+    businessUnit: text(row.businessUnit || row.costCenter || row["Business Unit"] || row["Cost Center"]),
+    companyName: text(row.companyName || row["Company Name"] || row.clientName || row.Client || row.client),
+    scopeType: text(row.scopeType || row.Scope || row.scope || "Unspecified"),
+    tenderAmount: text(row.tenderAmount || row["Tender Amount"] || row.totalValue || row["Total Value"] || 0),
+    contactPerson: text(row.contactPerson || row["Contact Person"] || ""),
+    status: text(row.status || row["RFQ Status"] || "Forecast"),
+    notes: text(row.notes || row["Comments"] || ""),
+    createdAt: text(row.createdAt || row["Created At"] || "")
+  };
+}
 }
 function computeSummaryFromRows(rows) {
   const keys = {
@@ -410,12 +452,15 @@ async function fetchJson(url, options={}) {
 }
 async function loadData() {
   const localRows = loadLocalRows().map(normaliseRow);
+  const localRfqs = loadLocalRfqs().map(normaliseRfqRow);
   state.rows = [...SEED_DATA.pipeline.map(normaliseRow), ...localRows];
+  state.rfqs = [...localRfqs];
   state.summary = computeSummaryFromRows(state.rows);
   if (APPS_SCRIPT_URL) {
     try {
-      const payload = await fetchJson(`${APPS_SCRIPT_URL}?action=getPipeline`);
+      const payload = await fetchJson(`${APPS_SCRIPT_URL}?action=getAllData`);
       if (Array.isArray(payload.rows)) state.rows = payload.rows.map(normaliseRow);
+      if (Array.isArray(payload.rfqs)) state.rfqs = payload.rfqs.map(normaliseRfqRow);
       state.summary = computeSummaryFromRows(state.rows);
       setConn("Connected", "ok");
     } catch (e) {
@@ -446,7 +491,24 @@ function populateFilters() {
   populateSelect("scopeFilter", scopes, state.filters.scope);
   populateSelect("statusFilter", statuses, state.filters.status);
   populateSelect("formBusinessUnit", COST_CENTER_OPTIONS, "Onpoint Ontime");
+  populateSelect("rfqBusinessUnit", COST_CENTER_OPTIONS, "Onpoint Ontime");
   populateSelect("formScopeType", ["Civil","Building","Electrical","Telecoms","Mechanical","Roads","Plant Hire","Unspecified"], "Civil");
+  populateSelect("rfqScopeType", ["Civil","Building","Electrical","Telecoms","Mechanical","Roads","Plant Hire","Unspecified"], "Civil");
+}
+function filteredRfqsRows() {
+  return state.rfqs.filter(r => {
+    if (state.filters.unit !== "All" && text(r.businessUnit) !== state.filters.unit) return false;
+    if (state.filters.scope !== "All" && text(r.scopeType) !== state.filters.scope) return false;
+    const statusValue = text(r.status || "Forecast");
+    if (state.filters.status !== "All") {
+      if (state.filters.status === "Completed" && statusValue !== "Confirmed") return false;
+      if (state.filters.status === "Ongoing" && statusValue !== "Forecast") return false;
+      if (state.filters.status === "On-hold") return false;
+    }
+    const hay = `${text(r.companyName)} ${text(r.contactPerson)} ${text(r.notes)}`.toLowerCase();
+    if (state.filters.search && !hay.includes(state.filters.search.toLowerCase())) return false;
+    return true;
+  });
 }
 function filteredRows() {
   return state.rows.filter(r => {
@@ -460,15 +522,18 @@ function filteredRows() {
 }
 function kpiRows() {
   const rows = filteredRows();
+  const filteredRfqs = filteredRfqsRows();
   const totalTenders = rows.length;
-  const totalRfqs = rows.filter(r => num(r.totalValue) === 0 || /rates/i.test(text(r.scopeValue))).length;
+  const totalRfqs = filteredRfqs.length;
   const awarded = rows.filter(r => text(r.status || "Ongoing") === "Completed").length;
   const open = rows.filter(r => text(r.status || "Ongoing") === "Ongoing").length;
+  const totalTenderAmount = rows.reduce((s,r)=>s+num(r.totalValue),0);
   return [
     ["Total Tenders", String(totalTenders), "All filtered tenders"],
-    ["Total RFQs", String(totalRfqs), "Rate or zero-value RFQs"],
+    ["Total RFQs", String(totalRfqs), "From RFQ tab"],
     ["Awarded Tenders", String(awarded), "Completed tenders"],
-    ["Open Tenders", String(open), "Ongoing tenders"]
+    ["Open Tenders", String(open), "Ongoing tenders"],
+    ["Tender Amount Total", money(totalTenderAmount), "Running total amount"]
   ];
 }
 function renderKPIs() {
@@ -495,19 +560,26 @@ function destroyChart(name) {
   if (charts[name]) { charts[name].destroy(); charts[name] = null; }
 }
 function renderCharts() {
-  destroyChart("businessUnitChart"); destroyChart("scopeChart"); destroyChart("targetChart");
-  const unitAgg = aggregateBy("businessUnit", "__count__");
-  const scopeAgg = aggregateBy("scopeType", "__count__");
+  destroyChart("businessUnitChart"); destroyChart("scopeChart"); destroyChart("targetChart"); destroyChart("rfqAwardedChart"); destroyChart("rfqScopeByCostCenterChart");
+  const filteredRfqs = filteredRfqsRows();
+  const rows = filteredRows();
+
+  const ccLabels = COST_CENTER_OPTIONS;
+  const rfqCounts = ccLabels.map(cc => filteredRfqs.filter(r => text(r.businessUnit) === cc).length);
+  const awardedCounts = ccLabels.map(cc => rows.filter(r => text(r.businessUnit) === cc && text(r.status) === "Completed").length);
 
   charts.businessUnitChart = new Chart($("businessUnitChart"), {
     type:"bar",
-    data:{ labels: unitAgg.map(x=>x.label), datasets:[{ label:"Tender Count", data: unitAgg.map(x=>Math.round(x.value)) }] },
-    options:{ responsive:true, maintainAspectRatio:false, animation:false, plugins:{legend:{display:false}} }
+    data:{ labels: ccLabels, datasets:[{ label:"RFQs", data: rfqCounts }, { label:"Awarded Tenders", data: awardedCounts }] },
+    options:{ responsive:true, maintainAspectRatio:false, animation:false }
   });
 
+  const scopes = ["Civil","Building","Electrical","Telecoms","Mechanical","Roads","Plant Hire","Unspecified"];
+  const scopeRfq = scopes.map(sc => filteredRfqs.filter(r => text(r.scopeType) === sc).length);
+  const scopeAwarded = scopes.map(sc => rows.filter(r => text(r.scopeType) === sc && text(r.status) === "Completed").length);
   charts.scopeChart = new Chart($("scopeChart"), {
     type:"doughnut",
-    data:{ labels: scopeAgg.map(x=>x.label), datasets:[{ data: scopeAgg.map(x=>Math.round(x.value)) }] },
+    data:{ labels: scopes, datasets:[{ data: scopeRfq.map((v,i)=>v + scopeAwarded[i]) }] },
     options:{ responsive:true, maintainAspectRatio:false, animation:false }
   });
 
@@ -519,6 +591,36 @@ function renderCharts() {
     data:{ labels, datasets:[{label:"Totals from Tenders tab", data: actual}] },
     options:{ responsive:true, maintainAspectRatio:false, animation:false }
   });
+
+  if ($("rfqAwardedChart")) {
+    const totalRfqs = filteredRfqs.length;
+    const totalAwarded = rows.filter(r => text(r.status) === "Completed").length;
+    const percent = totalRfqs ? ((totalAwarded / totalRfqs) * 100) : 0;
+    charts.rfqAwardedChart = new Chart($("rfqAwardedChart"), {
+      type:"bar",
+      data:{ labels:["All Cost Centers"], datasets:[{label:"RFQs", data:[totalRfqs]}, {label:"Awarded Tenders", data:[totalAwarded]}, {label:"Awarded % of RFQs", data:[percent]}] },
+      options:{ responsive:true, maintainAspectRatio:false, animation:false }
+    });
+  }
+
+  if ($("rfqScopeByCostCenterChart")) {
+    const selectedCenters = state.filters.unit === "All" ? COST_CENTER_OPTIONS : [state.filters.unit];
+    const labels2 = [];
+    const rfqData = [];
+    const awardedData = [];
+    selectedCenters.forEach(cc => {
+      scopes.forEach(sc => {
+        labels2.push(`${cc} - ${sc}`);
+        rfqData.push(filteredRfqs.filter(r => text(r.businessUnit) === cc && text(r.scopeType) === sc).length)
+      awardedData.push(rows.filter(r => text(r.businessUnit) === cc && text(r.scopeType) === sc && text(r.status) === "Completed").length);
+      });
+    });
+    charts.rfqScopeByCostCenterChart = new Chart($("rfqScopeByCostCenterChart"), {
+      type:"bar",
+      data:{ labels: labels2, datasets:[{label:"RFQs", data: rfqData}, {label:"Awarded Tenders", data: awardedData}] },
+      options:{ responsive:true, maintainAspectRatio:false, animation:false }
+    });
+  }
 }
 function renderDashboardTables() {
   const clientAgg = aggregateBy("clientName");
@@ -550,6 +652,21 @@ function renderPipelineTable() {
     ])
   );
 }
+function renderRfqTable() {
+  if (!$("rfqTable")) return;
+  buildTable($("rfqTable"),
+    [{label:"Cost Center"},{label:"Company Name"},{label:"Scope"},{label:"Tender Amount",className:"right"},{label:"Contact Person"},{label:"RFQ Status"},{label:"Notes"}],
+    filteredRfqsRows().map(r => [
+      r.businessUnit,
+      r.companyName,
+      r.scopeType,
+      money(r.tenderAmount),
+      r.contactPerson,
+      `<span class="badge ${text(r.status)==="Confirmed" ? "ok" : "warn"}">${r.status || "Forecast"}</span>`,
+      r.notes || ""
+    ])
+  );
+}
 function renderSummaryTable() {
   const s = state.summary || {};
   const rows = [
@@ -567,7 +684,53 @@ function renderAll() {
   renderCharts();
   renderDashboardTables();
   renderPipelineTable();
+  renderRfqTable();
   renderSummaryTable();
+}
+async function saveRfq() {
+  const row = {
+    businessUnit: $("rfqBusinessUnit").value,
+    companyName: $("rfqCompanyName").value,
+    scopeType: $("rfqScopeType").value,
+    tenderAmount: $("rfqTenderAmount").value,
+    contactPerson: $("rfqContactPerson").value,
+    status: $("rfqStatus").value,
+    notes: $("rfqNotes").value
+  };
+  if (!text(row.companyName) || !text(row.scopeType)) {
+    alert("Please complete at least Company Name and Scope.");
+    return;
+  }
+  const saveBtn = $("saveRfqBtn");
+  const oldText = saveBtn.textContent;
+  saveBtn.disabled = true;
+  saveBtn.textContent = "Synchronising...";
+  setConn("Synchronising", "warn");
+  try {
+    if (APPS_SCRIPT_URL) {
+      const res = await fetchJson(APPS_SCRIPT_URL, {
+        method:"POST",
+        headers:{"Content-Type":"text/plain;charset=utf-8"},
+        body: JSON.stringify({ action:"saveRfqRow", row })
+      });
+      if (res.success === false) throw new Error(res.error || "Save failed");
+      alert("RFQ saved successfully.");
+      await loadData();
+      return;
+    }
+    const localRows = loadLocalRfqs();
+    localRows.unshift(row);
+    saveLocalRfqs(localRows);
+    alert("RFQ saved successfully.");
+    await loadData();
+  } catch (e) {
+    console.error(e);
+    alert("RFQ save failed. Please check the Apps Script connection.");
+    await loadData();
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = oldText;
+  }
 }
 async function saveTender() {
   const row = {
@@ -651,6 +814,7 @@ function wireEvents() {
   $("statusFilter").onchange = e => { state.filters.status = e.target.value; renderAll(); };
   $("searchFilter").oninput = e => { state.filters.search = e.target.value; renderAll(); };
   $("saveTenderBtn").onclick = saveTender;
+  if ($("saveRfqBtn")) $("saveRfqBtn").onclick = saveRfq;
   $("exportCsvBtn").onclick = exportCsv;
   $("refreshBtn").onclick = loadData;
 }
