@@ -55,25 +55,6 @@
     .hero-title { font-size:30px; margin:4px 0 8px; }
     .callout { padding:16px; border:1px solid var(--line); border-radius:18px; background:linear-gradient(180deg,#ffffff 0%, #f5f9ff 100%); }
     .footer-note { margin-top:12px; font-size:12px; color:var(--muted); }
-    .app-ready { opacity:0; transform:translateY(8px); animation:fadeInUp .35s ease forwards; }
-    .spinner { width:54px; height:54px; margin:0 auto 14px; border-radius:50%; border:4px solid #dbeafe; border-top-color:var(--primary2); border-right-color:#60a5fa; animation:spin .85s linear infinite; box-shadow:0 0 0 6px rgba(96,165,250,.08); }
-    .loading-subtle { display:flex; align-items:center; justify-content:center; gap:10px; margin-top:12px; color:var(--muted); font-size:12px; }
-    .loading-dot { width:8px; height:8px; border-radius:50%; background:#60a5fa; animation:pulse 1.2s ease-in-out infinite; }
-    .toast-stack { position:fixed; top:18px; right:18px; z-index:10001; display:flex; flex-direction:column; gap:12px; width:min(360px, calc(100vw - 36px)); }
-    .toast { border-radius:18px; padding:14px 16px; border:1px solid var(--line); background:#fff; box-shadow:0 18px 32px rgba(15,23,42,.14); display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:start; animation:toastIn .22s ease; }
-    .toast-icon { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; }
-    .toast-title { font-weight:700; margin-bottom:2px; }
-    .toast-message { color:var(--muted); font-size:13px; }
-    .toast-close { background:transparent; border:none; color:var(--muted); padding:0; width:auto; cursor:pointer; font-size:18px; line-height:1; }
-    .toast.success .toast-icon { background:#dcfce7; color:#15803d; }
-    .toast.error .toast-icon { background:#fee2e2; color:#b91c1c; }
-    .toast.info .toast-icon { background:#dbeafe; color:#1d4ed8; }
-    .button-loading { position:relative; pointer-events:none; opacity:.9; }
-    .button-loading::after { content:""; width:14px; height:14px; border:2px solid rgba(255,255,255,.45); border-top-color:#fff; border-radius:50%; display:inline-block; margin-left:10px; vertical-align:-2px; animation:spin .7s linear infinite; }
-    @keyframes spin { to { transform:rotate(360deg); } }
-    @keyframes pulse { 0%,100% { transform:scale(.9); opacity:.45; } 50% { transform:scale(1.15); opacity:1; } }
-    @keyframes toastIn { from { opacity:0; transform:translateY(-8px) scale(.98); } to { opacity:1; transform:translateY(0) scale(1); } }
-    @keyframes fadeInUp { to { opacity:1; transform:translateY(0); } }
 .save-note{font-size:12px;color:var(--muted);margin-top:8px}
 .mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media (max-width:1100px){.mini-grid{grid-template-columns:1fr;}}
@@ -85,7 +66,6 @@
   </style>
 </head>
 <body>
-  <div id="toastStack" class="toast-stack" aria-live="polite" aria-atomic="true"></div>
 
   <div id="loginOverlay" style="position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;">
     <div class="card" style="width:min(760px,100%);max-height:calc(100vh - 40px);overflow:auto;">
@@ -115,15 +95,13 @@
     </div>
   </div>
   <div id="loadingOverlay" style="position:fixed;inset:0;background:rgba(255,255,255,.78);display:none;align-items:center;justify-content:center;z-index:9998;">
-    <div class="card" style="padding:24px 30px;text-align:center;min-width:300px;">
-      <div class="spinner" aria-hidden="true"></div>
-      <div style="font-size:18px;font-weight:700;color:#0b3b91;" id="loadingText">Synchronising data...</div>
-      <div class="footer-note">Please wait while the dashboard securely synchronises and refreshes your latest records.</div>
-      <div class="loading-subtle"><span class="loading-dot"></span><span>Preparing dashboard view</span></div>
+    <div class="card" style="padding:22px 28px;text-align:center;min-width:280px;">
+      <div style="font-size:18px;font-weight:700;color:#0b3b91;" id="loadingText">Loading data...</div>
+      <div class="footer-note">Please wait while the dashboard synchronises.</div>
     </div>
   </div>
 
-  <div class="wrap app-ready">
+  <div class="wrap">
     <div class="card topbar">
       <div>
         <div class="muted">Onpoint</div>
@@ -426,6 +404,8 @@ const state = {
   filters: { unit:"All", scope:"All", status:"All", search:"" }
 };
 let charts = {};
+let chartsReady = false;
+let chartsScheduled = false;
 
 const $ = id => document.getElementById(id);
 const text = v => String(v ?? "").trim();
@@ -436,35 +416,44 @@ const num = v => {
 };
 const money = v => new Intl.NumberFormat("en-ZA",{style:"currency",currency:"ZAR",maximumFractionDigits:0}).format(num(v));
 
+function isChartJsReady() {
+  return typeof window.Chart !== 'undefined';
+}
+function waitForChartJs(timeout = 8000) {
+  return new Promise((resolve, reject) => {
+    if (isChartJsReady()) return resolve();
+    const start = Date.now();
+    const timer = setInterval(() => {
+      if (isChartJsReady()) {
+        clearInterval(timer);
+        resolve();
+      } else if (Date.now() - start > timeout) {
+        clearInterval(timer);
+        reject(new Error('Chart.js load timeout'));
+      }
+    }, 50);
+  });
+}
+function scheduleChartsRender() {
+  if (chartsScheduled) return;
+  chartsScheduled = true;
+  const run = () => {
+    chartsScheduled = false;
+    if (!chartsReady) return;
+    try { renderCharts(); } catch (e) { console.error(e); }
+  };
+  if (window.requestIdleCallback) requestIdleCallback(run, { timeout: 300 });
+  else setTimeout(run, 0);
+}
+
 function setLoading(show, message) {
   const overlay = $("loadingOverlay");
   const textEl = $("loadingText");
   if (textEl && message) textEl.textContent = message;
   if (overlay) overlay.style.display = show ? "flex" : "none";
 }
-function showToast(message, type = "info", title) {
-  const stack = $("toastStack");
-  if (!stack) return;
-  const toast = document.createElement("div");
-  const resolvedType = ["success","error","info"].includes(type) ? type : "info";
-  const resolvedTitle = title || (resolvedType === "success" ? "Success" : resolvedType === "error" ? "Attention" : "Notice");
-  const icon = resolvedType === "success" ? "✓" : resolvedType === "error" ? "!" : "i";
-  toast.className = `toast ${resolvedType}`;
-  toast.innerHTML = `
-    <div class="toast-icon">${icon}</div>
-    <div>
-      <div class="toast-title">${resolvedTitle}</div>
-      <div class="toast-message">${message}</div>
-    </div>
-    <button class="toast-close" type="button" aria-label="Dismiss notification">×</button>
-  `;
-  stack.appendChild(toast);
-  const remove = () => { if (toast.parentNode) toast.parentNode.removeChild(toast); };
-  toast.querySelector(".toast-close").onclick = remove;
-  setTimeout(remove, 4200);
-}
 function notifyLoaded(message) {
-  showToast(message || "Data loaded successfully.", "success", "Load successful");
+  alert(message || "Data loaded successfully.");
 }
 function saveSessionUser(user) {
   try { localStorage.setItem(SESSION_USER_KEY, JSON.stringify(user || null)); } catch (e) {}
@@ -573,7 +562,7 @@ async function fetchJson(url, options={}) {
   }
 }
 async function loadData(showAlert = false) {
-  setLoading(true, "Synchronising dashboard data...");
+  setLoading(true, "Loading data...");
   const localRows = loadLocalRows().map(normaliseRow);
   const localRfqs = loadLocalRfqs().map(normaliseRfqRow);
   state.rows = [...SEED_DATA.pipeline.map(normaliseRow), ...localRows];
@@ -589,21 +578,18 @@ async function loadData(showAlert = false) {
       if (payload.currentUser && !state.currentUser) setCurrentUser(payload.currentUser);
       setConn("Connected", "ok");
       loadedFromServer = true;
-      await new Promise(resolve => requestAnimationFrame(resolve));
     } catch (e) {
       console.error(e);
       setConn("Connection failed", "bad");
       console.log("Apps Script connection failed:", e);
-      showToast("Google Sheets could not be reached, so the dashboard is using available local data.", "error", "Connection issue");
     }
   } else {
     setConn("Apps Script URL missing", "bad");
-    showToast("Apps Script URL is not configured yet. The dashboard is running with local or seed data.", "info", "Local mode");
   }
   populateFilters();
   renderAll();
   setLoading(false);
-  if (showAlert) notifyLoaded(loadedFromServer ? "Dashboard data loaded successfully." : "Dashboard loaded successfully using local or seed data.");
+  if (showAlert) notifyLoaded(loadedFromServer ? "Data loaded successfully." : "Loaded local/seed data. Google Sheets connection was not available.");
 }
 function unique(values) {
   return [...new Set(values.map(text).filter(Boolean))];
@@ -829,14 +815,14 @@ function renderSummaryTable() {
 }
 function renderAll() {
   renderKPIs();
-  renderCharts();
   renderDashboardTables();
   renderRfqTable();
   renderSummaryTable();
+  scheduleChartsRender();
 }
 async function saveRfq() {
   if (!state.currentUser) {
-    showToast("Please login first.", "error", "Authentication required");
+    alert("Please login first.");
     return;
   }
   const row = {
@@ -850,11 +836,13 @@ async function saveRfq() {
     createdBy: state.currentUser.username
   };
   if (!text(row.companyName) || !text(row.scopeType)) {
-    showToast("Please complete at least Company Name and Scope.", "error", "Missing information");
+    alert("Please complete at least Company Name and Scope.");
     return;
   }
   const saveBtn = $("saveRfqBtn");
-  setButtonBusy(saveBtn, true, "Synchronising");
+  const oldText = saveBtn.textContent;
+  saveBtn.disabled = true;
+  saveBtn.textContent = "Synchronising...";
   setConn("Synchronising", "warn");
   setLoading(true, "Saving RFQ...");
   try {
@@ -865,26 +853,27 @@ async function saveRfq() {
         body: JSON.stringify({ action:"saveRfqRow", row, currentUser: state.currentUser })
       });
       if (res.success === false) throw new Error(res.error || "Save failed");
-      showToast("RFQ saved successfully.", "success", "Save successful");
+      alert("RFQ saved successfully.");
       await loadData(false);
       return;
     }
     const localRows = loadLocalRfqs();
     localRows.unshift(row);
     saveLocalRfqs(localRows);
-    showToast("RFQ saved successfully.", "success", "Save successful");
+    alert("RFQ saved successfully.");
     await loadData(false);
   } catch (e) {
     console.error(e);
-    showToast("RFQ save failed. Please check the Apps Script connection.", "error", "Save failed");
+    alert("RFQ save failed. Please check the Apps Script connection.");
   } finally {
     setLoading(false);
-    setButtonBusy(saveBtn, false);
+    saveBtn.disabled = false;
+    saveBtn.textContent = oldText;
   }
 }
 async function saveTender() {
   if (!state.currentUser) {
-    showToast("Please login first.", "error", "Authentication required");
+    alert("Please login first.");
     return;
   }
   const row = {
@@ -902,11 +891,13 @@ async function saveTender() {
     createdBy: state.currentUser.username
   };
   if (!text(row.clientName) || !text(row.contractDescription)) {
-    showToast("Please complete at least Client Name and Contract Description.", "error", "Missing information");
+    alert("Please complete at least Client Name and Contract Description.");
     return;
   }
   const saveBtn = $("saveTenderBtn");
-  setButtonBusy(saveBtn, true, "Synchronising");
+  const oldText = saveBtn.textContent;
+  saveBtn.disabled = true;
+  saveBtn.textContent = "Synchronising...";
   setConn("Synchronising", "warn");
   setLoading(true, "Saving tender...");
   try {
@@ -917,21 +908,22 @@ async function saveTender() {
         body: JSON.stringify({ action:"savePipelineRow", row, currentUser: state.currentUser })
       });
       if (res.success === false) throw new Error(res.error || "Save failed");
-      showToast("Tender saved successfully.", "success", "Save successful");
+      alert("Tender saved successfully.");
       await loadData(false);
       return;
     }
     const localRows = loadLocalRows();
     localRows.unshift(row);
     saveLocalRows(localRows);
-    showToast("Tender saved successfully.", "success", "Save successful");
+    alert("Tender saved successfully.");
     await loadData(false);
   } catch (e) {
     console.error(e);
-    showToast("Save failed. Please check the Apps Script connection.", "error", "Save failed");
+    alert("Save failed. Please check the Apps Script connection.");
   } finally {
     setLoading(false);
-    setButtonBusy(saveBtn, false);
+    saveBtn.disabled = false;
+    saveBtn.textContent = oldText;
   }
 }
 
@@ -940,33 +932,33 @@ async function loginUser() {
   const username = text($("loginUsername")?.value);
   const password = text($("loginPassword")?.value);
   if (!username || !password) {
-    showToast("Enter username and password.", "error", "Login required");
+    alert("Enter username and password.");
     return;
   }
   if (!APPS_SCRIPT_URL) {
-    showToast("Apps Script URL is missing in the HTML. Add it first.", "error", "Configuration required");
+    alert("Apps Script URL is missing in the HTML. Add it first.");
     return;
   }
-  const btn = $("loginBtn");
-  setButtonBusy(btn, true, "Signing in");
-  setLoading(true, "Signing in securely...");
+  setLoading(true, "Signing in...");
   try {
-    const res = await fetchJson(APPS_SCRIPT_URL, {
-      method:"POST",
-      headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body: JSON.stringify({ action:"loginUser", username, password })
-    });
+    const [res] = await Promise.all([
+      fetchJson(APPS_SCRIPT_URL, {
+        method:"POST",
+        headers:{"Content-Type":"text/plain;charset=utf-8"},
+        body: JSON.stringify({ action:"loginUser", username, password })
+      }),
+      waitForChartJs().then(() => { chartsReady = true; }).catch(() => {})
+    ]);
     if (res.success === false || !res.user) throw new Error(res.error || "Login failed");
     setCurrentUser(res.user);
     if ($("loginMessage")) $("loginMessage").textContent = `Logged in as ${res.user.name || res.user.username}`;
-    showToast("Login successful.", "success", "Welcome back");
-    await loadData(true);
+    await loadData(false);
+    alert("Login successful.");
   } catch (e) {
     console.error(e);
-    showToast(e.message || "Login failed.", "error", "Sign in failed");
+    alert(e.message || "Login failed.");
   } finally {
     setLoading(false);
-    setButtonBusy($("loginBtn"), false);
   }
 }
 
@@ -976,15 +968,13 @@ async function registerUser() {
   const password = text($("registerPassword")?.value);
   const role = text($("registerRole")?.value || "User");
   if (!name || !username || !password) {
-    showToast("Complete all registration fields.", "error", "Missing information");
+    alert("Complete all registration fields.");
     return;
   }
   if (!APPS_SCRIPT_URL) {
-    showToast("Apps Script URL is missing in the HTML. Add it first.", "error", "Configuration required");
+    alert("Apps Script URL is missing in the HTML. Add it first.");
     return;
   }
-  const btn = $("registerBtn");
-  setButtonBusy(btn, true, "Registering");
   setLoading(true, "Registering user...");
   try {
     const res = await fetchJson(APPS_SCRIPT_URL, {
@@ -993,35 +983,19 @@ async function registerUser() {
       body: JSON.stringify({ action:"registerUser", row:{ name, username, password, role } })
     });
     if (res.success === false) throw new Error(res.error || "Registration failed");
-    showToast("User registered successfully.", "success", "Registration complete");
+    alert("User registered successfully.");
     if ($("loginUsername")) $("loginUsername").value = username;
   } catch (e) {
     console.error(e);
-    showToast(e.message || "Registration failed.", "error", "Registration failed");
+    alert(e.message || "Registration failed.");
   } finally {
     setLoading(false);
-    setButtonBusy($("registerBtn"), false);
-  }
-}
-
-function setButtonBusy(button, busy, busyText) {
-  if (!button) return;
-  if (busy) {
-    button.dataset.originalText = button.dataset.originalText || button.textContent;
-    button.disabled = true;
-    button.classList.add("button-loading");
-    button.textContent = busyText || button.textContent;
-  } else {
-    button.disabled = false;
-    button.classList.remove("button-loading");
-    button.textContent = button.dataset.originalText || button.textContent;
   }
 }
 
 function logoutUser() {
   setCurrentUser(null);
   if ($("loginMessage")) $("loginMessage").textContent = "Please sign in to continue.";
-  showToast("You have been signed out successfully.", "info", "Signed out");
 }
 function wireEvents() {
   document.querySelectorAll(".tab").forEach(tab => {
@@ -1048,8 +1022,12 @@ function wireEvents() {
   if ($("formProjectName")) $("formProjectName").onchange = () => handleAddableSelect("formProjectName", CUSTOM_PROJECT_OPTIONS_KEY, "Add new project name");
 }
 wireEvents();
+waitForChartJs().then(() => {
+  chartsReady = true;
+  scheduleChartsRender();
+}).catch(() => {});
 setCurrentUser(restoreSessionUser());
-if (state.currentUser) { loadData(true); }
+if (state.currentUser) { loadData(false); }
 </script>
 </body>
 </html>
