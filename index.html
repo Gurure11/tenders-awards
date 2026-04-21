@@ -132,7 +132,7 @@
         <h3 style="margin-top:0">Capture RFQ</h3>
         <div class="form-grid">
           <div class="field span-3"><label>Cost Center / Business Unit</label><select id="rfqBusinessUnit"></select></div>
-          <div class="field span-3"><label>Company Name</label><input id="rfqCompanyName"></div>
+          <div class="field span-3"><label>Company Name</label><select id="rfqCompanyName"></select></div>
           <div class="field span-3"><label>Scope</label><select id="rfqScopeType"></select></div>
           <div class="field span-3"><label>Tender Amount</label><input id="rfqTenderAmount" placeholder="R0.00"></div>
           <div class="field span-4"><label>Contact Person</label><input id="rfqContactPerson"></div>
@@ -164,8 +164,9 @@
         <h3 style="margin-top:0">Capture Tender</h3>
         <div class="form-grid">
           <div class="field span-3"><label>Cost Center / Business Unit</label><select id="formBusinessUnit"></select></div>
-          <div class="field span-3"><label>Client Name</label><input id="formClientName"></div>
-          <div class="field span-6"><label>Contract Description</label><input id="formContractDescription"></div>
+          <div class="field span-3"><label>Client Name</label><select id="formClientName"></select></div>
+          <div class="field span-3"><label>Project Name</label><select id="formProjectName"></select></div>
+          <div class="field span-3"><label>Contract Description</label><input id="formContractDescription"></div>
           <div class="field span-3"><label>Scope Type</label><select id="formScopeType"></select></div>
           <div class="field span-3"><label>Scope Value</label><input id="formScopeValue" placeholder="R0.00 or RATES-PANEL"></div>
           <div class="field span-3"><label>Total Value</label><input id="formTotalValue" placeholder="R0.00"></div>
@@ -204,7 +205,11 @@ const APP_CONFIG = {
 };
 const APPS_SCRIPT_URL = APP_CONFIG.appsScriptUrl;
 const COST_CENTER_OPTIONS = ["Onpoint Ontime","Nkanyezi","Aqua Telecoms","Distinct Hire"];
+const SCOPE_OPTIONS = ["CIVIL","BUILDING","ELECTRICAL","TELECOMS","MECHANICAL","ROADS","PLANT HIRE"];
+const CLIENT_NAME_OPTIONS = ["ETHEKWINI","COEGA","ESKOM-LOU","JRA","MSUNDUZI","NKANYEZI","DISTINCT","AQUATELECOMS","ESKOM"];
 const STATUS_OPTIONS = ["Ongoing","On-hold","Completed"];
+const CUSTOM_CLIENT_OPTIONS_KEY = "onpoint_tendering_feed_custom_clients_v1";
+const CUSTOM_PROJECT_OPTIONS_KEY = "onpoint_tendering_feed_custom_projects_v1";
 const LOCAL_STORAGE_KEY = "onpoint_tendering_feed_local_v1";
 const LOCAL_RFQ_STORAGE_KEY = "onpoint_tendering_feed_rfq_local_v1";
 const SEED_DATA = {
@@ -213,7 +218,7 @@ const SEED_DATA = {
       "businessUnit": "Onpoint Ontime",
       "clientName": "ETHEKWINI",
       "contractDescription": "VERULAM WASTE WATER TREATMENT WORKS REHABILITATION",
-      "scopeType": "Civil",
+      "scopeType": "CIVIL",
       "scopeValue": "R29,800,000.00",
       "totalValue": "R29,800,000.00",
       "status": "Ongoing",
@@ -225,7 +230,7 @@ const SEED_DATA = {
       "businessUnit": "Onpoint Ontime",
       "clientName": "COEGA",
       "contractDescription": "STORM DAMAGE REPAIRS TO  SCHOOL",
-      "scopeType": "Building",
+      "scopeType": "BUILDING",
       "scopeValue": "R25,000,000.00",
       "totalValue": "R25,000,000.00",
       "status": "Ongoing",
@@ -237,7 +242,7 @@ const SEED_DATA = {
       "businessUnit": "Onpoint Ontime",
       "clientName": "ESKOM-LOU",
       "contractDescription": "EPHRAIM MOGALE SUBSTATION EXPANSION",
-      "scopeType": "Civil",
+      "scopeType": "CIVIL",
       "scopeValue": "R30,137,219.00",
       "totalValue": "R30,137,219.00",
       "status": "Ongoing",
@@ -249,7 +254,7 @@ const SEED_DATA = {
       "businessUnit": "Onpoint Ontime",
       "clientName": "ESKOM-LOU",
       "contractDescription": "CONSTRUCTION & DISMANTLING OF MV & HV SUBSTATIONS & SWITCHING STATIONS",
-      "scopeType": "Electrical",
+      "scopeType": "ELECTRICAL",
       "scopeValue": "RATES-PANEL",
       "totalValue": "R0.00",
       "status": "Ongoing",
@@ -261,7 +266,7 @@ const SEED_DATA = {
       "businessUnit": "Onpoint Ontime",
       "clientName": "ESKOM-LOU",
       "contractDescription": "CONSTRUCTION & DISMANTLING OF HV DISTRIBUTION WITHIN THE MPUMALANGA AREA",
-      "scopeType": "Electrical",
+      "scopeType": "ELECTRICAL",
       "scopeValue": "RATES-PANEL",
       "totalValue": "R0.00",
       "status": "Ongoing",
@@ -273,7 +278,7 @@ const SEED_DATA = {
       "businessUnit": "Onpoint Ontime",
       "clientName": "JRA",
       "contractDescription": "CONSTRUCTION OF STORMWATER INFRASTRUCTURE",
-      "scopeType": "Civil",
+      "scopeType": "CIVIL",
       "scopeValue": "RATES - PANEL",
       "totalValue": "R0.00",
       "status": "Ongoing",
@@ -285,7 +290,7 @@ const SEED_DATA = {
       "businessUnit": "Onpoint Ontime",
       "clientName": "MSUNDUZI",
       "contractDescription": "E50 of 2025: REPAIRS AND MAINTENANCE OF HIGH VOLTAGE 33KV OILE FILLED AND 132KV XLPE UNDERGROUND CABLES",
-      "scopeType": "Civil",
+      "scopeType": "CIVIL",
       "scopeValue": "RATES - PANEL",
       "totalValue": "R0.00",
       "status": "Ongoing",
@@ -297,7 +302,7 @@ const SEED_DATA = {
       "businessUnit": "Aqua Telecoms",
       "clientName": "ESKOM",
       "contractDescription": "SUPPLY & DELIVERY OF ELECTRICAL CABLES",
-      "scopeType": "Electrical",
+      "scopeType": "ELECTRICAL",
       "scopeValue": "RATES-PANEL",
       "totalValue": "R0.00",
       "status": "Ongoing",
@@ -309,7 +314,7 @@ const SEED_DATA = {
       "businessUnit": "Aqua Telecoms",
       "clientName": "ESKOM",
       "contractDescription": "VEGETATION MANAGEMENT",
-      "scopeType": "Electrical",
+      "scopeType": "ELECTRICAL",
       "scopeValue": "RATES-PANEL",
       "totalValue": "R0.00",
       "status": "Ongoing",
@@ -397,7 +402,7 @@ function normaliseRow(row) {
     businessUnit: text(row.businessUnit || row.costCenter || row["Business Unit"] || row["Cost Center"]),
     clientName: text(row.clientName || row["Client Name"] || row.Client || row.client),
     contractDescription: text(row.contractDescription || row["Contract Description"] || row["Tender Name"] || row.tenderName),
-    scopeType: text(row.scopeType || row.Scope || row.scope || "Unspecified"),
+    scopeType: text(row.scopeType || row.Scope || row.scope || "CIVIL").toUpperCase(),
     scopeValue: text(row.scopeValue || row["Scope Value"] || ""),
     totalValue: text(row.totalValue || row["Tender Value"] || row["Total Value"] || row["Projected Revenue"] || 0),
     status: text(row.status || row["Tender Status"] || "Ongoing"),
@@ -411,7 +416,7 @@ function normaliseRfqRow(row) {
   return {
     businessUnit: text(row.businessUnit || row.costCenter || row["Business Unit"] || row["Cost Center"]),
     companyName: text(row.companyName || row["Company Name"] || row.clientName || row.Client || row.client),
-    scopeType: text(row.scopeType || row.Scope || row.scope || "Unspecified"),
+    scopeType: text(row.scopeType || row.Scope || row.scope || "CIVIL").toUpperCase(),
     tenderAmount: text(row.tenderAmount || row["Tender Amount"] || row.totalValue || row["Total Value"] || 0),
     contactPerson: text(row.contactPerson || row["Contact Person"] || ""),
     status: text(row.status || row["RFQ Status"] || "Forecast"),
@@ -482,10 +487,39 @@ function populateSelect(id, values, selected) {
   const el = $(id);
   el.innerHTML = values.map(v => `<option value="${v}" ${v===selected?"selected":""}>${v}</option>`).join("");
 }
+
+function getCustomOptions(key) {
+  try { return JSON.parse(localStorage.getItem(key) || "[]").map(text).filter(Boolean); } catch { return []; }
+}
+function saveCustomOption(key, value) {
+  const name = text(value);
+  if (!name) return [];
+  const merged = [...new Set([...getCustomOptions(key), name])];
+  localStorage.setItem(key, JSON.stringify(merged));
+  return merged;
+}
+function populateSelectWithAdd(selectId, values, selected, addLabel) {
+  const el = $(selectId);
+  if (!el) return;
+  el.innerHTML = [...values, addLabel].map(v => `<option value="${v}" ${v===selected?"selected":""}>${v}</option>`).join("");
+}
+function handleAddableSelect(selectId, storageKey, addLabel) {
+  const el = $(selectId);
+  if (!el) return;
+  if (el.value !== addLabel) return;
+  const entered = window.prompt(`Enter new ${addLabel.toLowerCase().replace("add new ","")}`);
+  const name = text(entered);
+  if (!name) { populateFilters(); return; }
+  saveCustomOption(storageKey, name);
+  populateFilters();
+  if ($(selectId)) $(selectId).value = name;
+}
 function populateFilters() {
   const units = ["All", ...COST_CENTER_OPTIONS];
-  const scopes = ["All", ...unique(state.rows.map(r => r.scopeType || "Unspecified"))];
+  const scopes = ["All", ...SCOPE_OPTIONS];
   const statuses = ["All", ...STATUS_OPTIONS];
+  const clientOptions = [...new Set([...CLIENT_NAME_OPTIONS, ...getCustomOptions(CUSTOM_CLIENT_OPTIONS_KEY)])];
+  const projectOptions = [...new Set([...getCustomOptions(CUSTOM_PROJECT_OPTIONS_KEY)])];
   if (!units.includes(state.filters.unit)) state.filters.unit = "All";
   if (!scopes.includes(state.filters.scope)) state.filters.scope = "All";
   if (!statuses.includes(state.filters.status)) state.filters.status = "All";
@@ -494,8 +528,11 @@ function populateFilters() {
   populateSelect("statusFilter", statuses, state.filters.status);
   populateSelect("formBusinessUnit", COST_CENTER_OPTIONS, "Onpoint Ontime");
   populateSelect("rfqBusinessUnit", COST_CENTER_OPTIONS, "Onpoint Ontime");
-  populateSelect("formScopeType", ["Civil","Building","Electrical","Telecoms","Mechanical","Roads","Plant Hire","Unspecified"], "Civil");
-  populateSelect("rfqScopeType", ["Civil","Building","Electrical","Telecoms","Mechanical","Roads","Plant Hire","Unspecified"], "Civil");
+  populateSelect("formScopeType", SCOPE_OPTIONS, "CIVIL");
+  populateSelect("rfqScopeType", SCOPE_OPTIONS, "CIVIL");
+  populateSelectWithAdd("formClientName", clientOptions, clientOptions[0] || "ETHEKWINI", "Add new name");
+  populateSelectWithAdd("rfqCompanyName", clientOptions, clientOptions[0] || "ETHEKWINI", "Add new name");
+  populateSelectWithAdd("formProjectName", projectOptions, projectOptions[0] || "Add new project name", "Add new project name");
 }
 function filteredRfqsRows() {
   return state.rfqs.filter(r => {
@@ -721,6 +758,7 @@ async function saveTender() {
   const row = {
     businessUnit: $("formBusinessUnit").value,
     clientName: $("formClientName").value,
+    projectName: $("formProjectName") ? $("formProjectName").value : "",
     contractDescription: $("formContractDescription").value,
     scopeType: $("formScopeType").value,
     scopeValue: $("formScopeValue").value,
@@ -786,6 +824,9 @@ function wireEvents() {
   if ($("saveTenderBtn")) $("saveTenderBtn").onclick = saveTender;
   if ($("saveRfqBtn")) $("saveRfqBtn").onclick = saveRfq;
   if ($("refreshBtn")) $("refreshBtn").onclick = loadData;
+  if ($("formClientName")) $("formClientName").onchange = () => handleAddableSelect("formClientName", CUSTOM_CLIENT_OPTIONS_KEY, "Add new name");
+  if ($("rfqCompanyName")) $("rfqCompanyName").onchange = () => handleAddableSelect("rfqCompanyName", CUSTOM_CLIENT_OPTIONS_KEY, "Add new name");
+  if ($("formProjectName")) $("formProjectName").onchange = () => handleAddableSelect("formProjectName", CUSTOM_PROJECT_OPTIONS_KEY, "Add new project name");
 }
 wireEvents();
 loadData();
