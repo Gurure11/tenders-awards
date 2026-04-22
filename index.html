@@ -196,7 +196,7 @@
           <div class="table-wrap"><table id="topClientsTable"></table></div>
         </div>
         <div class="card">
-          <h3 style="margin-top:0">Tenders, RFQ & Awards by Cost Center (Jan - Dec 2026)</h3>
+          <h3 style="margin-top:0">Tenders, RFQ & Awards by Cost Center (Mar-26 - Feb-27)</h3>
           <div class="table-wrap"><table id="monthlyAwardsSummaryTable"></table></div>
         </div>
       </div>
@@ -337,7 +337,7 @@
 const APP_CONFIG = {
   rfqTab: "RFQ",
   loginTab: "Login",
-  appsScriptUrl: "https://script.google.com/macros/s/AKfycbyR4O6CYPb6jGg669O9WAWTRp9N5LZyxbww7REV3gzpmxJe3IONkVzD3WX3XDQgE9-nLg/exec", // Paste your deployed Apps Script web app URL here after deploying Code.gs
+  appsScriptUrl: "https://script.google.com/macros/s/AKfycbyEC3dYsr0RgEHafWNdWrP2qp-va1Byh8wq2ZyJ0JLCz5_YPolf0phDkF2XEIQH_atXCw/exec", // Paste your deployed Apps Script web app URL here after deploying Code.gs
   spreadsheetId: "1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0",
   driveFileId: "1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0",
   spreadsheetName: "Performance Tracker - Tendering(Pipeline)",
@@ -901,13 +901,11 @@ function kpiRows() {
   const totalTenders = rows.length;
   const totalRfqs = filteredRfqs.reduce((s,r)=>s+num(r.tenderAmount),0);
   const totalTarget = num(state.summary?.target?.overall) || state.scopeTargets.reduce((s,r)=>s + (text(r.year || '2026') === '2026' ? num(r.targetSet) : 0), 0);
-  const open = rows.filter(r => text(r.status || "Ongoing") === "Ongoing").length;
   const totalTenderAmount = rows.reduce((s,r)=>s+num(r.totalValue),0);
   return [
     ["Total Tenders", String(totalTenders), "All filtered tenders"],
     ["Total RFQs", String(totalRfqs), "From RFQ tab"],
     ["Total Target", money(totalTarget), "Overall target from Target tab"],
-    ["Open Tenders", String(open), "Ongoing tenders"],
     ["Tender Amount Total", money(totalTenderAmount), "Running total amount"]
   ];
 }
@@ -936,7 +934,7 @@ function destroyChart(name) {
 }
 
 function monthlyAwardsMatrix() {
-  const months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+  const months = ["MAR-26","APR-26","MAY-26","JUN-26","JUL-26","AUG-26","SEP-26","OCT-26","NOV-26","DEC-26","JAN-27","FEB-27"];
   const costCenters = COST_CENTER_OPTIONS.slice();
   return {
     months,
@@ -944,7 +942,7 @@ function monthlyAwardsMatrix() {
     rows: costCenters.map(center => {
       const awardsRows = state.awards.filter(r => text(r.entity) === center);
       const monthly = months.map(month => {
-        const items = awardsRows.filter(r => text(r.month).toUpperCase().startsWith(month));
+        const items = awardsRows.filter(r => text(r.month).toUpperCase() === month || text(r.month).toUpperCase().startsWith(month.split("-")[0]));
         return {
           tenders: items.reduce((s,r)=>s+num(r.tenders),0),
           rfqs: items.reduce((s,r)=>s+num(r.rfqs),0),
