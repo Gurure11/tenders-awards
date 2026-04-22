@@ -186,14 +186,18 @@
           <div class="chart-box"><canvas id="scopeChart"></canvas></div>
         </div>
       </div>
+      <div class="card" style="margin-top:16px;">
+        <h3 style="margin-top:0">Actual vs Target by Cost Center</h3>
+        <div class="chart-box"><canvas id="actualVsTargetChart"></canvas></div>
+      </div>
       <div class="grid two" style="margin-top:16px;">
         <div class="card">
           <h3 style="margin-top:0">Target totals by scope</h3>
           <div class="table-wrap"><table id="topClientsTable"></table></div>
         </div>
         <div class="card">
-          <h3 style="margin-top:0">Open tenders snapshot</h3>
-          <div class="table-wrap"><table id="openTendersTable"></table></div>
+          <h3 style="margin-top:0">Tenders, RFQ & Awards by Cost Center (Jan - Dec 2026)</h3>
+          <div class="table-wrap"><table id="monthlyAwardsSummaryTable"></table></div>
         </div>
       </div>
           <div class="card" style="margin-top:16px;">
@@ -301,6 +305,21 @@
     </div>
 
 <div class="panel" id="summaryPanel">
+      <div class="card" style="margin-bottom:16px;">
+        <div class="section-chip">Store directly to Google Sheet tab Scope Target</div>
+        <h3 style="margin-top:0">Set Annual Targets by Cost Center</h3>
+        <div class="form-grid">
+          <div class="field span-4"><label>Cost Center</label><select id="targetCostCenter"></select></div>
+          <div class="field span-4"><label>Target Set</label><input id="targetAmount" type="number" min="0" step="0.01" placeholder="480000000"></div>
+          <div class="field span-4"><label>Year</label><select id="targetYear"><option value="2026">2026</option></select></div>
+          <div class="field span-12"><button id="saveTargetBtn" type="button">Save Cost Center Target</button></div>
+        </div>
+        <div class="save-note">Targets save to tab <strong>Scope Target</strong> in spreadsheet <strong>Performance Tracker - Tendering(Pipeline)</strong>.</div>
+      </div>
+      <div class="card" style="margin-bottom:16px;">
+        <h3 style="margin-top:0">Cost Center Targets</h3>
+        <div class="table-wrap"><table id="scopeTargetsTable"></table></div>
+      </div>
       <div class="grid two">
         <div class="card">
           <h3 style="margin-top:0">Summary totals from Tenders tab</h3>
@@ -318,13 +337,14 @@
 const APP_CONFIG = {
   rfqTab: "RFQ",
   loginTab: "Login",
-  appsScriptUrl: "https://script.google.com/macros/s/AKfycbxOPMOZCSjqIXGSEOhVidHRLOuKBZ89OEHRZV79j2Uq4MWSo_koVAr6BZ8JtR8tq_hY/exec", // Paste your deployed Apps Script web app URL here after deploying Code.gs
+  appsScriptUrl: "https://script.google.com/macros/s/AKfycbxiKqQ9hN9-6d75ffcP2JeHwFT3Qdc1C9rkCQcqgETmAp-K3rYKSQmD9tCiwuV08ZjE/exec", // Paste your deployed Apps Script web app URL here after deploying Code.gs
   spreadsheetId: "1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0",
   driveFileId: "1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0",
   spreadsheetName: "Performance Tracker - Tendering(Pipeline)",
   pipelineTab: "Tenders",
   contractsTab: "Contracts",
-  awardsTab: "Awards"
+  awardsTab: "Awards",
+  scopeTargetTab: "Scope Target"
 };
 const APPS_SCRIPT_URL = APP_CONFIG.appsScriptUrl;
 const COST_CENTER_OPTIONS = ["Onpoint Ontime","Nkanyezi","Aqua Telecoms","Distinct Hire"];
@@ -337,6 +357,7 @@ const LOCAL_STORAGE_KEY = "onpoint_tendering_feed_local_v1";
 const LOCAL_RFQ_STORAGE_KEY = "onpoint_tendering_feed_rfq_local_v1";
 const LOCAL_CONTRACTS_STORAGE_KEY = "onpoint_tendering_feed_contracts_local_v1";
 const LOCAL_AWARDS_STORAGE_KEY = "onpoint_tendering_feed_awards_local_v1";
+const LOCAL_SCOPE_TARGETS_STORAGE_KEY = "onpoint_tendering_feed_scope_targets_local_v1";
 const SESSION_USER_KEY = "onpoint_tendering_feed_session_user_v1";
 const SEED_DATA = {
   "pipeline": [
@@ -488,6 +509,7 @@ const state = {
   rfqs: [],
   contracts: [],
   awards: [],
+  scopeTargets: [],
   summary: SEED_DATA.summary,
   currentUser: null,
   filters: { unit:"All", scope:"All", status:"All", search:"", project:"All" }
@@ -610,6 +632,12 @@ function loadLocalAwards() {
 function saveLocalAwards(rows) {
   localStorage.setItem(LOCAL_AWARDS_STORAGE_KEY, JSON.stringify(rows));
 }
+function loadLocalScopeTargets() {
+  try { return JSON.parse(localStorage.getItem(LOCAL_SCOPE_TARGETS_STORAGE_KEY) || "[]"); } catch { return []; }
+}
+function saveLocalScopeTargets(rows) {
+  localStorage.setItem(LOCAL_SCOPE_TARGETS_STORAGE_KEY, JSON.stringify(rows));
+}
 
 function normaliseRow(row) {
   return {
@@ -659,6 +687,15 @@ function normaliseAwardRow(row) {
     tenders: text(row.tenders || row["Tenders"] || 0),
     rfqs: text(row.rfqs || row["RFQs"] || row["Rfqs"] || 0),
     awards: text(row.awards || row["Awards"] || 0),
+    createdBy: text(row.createdBy || row["Created By"] || ""),
+    createdAt: text(row.createdAt || row["Created At"] || "")
+  };
+}
+function normaliseScopeTargetRow(row) {
+  return {
+    costCenter: text(row.costCenter || row.businessUnit || row.entity || row["Cost Center"] || row["Entity"] || ""),
+    targetSet: text(row.targetSet || row.target || row["Target Set"] || row["Target"] || 0),
+    year: text(row.year || row["Year"] || "2026"),
     createdBy: text(row.createdBy || row["Created By"] || ""),
     createdAt: text(row.createdAt || row["Created At"] || "")
   };
@@ -725,10 +762,12 @@ async function loadData(showAlert = false) {
     const localRfqs = loadLocalRfqs().map(normaliseRfqRow);
     const localContracts = loadLocalContracts().map(normaliseContractRow);
     const localAwards = loadLocalAwards().map(normaliseAwardRow);
+    const localScopeTargets = loadLocalScopeTargets().map(normaliseScopeTargetRow);
     state.rows = [...SEED_DATA.pipeline.map(normaliseRow), ...localRows];
     state.rfqs = [...localRfqs];
     state.contracts = [...localContracts];
     state.awards = [...localAwards];
+    state.scopeTargets = [...localScopeTargets];
     state.summary = computeSummaryFromRows(state.rows);
     if (APPS_SCRIPT_URL) {
       try {
@@ -737,6 +776,8 @@ async function loadData(showAlert = false) {
         if (Array.isArray(payload.rfqs)) state.rfqs = payload.rfqs.map(normaliseRfqRow);
         if (Array.isArray(payload.contracts)) state.contracts = payload.contracts.map(normaliseContractRow);
         if (Array.isArray(payload.awards)) state.awards = payload.awards.map(normaliseAwardRow);
+        if (Array.isArray(payload.scopeTargets)) state.scopeTargets = payload.scopeTargets.map(normaliseScopeTargetRow);
+        else if (Array.isArray(payload.targets)) state.scopeTargets = payload.targets.map(normaliseScopeTargetRow);
         if (Array.isArray(payload.awards) && payload.awards.length) state.rfqs = payload.awards.map(normaliseAwardRow).map(mapAwardToRfqRow);
         state.summary = payload.summary || computeSummaryFromRows(state.rows);
         if (payload.currentUser && !state.currentUser) setCurrentUser(payload.currentUser);
@@ -814,6 +855,7 @@ function populateFilters() {
   populateSelect("rfqBusinessUnit", COST_CENTER_OPTIONS, "Onpoint Ontime");
   populateSelect("contractEntity", COST_CENTER_OPTIONS, "Onpoint Ontime");
   populateSelect("awardEntity", COST_CENTER_OPTIONS, "Onpoint Ontime");
+  populateSelect("targetCostCenter", COST_CENTER_OPTIONS, "Onpoint Ontime");
   populateSelect("formScopeType", SCOPE_OPTIONS, "CIVIL");
   populateSelect("rfqScopeType", SCOPE_OPTIONS, "CIVIL");
   populateSelectWithAdd("formClientName", clientOptions, clientOptions[0] || "ETHEKWINI", "Add new name");
@@ -892,8 +934,108 @@ function aggregateBy(key, valueKey="totalValue") {
 function destroyChart(name) {
   if (charts[name]) { charts[name].destroy(); charts[name] = null; }
 }
+
+function monthlyAwardsMatrix() {
+  const months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+  const costCenters = COST_CENTER_OPTIONS.slice();
+  return {
+    months,
+    costCenters,
+    rows: costCenters.map(center => {
+      const awardsRows = state.awards.filter(r => text(r.entity) === center);
+      const monthly = months.map(month => {
+        const items = awardsRows.filter(r => text(r.month).toUpperCase().startsWith(month));
+        return {
+          tenders: items.reduce((s,r)=>s+num(r.tenders),0),
+          rfqs: items.reduce((s,r)=>s+num(r.rfqs),0),
+          awards: items.reduce((s,r)=>s+num(r.awards),0)
+        };
+      });
+      return { center, monthly };
+    })
+  };
+}
+
+function renderMonthlyAwardsSummaryTable() {
+  const table = $("monthlyAwardsSummaryTable");
+  if (!table) return;
+  const { months, rows } = monthlyAwardsMatrix();
+  const rowColors = {
+    "Onpoint Ontime":"#e8f0ff",
+    "Aqua Telecoms":"#e8f7ee",
+    "Nkanyezi":"#fff4df",
+    "Distinct Hire":"#f6eefe"
+  };
+  const thead = `<thead>
+    <tr>
+      <th rowspan="2">Cost Center</th>
+      <th rowspan="2">Line</th>
+      ${months.map(m => `<th>${m}</th>`).join("")}
+      <th rowspan="2">Total</th>
+    </tr>
+    <tr>${months.map(() => `<th class="right">Value</th>`).join("")}</tr>
+  </thead>`;
+  const metricDefs = [
+    { key:"tenders", label:"Tenders" },
+    { key:"rfqs", label:"RFQs" },
+    { key:"awards", label:"Awards" }
+  ];
+  const bodyRows = [];
+  rows.forEach(r => {
+    const bg = rowColors[r.center] || "#ffffff";
+    metricDefs.forEach((metric, idx) => {
+      const values = r.monthly.map(m => Number(m[metric.key] || 0));
+      const total = values.reduce((s,v)=>s+v,0);
+      bodyRows.push(`<tr style="background:${bg}">
+        ${idx === 0 ? `<td rowspan="3"><strong>${r.center}</strong></td>` : ""}
+        <td><strong>${metric.label}</strong></td>
+        ${values.map(v => `<td class="right">${v === 0 ? "" : v}</td>`).join("")}
+        <td class="right"><strong>${total === 0 ? "" : total}</strong></td>
+      </tr>`);
+    });
+  });
+  table.innerHTML = thead + `<tbody>${bodyRows.join("")}</tbody>`;
+}
+
+function actualVsTargetByCostCenter() {
+  const centers = COST_CENTER_OPTIONS.slice();
+  const actualMap = new Map();
+  filteredRows().forEach(r => {
+    const key = text(r.businessUnit);
+    actualMap.set(key, (actualMap.get(key) || 0) + num(r.totalValue));
+  });
+  const targetMap = new Map();
+  state.scopeTargets.forEach(r => {
+    if (text(r.year || '2026') !== '2026') return;
+    const key = text(r.costCenter);
+    targetMap.set(key, (targetMap.get(key) || 0) + num(r.targetSet));
+  });
+  return centers.map(center => ({
+    center,
+    actual: actualMap.get(center) || 0,
+    target: targetMap.get(center) || 0
+  }));
+}
+
+function renderScopeTargetsTable() {
+  const table = $("scopeTargetsTable");
+  if (!table) return;
+  const rows = [...state.scopeTargets]
+    .filter(r => text(r.year || '2026') === '2026')
+    .sort((a,b) => text(a.costCenter).localeCompare(text(b.costCenter)));
+  buildTable(table,
+    [{label:"Cost Center"},{label:"Target Set",className:"right"},{label:"Year"},{label:"Created By"}],
+    rows.map(r => [
+      r.costCenter,
+      money(r.targetSet),
+      r.year || '2026',
+      r.createdBy || ''
+    ])
+  );
+}
+
 function renderCharts() {
-  destroyChart("businessUnitChart"); destroyChart("scopeChart"); destroyChart("targetChart"); destroyChart("rfqAwardedChart"); destroyChart("rfqScopeByCostCenterChart");
+  destroyChart("businessUnitChart"); destroyChart("scopeChart"); destroyChart("targetChart"); destroyChart("rfqAwardedChart"); destroyChart("rfqScopeByCostCenterChart"); destroyChart("actualVsTargetChart");
   const rows = filteredRows();
   const summary = state.summary || {};
 
@@ -912,6 +1054,21 @@ function renderCharts() {
     data:{ labels: grouped.map(r => r.label), datasets:[{ label:"Tender Value", data: grouped.map(r => r.value) }] },
     options:{ responsive:true, maintainAspectRatio:false, animation:false }
   });
+
+  if ($("actualVsTargetChart")) {
+    const byCenter = actualVsTargetByCostCenter();
+    charts.actualVsTargetChart = new Chart($("actualVsTargetChart"), {
+      type:"bar",
+      data:{
+        labels: byCenter.map(r => r.center),
+        datasets:[
+          {label:"Actual", data: byCenter.map(r => r.actual)},
+          {label:"Target", data: byCenter.map(r => r.target)}
+        ]
+      },
+      options:{ responsive:true, maintainAspectRatio:false, animation:false }
+    });
+  }
 
   if ($("targetChart")) {
     const actual = [summary.total?.civil,summary.total?.building,summary.total?.electrical,summary.total?.telecoms,summary.total?.mechanical,summary.total?.roads,summary.total?.plantHire].map(num);
@@ -972,11 +1129,6 @@ function renderDashboardTables() {
     scopeRows.map(r => [r[0], money(r[1])])
   );
 
-  const rows = filteredRows().slice(0,10);
-  buildTable($("openTendersTable"),
-    [{label:"Business Unit"},{label:"Client"},{label:"Description"},{label:"Value",className:"right"},{label:"Status"}],
-    rows.map(r => [r.businessUnit, r.clientName, r.contractDescription, money(r.totalValue), `<span class="badge ${badgeClass(r.status)}">${r.status||"Open"}</span>`])
-  );
 }
 
 function renderRfqTable() {
@@ -1097,6 +1249,8 @@ function renderAll() {
   renderKPIs();
   renderDashboardTables();
   renderProgressBlock();
+  renderMonthlyAwardsSummaryTable();
+  renderScopeTargetsTable();
   renderContractsDashboardTable();
   renderRfqTable();
   renderContractsTable();
@@ -1212,6 +1366,54 @@ async function saveTender() {
   }
 }
 
+
+async function saveScopeTarget() {
+  if (!state.currentUser) {
+    alert("Please login first.");
+    return;
+  }
+  const row = {
+    costCenter: $("targetCostCenter").value,
+    targetSet: $("targetAmount").value,
+    year: $("targetYear").value,
+    createdBy: state.currentUser.username
+  };
+  if (!text(row.costCenter) || !text(row.targetSet)) {
+    alert("Please complete Cost Center and Target Set.");
+    return;
+  }
+  const saveBtn = $("saveTargetBtn");
+  const oldText = saveBtn.textContent;
+  saveBtn.disabled = true;
+  saveBtn.textContent = "Synchronising...";
+  setConn("Synchronising", "warn");
+  setLoading(true, "Saving scope target...");
+  try {
+    if (APPS_SCRIPT_URL) {
+      const res = await fetchJson(APPS_SCRIPT_URL, {
+        method:"POST",
+        headers:{"Content-Type":"text/plain;charset=utf-8"},
+        body: JSON.stringify({ action:"saveScopeTargetRow", row, currentUser: state.currentUser })
+      });
+      if (res.success === false) throw new Error(res.error || "Save failed");
+      alert("Cost center target saved successfully.");
+      await loadData(false);
+      return;
+    }
+    const localRows = loadLocalScopeTargets();
+    localRows.unshift(row);
+    saveLocalScopeTargets(localRows);
+    alert("Cost center target saved successfully.");
+    await loadData(false);
+  } catch (e) {
+    console.error(e);
+    alert("Cost center target save failed. Please check the Apps Script connection.");
+  } finally {
+    setLoading(false);
+    saveBtn.disabled = false;
+    saveBtn.textContent = oldText;
+  }
+}
 
 async function saveContract() {
   if (!state.currentUser) {
@@ -1402,6 +1604,7 @@ function wireEvents() {
   if ($("saveRfqBtn")) $("saveRfqBtn").onclick = saveRfq;
   if ($("saveContractBtn")) $("saveContractBtn").onclick = saveContract;
   if ($("saveAwardBtn")) $("saveAwardBtn").onclick = saveAward;
+  if ($("saveTargetBtn")) $("saveTargetBtn").onclick = saveScopeTarget;
   if ($("refreshBtn")) $("refreshBtn").onclick = () => loadData(true);
   if ($("loginBtn")) $("loginBtn").onclick = loginUser;
   if ($("registerBtn")) $("registerBtn").onclick = registerUser;
