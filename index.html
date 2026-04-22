@@ -337,7 +337,7 @@
 const APP_CONFIG = {
   rfqTab: "RFQ",
   loginTab: "Login",
-  appsScriptUrl: "https://script.google.com/macros/s/AKfycbxiKqQ9hN9-6d75ffcP2JeHwFT3Qdc1C9rkCQcqgETmAp-K3rYKSQmD9tCiwuV08ZjE/exec", // Paste your deployed Apps Script web app URL here after deploying Code.gs
+  appsScriptUrl: "https://script.google.com/macros/s/AKfycbwzjkKY9itrr2XccC3N4MqFxqiOknr1uSN_CVwce6xcvZUbI0BAjyrv1HrAYenDUcj_/exec", // Paste your deployed Apps Script web app URL here after deploying Code.gs
   spreadsheetId: "1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0",
   driveFileId: "1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0",
   spreadsheetName: "Performance Tracker - Tendering(Pipeline)",
@@ -900,7 +900,7 @@ function kpiRows() {
   const filteredRfqs = filteredRfqsRows();
   const totalTenders = rows.length;
   const totalRfqs = filteredRfqs.reduce((s,r)=>s+num(r.tenderAmount),0);
-  const totalTarget = num(state.summary?.target?.overall);
+  const totalTarget = num(state.summary?.target?.overall) || state.scopeTargets.reduce((s,r)=>s + (text(r.year || '2026') === '2026' ? num(r.targetSet) : 0), 0);
   const open = rows.filter(r => text(r.status || "Ongoing") === "Ongoing").length;
   const totalTenderAmount = rows.reduce((s,r)=>s+num(r.totalValue),0);
   return [
