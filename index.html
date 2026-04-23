@@ -254,7 +254,7 @@
           <h2 class="section-title">Apps Script Setup</h2>
           <div class="field">
             <label for="appScriptUrl">Google Apps Script Web App URL</label>
-            <input id="appScriptUrl" value="https://script.google.com/macros/s/AKfycbwxwxnDRWrEvaox7Uk7uV_YOJ7QUa6emaCHIMaBrFRbRMfejE_FP70bLj3PhbmAnUPp/exec" />
+            <input id="appScriptUrl" value="https://script.google.com/macros/s/AKfycbyyjdM0ZiHm2K1RJ_-ZmpYUDJI59QTqKoPu4J4ZAx_9awz0GjyOhHpfoiPYqg0jxTWO/exec" />
           </div>
           <div class="small-note" style="margin-top: 14px;">
             <div><strong>Sheet ID:</strong> 1eU2ktGearF47bLH0EKToOOTWpDkqcbqO1zWGIL9hbsg</div>
@@ -641,6 +641,55 @@
       iframe.src = url;
     }
 
+    function popupBridgeRequest(baseUrl, params, onSuccess, onError) {
+      params = params || {};
+      params.bridge = '1';
+      params._ts = String(Date.now());
+
+      var width = 520;
+      var height = 720;
+      var left = Math.max(0, Math.round((window.screen.width - width) / 2));
+      var top = Math.max(0, Math.round((window.screen.height - height) / 2));
+      var features = 'popup=yes,width=' + width + ',height=' + height + ',left=' + left + ',top=' + top + ',resizable=yes,scrollbars=yes';
+      var url = baseUrl + (baseUrl.indexOf('?') > -1 ? '&' : '?') + buildQuery(params);
+      var popup = window.open(url, 'tenderingAuthPopup', features);
+
+      if (!popup) {
+        if (onError) onError(new Error('Popup was blocked by the browser'));
+        return;
+      }
+
+      var timeoutId = setTimeout(function() {
+        cleanup();
+        try { popup.close(); } catch (e) {}
+        if (onError) onError(new Error('Authentication request timed out'));
+      }, 30000);
+
+      var closePoll = setInterval(function() {
+        if (popup.closed) {
+          cleanup();
+          if (onError) onError(new Error('Authentication window was closed before completion'));
+        }
+      }, 500);
+
+      function cleanup() {
+        clearTimeout(timeoutId);
+        clearInterval(closePoll);
+        window.removeEventListener('message', onMessage);
+      }
+
+      function onMessage(event) {
+        var data = event && event.data;
+        if (!data || data.source !== 'tendering-auth-bridge') return;
+        cleanup();
+        try { popup.close(); } catch (e) {}
+        if (onSuccess) onSuccess(data.payload);
+      }
+
+      window.addEventListener('message', onMessage);
+      try { popup.focus(); } catch (e) {}
+    }
+
 
     function setAuthMessage(message, isError) {
       var el = document.getElementById('authMessage');
@@ -770,7 +819,7 @@
       setAuthMessage('Registering new user...', false);
       safeAlert('Registering new user...');
       sha256Hex(password).then(function(passwordHash) {
-        bridgeRequest(formEls.appScriptUrl.value, {
+        popupBridgeRequest(formEls.appScriptUrl.value, {
           action: 'register',
           name: name,
           email: email,
@@ -813,7 +862,7 @@
       setAuthMessage('Logging in...', false);
       safeAlert('Logging in...');
       sha256Hex(password).then(function(passwordHash) {
-        bridgeRequest(formEls.appScriptUrl.value, {
+        popupBridgeRequest(formEls.appScriptUrl.value, {
           action: 'login',
           email: email,
           passwordHash: passwordHash
@@ -841,7 +890,7 @@
     function handleLogout() {
       var session = getSavedSession();
       if (session && session.user && session.user.email) {
-        bridgeRequest(formEls.appScriptUrl.value, { action: 'logout', email: session.user.email }, function() {}, function() {});
+        popupBridgeRequest(formEls.appScriptUrl.value, { action: 'logout', email: session.user.email }, function() {}, function() {});
       }
       clearSession();
     }
