@@ -73,6 +73,20 @@
     .entity-card { padding: 0; overflow: hidden; }
     .entity-head { padding: 18px 18px 0 18px; }
     .entity-body { padding: 0 18px 18px 18px; }
+
+    .auth-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.70); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+    .auth-card { width: 100%; max-width: 460px; background: white; border-radius: 28px; box-shadow: 0 30px 80px rgba(0,0,0,0.25); overflow: hidden; }
+    .auth-head { background: linear-gradient(135deg, #0f172a, #1e293b, #065f46); color: white; padding: 24px; }
+    .auth-body { padding: 24px; }
+    .auth-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; background: #f8fafc; padding: 6px; border-radius: 16px; }
+    .auth-tab { border: 0; background: transparent; padding: 12px; border-radius: 12px; cursor: pointer; font-weight: 700; color: var(--muted); }
+    .auth-tab.active { background: white; color: var(--primary); box-shadow: var(--shadow); }
+    .auth-panel { display: none; }
+    .auth-panel.active { display: block; }
+    .auth-message { margin-top: 12px; font-size: 13px; color: var(--muted); min-height: 18px; }
+    .top-userbar { display: none; margin-top: 12px; justify-content: space-between; align-items: center; gap: 12px; }
+    .user-chip { background: #ecfeff; color: #0f766e; padding: 10px 14px; border-radius: 999px; font-weight: 700; font-size: 13px; }
+
     @media (max-width: 1100px) {
       .kpi-grid, .grid-2, .grid-3, .form-grid { grid-template-columns: 1fr 1fr; }
       .tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -86,6 +100,41 @@
   </style>
 </head>
 <body>
+
+  <div id="authOverlay" class="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-head">
+        <div class="badge-row">
+          <span class="badge">Tendering</span>
+          <span class="badge">Live Access</span>
+        </div>
+        <h2 style="margin:0 0 8px 0;">Login to continue</h2>
+        <p style="margin:0;color:#dbeafe;">Sign in or register. After login, the dashboard connects and syncs live data automatically.</p>
+      </div>
+      <div class="auth-body">
+        <div class="auth-tabs">
+          <button id="loginTabBtn" class="auth-tab active" type="button">Login</button>
+          <button id="registerTabBtn" class="auth-tab" type="button">Register</button>
+        </div>
+
+        <div id="loginPanel" class="auth-panel active">
+          <div class="field"><label for="loginEmail">Email</label><input id="loginEmail" type="email" placeholder="name@company.com" /></div>
+          <div class="field" style="margin-top:12px;"><label for="loginPassword">Password</label><input id="loginPassword" type="password" placeholder="Enter password" /></div>
+          <div class="actions"><button class="btn btn-primary" id="loginBtn" type="button">Login</button></div>
+        </div>
+
+        <div id="registerPanel" class="auth-panel">
+          <div class="field"><label for="registerName">Full Name</label><input id="registerName" type="text" placeholder="Your full name" /></div>
+          <div class="field" style="margin-top:12px;"><label for="registerEmail">Email</label><input id="registerEmail" type="email" placeholder="name@company.com" /></div>
+          <div class="field" style="margin-top:12px;"><label for="registerPassword">Password</label><input id="registerPassword" type="password" placeholder="Create password" /></div>
+          <div class="actions"><button class="btn btn-primary" id="registerBtn" type="button">Create Account</button></div>
+        </div>
+
+        <div id="authMessage" class="auth-message"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="container">
     <section class="hero">
       <div>
@@ -104,6 +153,12 @@
         <div class="mini-card"><div class="label">Mode</div><div id="modeLabel">Demo data active</div></div>
       </div>
     </section>
+
+
+    <div id="topUserbar" class="top-userbar">
+      <div id="currentUserChip" class="user-chip"></div>
+      <button class="btn btn-secondary" id="logoutBtn" type="button">Logout</button>
+    </div>
 
     <div id="offlineAlert" class="alert">
       <strong>Not connected.</strong> Demo data is currently displayed. Add your Apps Script web app URL and click <strong>Sync Live Data</strong>.
@@ -194,7 +249,7 @@
           <h2 class="section-title">Apps Script Setup</h2>
           <div class="field">
             <label for="appScriptUrl">Google Apps Script Web App URL</label>
-            <input id="appScriptUrl" value="https://script.google.com/macros/s/AKfycbxnjnMrWmLYMokcdciJSiOFhoXPtGVB84kyYKJop_CB6ZllRoBMK-mYx9xD9SnJ7ANT/exec" />
+            <input id="appScriptUrl" value="https://script.google.com/macros/s/AKfycbzMVC32Wqhii0mEBBayI-Vo7lNZk-VoPCPO5VFW_mawnWZefuzVpWOt068WtrKcoADV/exec" />
           </div>
           <div class="small-note" style="margin-top: 14px;">
             <div><strong>Sheet ID:</strong> 1eU2ktGearF47bLH0EKToOOTWpDkqcbqO1zWGIL9hbsg</div>
@@ -237,6 +292,7 @@
     var charts = {};
     var formEls = {};
     var jsonpCounter = 0;
+    var currentUser = null;
 
     var data = {
       tenderSummary: [
@@ -544,6 +600,168 @@
       document.body.appendChild(script);
     }
 
+
+    function setAuthMessage(message, isError) {
+      var el = document.getElementById('authMessage');
+      if (!el) return;
+      el.textContent = message || '';
+      el.style.color = isError ? '#991b1b' : '#64748b';
+    }
+
+    function showAuthOverlay(show) {
+      document.getElementById('authOverlay').style.display = show ? 'flex' : 'none';
+      document.getElementById('topUserbar').style.display = show ? 'none' : 'flex';
+    }
+
+    function switchAuthTab(mode) {
+      var loginActive = mode === 'login';
+      document.getElementById('loginTabBtn').classList.toggle('active', loginActive);
+      document.getElementById('registerTabBtn').classList.toggle('active', !loginActive);
+      document.getElementById('loginPanel').classList.toggle('active', loginActive);
+      document.getElementById('registerPanel').classList.toggle('active', !loginActive);
+      setAuthMessage('', false);
+    }
+
+    function normalizeUrl(url) {
+      return String(url || '').trim().replace(/\/+$/, '');
+    }
+
+    function updateUserBar() {
+      var chip = document.getElementById('currentUserChip');
+      if (currentUser && currentUser.name) {
+        chip.textContent = currentUser.name + ' (' + currentUser.email + ')';
+      } else {
+        chip.textContent = '';
+      }
+    }
+
+    function sha256Hex(text) {
+      if (!window.crypto || !window.crypto.subtle) {
+        return Promise.reject(new Error('Browser crypto not available.'));
+      }
+      var encoder = new TextEncoder();
+      return window.crypto.subtle.digest('SHA-256', encoder.encode(text)).then(function(buf) {
+        return Array.from(new Uint8Array(buf)).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+      });
+    }
+
+    function saveSession(user, sessionToken, sessionExpiry) {
+      localStorage.setItem('tenderingUserSession', JSON.stringify({
+        user: user,
+        sessionToken: sessionToken,
+        sessionExpiry: sessionExpiry
+      }));
+      currentUser = user;
+      updateUserBar();
+      showAuthOverlay(false);
+    }
+
+    function clearSession() {
+      localStorage.removeItem('tenderingUserSession');
+      currentUser = null;
+      updateUserBar();
+      showAuthOverlay(true);
+      connected = false;
+      renderConnection();
+    }
+
+    function getSavedSession() {
+      var raw = localStorage.getItem('tenderingUserSession');
+      if (!raw) return null;
+      try { return JSON.parse(raw); } catch (e) { return null; }
+    }
+
+    function validateSavedSession(session, successCb, failCb) {
+      if (!session || !session.user || !session.user.email || !session.sessionToken) {
+        if (failCb) failCb();
+        return;
+      }
+      jsonpRequest(formEls.appScriptUrl.value, {
+        action: 'validateSession',
+        email: session.user.email,
+        sessionToken: session.sessionToken
+      }, function(result) {
+        if (result && result.ok) {
+          saveSession(result.user || session.user, result.sessionToken || session.sessionToken, result.sessionExpiry || session.sessionExpiry);
+          if (successCb) successCb(result);
+        } else {
+          clearSession();
+          if (failCb) failCb(result);
+        }
+      }, function() {
+        clearSession();
+        if (failCb) failCb();
+      });
+    }
+
+    function handleRegister() {
+      var name = document.getElementById('registerName').value.trim();
+      var email = document.getElementById('registerEmail').value.trim().toLowerCase();
+      var password = document.getElementById('registerPassword').value;
+      if (!name || !email || !password) {
+        setAuthMessage('Complete all registration fields.', true);
+        return;
+      }
+      setAuthMessage('Creating account...', false);
+      sha256Hex(password).then(function(passwordHash) {
+        jsonpRequest(formEls.appScriptUrl.value, {
+          action: 'register',
+          name: name,
+          email: email,
+          passwordHash: passwordHash
+        }, function(result) {
+          if (!result || !result.ok) {
+            setAuthMessage((result && result.message) || 'Registration failed.', true);
+            return;
+          }
+          saveSession(result.user, result.sessionToken, result.sessionExpiry);
+          setAuthMessage('Registration successful.', false);
+          syncLiveData(false);
+        }, function(error) {
+          setAuthMessage(error.message || 'Registration failed.', true);
+        });
+      }).catch(function(error) {
+        setAuthMessage(error.message || 'Could not secure password.', true);
+      });
+    }
+
+    function handleLogin() {
+      var email = document.getElementById('loginEmail').value.trim().toLowerCase();
+      var password = document.getElementById('loginPassword').value;
+      if (!email || !password) {
+        setAuthMessage('Enter email and password.', true);
+        return;
+      }
+      setAuthMessage('Signing in...', false);
+      sha256Hex(password).then(function(passwordHash) {
+        jsonpRequest(formEls.appScriptUrl.value, {
+          action: 'login',
+          email: email,
+          passwordHash: passwordHash
+        }, function(result) {
+          if (!result || !result.ok) {
+            setAuthMessage((result && result.message) || 'Login failed.', true);
+            return;
+          }
+          saveSession(result.user, result.sessionToken, result.sessionExpiry);
+          setAuthMessage('Login successful.', false);
+          syncLiveData(false);
+        }, function(error) {
+          setAuthMessage(error.message || 'Login failed.', true);
+        });
+      }).catch(function(error) {
+        setAuthMessage(error.message || 'Could not secure password.', true);
+      });
+    }
+
+    function handleLogout() {
+      var session = getSavedSession();
+      if (session && session.user && session.user.email) {
+        jsonpRequest(formEls.appScriptUrl.value, { action: 'logout', email: session.user.email }, function() {}, function() {});
+      }
+      clearSession();
+    }
+
     function saveDemoData() {
       var entryType = formEls.entryType.value;
       var form = getFormData();
@@ -578,6 +796,7 @@
     }
 
     function saveToGoogleSheets() {
+      formEls.appScriptUrl.value = normalizeUrl(formEls.appScriptUrl.value);
       if (!formEls.appScriptUrl.value || formEls.appScriptUrl.value.indexOf('YOUR_DEPLOYMENT_ID') > -1) {
         alert('Please paste your deployed Google Apps Script web app URL first.');
         return;
@@ -618,6 +837,7 @@
 
     function syncLiveData(showAlert) {
       if (showAlert === undefined) showAlert = true;
+      formEls.appScriptUrl.value = normalizeUrl(formEls.appScriptUrl.value);
       if (!formEls.appScriptUrl.value || formEls.appScriptUrl.value.indexOf('YOUR_DEPLOYMENT_ID') > -1) {
         if (showAlert) alert('Please paste your deployed Google Apps Script web app URL first.');
         return;
@@ -634,6 +854,10 @@
         applyLivePayload(result);
         renderAll();
         localStorage.setItem('tenderingDashboardLiveUrl', formEls.appScriptUrl.value);
+        if (currentUser) {
+          updateUserBar();
+          showAuthOverlay(false);
+        }
         if (showAlert) alert('Live data synced successfully.');
       }, function(error) {
         console.error(error);
@@ -692,12 +916,32 @@
       var savedUrl = localStorage.getItem('tenderingDashboardLiveUrl');
       if (savedUrl) formEls.appScriptUrl.value = savedUrl;
 
+
       document.getElementById('saveDemoBtn').addEventListener('click', saveDemoData);
       document.getElementById('saveSheetsBtn').addEventListener('click', saveToGoogleSheets);
       document.getElementById('syncLiveBtn').addEventListener('click', function() { syncLiveData(true); });
 
+      document.getElementById('loginTabBtn').addEventListener('click', function() { switchAuthTab('login'); });
+      document.getElementById('registerTabBtn').addEventListener('click', function() { switchAuthTab('register'); });
+      document.getElementById('loginBtn').addEventListener('click', handleLogin);
+      document.getElementById('registerBtn').addEventListener('click', handleRegister);
+      document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+
       setupTabs();
       renderAll();
+
+      formEls.appScriptUrl.value = normalizeUrl(formEls.appScriptUrl.value);
+      var savedSession = getSavedSession();
+      if (savedSession) {
+        validateSavedSession(savedSession, function() {
+          syncLiveData(false);
+        }, function() {
+          showAuthOverlay(true);
+        });
+      } else {
+        showAuthOverlay(true);
+      }
+
     }
 
     document.addEventListener('DOMContentLoaded', init);
