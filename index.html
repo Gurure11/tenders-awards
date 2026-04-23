@@ -138,6 +138,8 @@
     </div>
   </div>
 
+  <div id="authBridgeHost" style="display:none;"></div>
+
   <div class="container">
     <section class="hero">
       <div>
@@ -252,7 +254,7 @@
           <h2 class="section-title">Apps Script Setup</h2>
           <div class="field">
             <label for="appScriptUrl">Google Apps Script Web App URL</label>
-            <input id="appScriptUrl" value="https://script.google.com/macros/s/AKfycbxnjnMrWmLYMokcdciJSiOFhoXPtGVB84kyYKJop_CB6ZllRoBMK-mYx9xD9SnJ7ANT/exec" />
+            <input id="appScriptUrl" value="https://script.google.com/macros/s/AKfycbwxwxnDRWrEvaox7Uk7uV_YOJ7QUa6emaCHIMaBrFRbRMfejE_FP70bLj3PhbmAnUPp/exec" />
           </div>
           <div class="small-note" style="margin-top: 14px;">
             <div><strong>Sheet ID:</strong> 1eU2ktGearF47bLH0EKToOOTWpDkqcbqO1zWGIL9hbsg</div>
@@ -603,6 +605,42 @@
       document.body.appendChild(script);
     }
 
+    function bridgeRequest(baseUrl, params, onSuccess, onError) {
+      params = params || {};
+      params.bridge = '1';
+      params._ts = String(Date.now());
+
+      var host = document.getElementById('authBridgeHost');
+      var iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.name = 'authBridgeFrame' + Date.now();
+      host.innerHTML = '';
+      host.appendChild(iframe);
+
+      var timeoutId = setTimeout(function() {
+        cleanup();
+        if (onError) onError(new Error('Authentication request timed out'));
+      }, 20000);
+
+      function cleanup() {
+        clearTimeout(timeoutId);
+        window.removeEventListener('message', onMessage);
+        if (iframe && iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      }
+
+      function onMessage(event) {
+        var data = event && event.data;
+        if (!data || data.source !== 'tendering-auth-bridge') return;
+        cleanup();
+        if (onSuccess) onSuccess(data.payload);
+      }
+
+      window.addEventListener('message', onMessage);
+
+      var url = baseUrl + (baseUrl.indexOf('?') > -1 ? '&' : '?') + buildQuery(params);
+      iframe.src = url;
+    }
+
 
     function setAuthMessage(message, isError) {
       var el = document.getElementById('authMessage');
@@ -690,7 +728,7 @@
         if (failCb) failCb();
         return;
       }
-      jsonpRequest(formEls.appScriptUrl.value, {
+      bridgeRequest(formEls.appScriptUrl.value, {
         action: 'validateSession',
         email: session.user.email,
         sessionToken: session.sessionToken
@@ -732,7 +770,7 @@
       setAuthMessage('Registering new user...', false);
       safeAlert('Registering new user...');
       sha256Hex(password).then(function(passwordHash) {
-        jsonpRequest(formEls.appScriptUrl.value, {
+        bridgeRequest(formEls.appScriptUrl.value, {
           action: 'register',
           name: name,
           email: email,
@@ -775,7 +813,7 @@
       setAuthMessage('Logging in...', false);
       safeAlert('Logging in...');
       sha256Hex(password).then(function(passwordHash) {
-        jsonpRequest(formEls.appScriptUrl.value, {
+        bridgeRequest(formEls.appScriptUrl.value, {
           action: 'login',
           email: email,
           passwordHash: passwordHash
@@ -803,7 +841,7 @@
     function handleLogout() {
       var session = getSavedSession();
       if (session && session.user && session.user.email) {
-        jsonpRequest(formEls.appScriptUrl.value, { action: 'logout', email: session.user.email }, function() {}, function() {});
+        bridgeRequest(formEls.appScriptUrl.value, { action: 'logout', email: session.user.email }, function() {}, function() {});
       }
       clearSession();
     }
