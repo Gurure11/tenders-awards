@@ -73,20 +73,6 @@
     .entity-card { padding: 0; overflow: hidden; }
     .entity-head { padding: 18px 18px 0 18px; }
     .entity-body { padding: 0 18px 18px 18px; }
-
-    .auth-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.70); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
-    .auth-card { width: 100%; max-width: 460px; background: white; border-radius: 28px; box-shadow: 0 30px 80px rgba(0,0,0,0.25); overflow: hidden; }
-    .auth-head { background: linear-gradient(135deg, #0f172a, #1e293b, #065f46); color: white; padding: 24px; }
-    .auth-body { padding: 24px; }
-    .auth-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; background: #f8fafc; padding: 6px; border-radius: 16px; }
-    .auth-tab { border: 0; background: transparent; padding: 12px; border-radius: 12px; cursor: pointer; font-weight: 700; color: var(--muted); }
-    .auth-tab.active { background: white; color: var(--primary); box-shadow: var(--shadow); }
-    .auth-panel { display: none; }
-    .auth-panel.active { display: block; }
-    .auth-message { margin-top: 12px; font-size: 13px; color: var(--muted); min-height: 18px; }
-    .top-userbar { display: none; margin-top: 12px; justify-content: space-between; align-items: center; gap: 12px; }
-    .user-chip { background: #ecfeff; color: #0f766e; padding: 10px 14px; border-radius: 999px; font-weight: 700; font-size: 13px; }
-
     @media (max-width: 1100px) {
       .kpi-grid, .grid-2, .grid-3, .form-grid { grid-template-columns: 1fr 1fr; }
       .tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -100,46 +86,6 @@
   </style>
 </head>
 <body>
-
-  <div id="authOverlay" class="auth-overlay">
-    <div class="auth-card">
-      <div class="auth-head">
-        <div class="badge-row">
-          <span class="badge">Tendering</span>
-          <span class="badge">Live Access</span>
-        </div>
-        <h2 style="margin:0 0 8px 0;">Login to continue</h2>
-        <p style="margin:0;color:#dbeafe;">Sign in or register. After login, the dashboard connects and syncs live data automatically.</p>
-      </div>
-      <div class="auth-body">
-        <div class="auth-tabs">
-          <button id="loginTabBtn" class="auth-tab active" type="button">Login</button>
-          <button id="registerTabBtn" class="auth-tab" type="button">Register</button>
-        </div>
-
-        <div id="loginPanel" class="auth-panel active">
-          <div class="field"><label for="loginEmail">Email</label><input id="loginEmail" type="email" placeholder="name@company.com" /></div>
-          <div class="field" style="margin-top:12px;"><label for="loginPassword">Password</label><input id="loginPassword" type="password" placeholder="Enter password" /></div>
-          <div class="field" style="margin-top:8px;"><label><input id="loginShowPassword" type="checkbox" style="width:auto;margin-right:8px;" /> Show password</label></div>
-          <div class="actions"><button class="btn btn-primary" id="loginBtn" type="button">Login</button></div>
-        </div>
-
-        <div id="registerPanel" class="auth-panel">
-          <div class="field"><label for="registerName">Full Name</label><input id="registerName" type="text" placeholder="Your full name" /></div>
-          <div class="field" style="margin-top:12px;"><label for="registerEmail">Email</label><input id="registerEmail" type="email" placeholder="name@company.com" /></div>
-          <div class="field" style="margin-top:12px;"><label for="registerPassword">Password</label><input id="registerPassword" type="password" placeholder="Create password" /></div>
-          <div class="field" style="margin-top:12px;"><label for="registerPasswordConfirm">Confirm Password</label><input id="registerPasswordConfirm" type="password" placeholder="Confirm password" /></div>
-          <div class="field" style="margin-top:8px;"><label><input id="registerShowPassword" type="checkbox" style="width:auto;margin-right:8px;" /> Show passwords</label></div>
-          <div class="actions"><button class="btn btn-primary" id="registerBtn" type="button">Create Account</button></div>
-        </div>
-
-        <div id="authMessage" class="auth-message"></div>
-      </div>
-    </div>
-  </div>
-
-  <div id="authBridgeHost" style="display:none;"></div>
-
   <div class="container">
     <section class="hero">
       <div>
@@ -158,12 +104,6 @@
         <div class="mini-card"><div class="label">Mode</div><div id="modeLabel">Demo data active</div></div>
       </div>
     </section>
-
-
-    <div id="topUserbar" class="top-userbar">
-      <div id="currentUserChip" class="user-chip"></div>
-      <button class="btn btn-secondary" id="logoutBtn" type="button">Logout</button>
-    </div>
 
     <div id="offlineAlert" class="alert">
       <strong>Not connected.</strong> Demo data is currently displayed. Add your Apps Script web app URL and click <strong>Sync Live Data</strong>.
@@ -254,7 +194,7 @@
           <h2 class="section-title">Apps Script Setup</h2>
           <div class="field">
             <label for="appScriptUrl">Google Apps Script Web App URL</label>
-            <input id="appScriptUrl" value="https://script.google.com/macros/s/AKfycbxxaouANj9GTL4CfG7gyl1r0UgLzj7Eex43O18FWx6ufXsr06_GU0rXC7wHlreVVmNQvA/exec" />
+            <input id="appScriptUrl" value="https://script.google.com/macros/s/AKfycbxnjnMrWmLYMokcdciJSiOFhoXPtGVB84kyYKJop_CB6ZllRoBMK-mYx9xD9SnJ7ANT/exec" />
           </div>
           <div class="small-note" style="margin-top: 14px;">
             <div><strong>Sheet ID:</strong> 1eU2ktGearF47bLH0EKToOOTWpDkqcbqO1zWGIL9hbsg</div>
@@ -297,7 +237,6 @@
     var charts = {};
     var formEls = {};
     var jsonpCounter = 0;
-    var currentUser = null;
 
     var data = {
       tenderSummary: [
@@ -605,296 +544,6 @@
       document.body.appendChild(script);
     }
 
-    function bridgeRequest(baseUrl, params, onSuccess, onError) {
-      params = params || {};
-      params.bridge = '1';
-      params._ts = String(Date.now());
-
-      var host = document.getElementById('authBridgeHost');
-      var iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.name = 'authBridgeFrame' + Date.now();
-      host.innerHTML = '';
-      host.appendChild(iframe);
-
-      var timeoutId = setTimeout(function() {
-        cleanup();
-        if (onError) onError(new Error('Authentication request timed out'));
-      }, 20000);
-
-      function cleanup() {
-        clearTimeout(timeoutId);
-        window.removeEventListener('message', onMessage);
-        if (iframe && iframe.parentNode) iframe.parentNode.removeChild(iframe);
-      }
-
-      function onMessage(event) {
-        var data = event && event.data;
-        if (!data || data.source !== 'tendering-auth-bridge') return;
-        cleanup();
-        if (onSuccess) onSuccess(data.payload);
-      }
-
-      window.addEventListener('message', onMessage);
-
-      var url = baseUrl + (baseUrl.indexOf('?') > -1 ? '&' : '?') + buildQuery(params);
-      iframe.src = url;
-    }
-
-    function popupBridgeRequest(baseUrl, params, onSuccess, onError) {
-      params = params || {};
-      params.bridge = '1';
-      params._ts = String(Date.now());
-
-      var width = 520;
-      var height = 720;
-      var left = Math.max(0, Math.round((window.screen.width - width) / 2));
-      var top = Math.max(0, Math.round((window.screen.height - height) / 2));
-      var features = 'popup=yes,width=' + width + ',height=' + height + ',left=' + left + ',top=' + top + ',resizable=yes,scrollbars=yes';
-      var url = baseUrl + (baseUrl.indexOf('?') > -1 ? '&' : '?') + buildQuery(params);
-      var popup = window.open(url, 'tenderingAuthPopup', features);
-
-      if (!popup) {
-        if (onError) onError(new Error('Popup was blocked by the browser'));
-        return;
-      }
-
-      var timeoutId = setTimeout(function() {
-        cleanup();
-        try { popup.close(); } catch (e) {}
-        if (onError) onError(new Error('Authentication request timed out'));
-      }, 30000);
-
-      var closePoll = setInterval(function() {
-        if (popup.closed) {
-          cleanup();
-          if (onError) onError(new Error('Authentication window was closed before completion'));
-        }
-      }, 500);
-
-      function cleanup() {
-        clearTimeout(timeoutId);
-        clearInterval(closePoll);
-        window.removeEventListener('message', onMessage);
-      }
-
-      function onMessage(event) {
-        var data = event && event.data;
-        if (!data || data.source !== 'tendering-auth-bridge') return;
-        cleanup();
-        try { popup.close(); } catch (e) {}
-        if (onSuccess) onSuccess(data.payload);
-      }
-
-      window.addEventListener('message', onMessage);
-      try { popup.focus(); } catch (e) {}
-    }
-
-
-    function setAuthMessage(message, isError) {
-      var el = document.getElementById('authMessage');
-      if (!el) return;
-      el.textContent = message || '';
-      el.style.color = isError ? '#991b1b' : '#64748b';
-    }
-
-    function safeAlert(message) {
-      if (message) window.alert(message);
-    }
-
-    function setPasswordVisibility(inputIds, visible) {
-      for (var i = 0; i < inputIds.length; i++) {
-        var el = document.getElementById(inputIds[i]);
-        if (el) el.type = visible ? 'text' : 'password';
-      }
-    }
-
-    function showAuthOverlay(show) {
-      document.getElementById('authOverlay').style.display = show ? 'flex' : 'none';
-      document.getElementById('topUserbar').style.display = show ? 'none' : 'flex';
-    }
-
-    function switchAuthTab(mode) {
-      var loginActive = mode === 'login';
-      document.getElementById('loginTabBtn').classList.toggle('active', loginActive);
-      document.getElementById('registerTabBtn').classList.toggle('active', !loginActive);
-      document.getElementById('loginPanel').classList.toggle('active', loginActive);
-      document.getElementById('registerPanel').classList.toggle('active', !loginActive);
-      setAuthMessage('', false);
-    }
-
-    function normalizeUrl(url) {
-      return String(url || '').trim().replace(/\/+$/, '');
-    }
-
-    function updateUserBar() {
-      var chip = document.getElementById('currentUserChip');
-      if (currentUser && currentUser.name) {
-        chip.textContent = currentUser.name + ' (' + currentUser.email + ')';
-      } else {
-        chip.textContent = '';
-      }
-    }
-
-    function sha256Hex(text) {
-      if (!window.crypto || !window.crypto.subtle) {
-        return Promise.reject(new Error('Browser crypto not available.'));
-      }
-      var encoder = new TextEncoder();
-      return window.crypto.subtle.digest('SHA-256', encoder.encode(text)).then(function(buf) {
-        return Array.from(new Uint8Array(buf)).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
-      });
-    }
-
-    function saveSession(user, sessionToken, sessionExpiry) {
-      localStorage.setItem('tenderingUserSession', JSON.stringify({
-        user: user,
-        sessionToken: sessionToken,
-        sessionExpiry: sessionExpiry
-      }));
-      currentUser = user;
-      updateUserBar();
-      showAuthOverlay(false);
-    }
-
-    function clearSession() {
-      localStorage.removeItem('tenderingUserSession');
-      currentUser = null;
-      updateUserBar();
-      showAuthOverlay(true);
-      connected = false;
-      renderConnection();
-    }
-
-    function getSavedSession() {
-      var raw = localStorage.getItem('tenderingUserSession');
-      if (!raw) return null;
-      try { return JSON.parse(raw); } catch (e) { return null; }
-    }
-
-    function validateSavedSession(session, successCb, failCb) {
-      if (!session || !session.user || !session.user.email || !session.sessionToken) {
-        if (failCb) failCb();
-        return;
-      }
-      bridgeRequest(formEls.appScriptUrl.value, {
-        action: 'validateSession',
-        email: session.user.email,
-        sessionToken: session.sessionToken
-      }, function(result) {
-        if (result && result.ok) {
-          saveSession(result.user || session.user, result.sessionToken || session.sessionToken, result.sessionExpiry || session.sessionExpiry);
-          if (successCb) successCb(result);
-        } else {
-          clearSession();
-          if (failCb) failCb(result);
-        }
-      }, function() {
-        clearSession();
-        if (failCb) failCb();
-      });
-    }
-
-    function handleRegister() {
-      var name = document.getElementById('registerName').value.trim();
-      var email = document.getElementById('registerEmail').value.trim().toLowerCase();
-      var password = document.getElementById('registerPassword').value;
-      var confirmPassword = document.getElementById('registerPasswordConfirm').value;
-      formEls.appScriptUrl.value = normalizeUrl(formEls.appScriptUrl.value);
-      if (!name || !email || !password || !confirmPassword) {
-        setAuthMessage('Complete all registration fields.', true);
-        safeAlert('Complete all registration fields.');
-        return;
-      }
-      if (password !== confirmPassword) {
-        setAuthMessage('Passwords do not match.', true);
-        safeAlert('Passwords do not match.');
-        return;
-      }
-      if (!formEls.appScriptUrl.value || formEls.appScriptUrl.value.indexOf('/exec') === -1) {
-        setAuthMessage('Apps Script URL is missing or invalid.', true);
-        safeAlert('Apps Script URL is missing or invalid.');
-        return;
-      }
-      setAuthMessage('Registering new user...', false);
-      safeAlert('Registering new user...');
-      sha256Hex(password).then(function(passwordHash) {
-        popupBridgeRequest(formEls.appScriptUrl.value, {
-          action: 'register',
-          name: name,
-          email: email,
-          passwordHash: passwordHash
-        }, function(result) {
-          if (!result || !result.ok) {
-            setAuthMessage((result && result.message) || 'Registration failed.', true);
-            safeAlert((result && result.message) || 'Registration failed.');
-            return;
-          }
-          saveSession(result.user, result.sessionToken, result.sessionExpiry);
-          setAuthMessage('Registration successful.', false);
-          safeAlert('Registration successful.');
-          safeAlert('Connecting to Google Sheets...');
-          syncLiveData(true);
-        }, function(error) {
-          setAuthMessage(error.message || 'Registration failed.', true);
-          safeAlert(error.message || 'Registration failed.');
-        });
-      }).catch(function(error) {
-        setAuthMessage(error.message || 'Could not secure password.', true);
-        safeAlert(error.message || 'Could not secure password.');
-      });
-    }
-
-    function handleLogin() {
-      var email = document.getElementById('loginEmail').value.trim().toLowerCase();
-      var password = document.getElementById('loginPassword').value;
-      formEls.appScriptUrl.value = normalizeUrl(formEls.appScriptUrl.value);
-      if (!email || !password) {
-        setAuthMessage('Enter email and password.', true);
-        safeAlert('Enter email and password.');
-        return;
-      }
-      if (!formEls.appScriptUrl.value || formEls.appScriptUrl.value.indexOf('/exec') === -1) {
-        setAuthMessage('Apps Script URL is missing or invalid.', true);
-        safeAlert('Apps Script URL is missing or invalid.');
-        return;
-      }
-      setAuthMessage('Logging in...', false);
-      safeAlert('Logging in...');
-      sha256Hex(password).then(function(passwordHash) {
-        popupBridgeRequest(formEls.appScriptUrl.value, {
-          action: 'login',
-          email: email,
-          passwordHash: passwordHash
-        }, function(result) {
-          if (!result || !result.ok) {
-            setAuthMessage((result && result.message) || 'Login failed.', true);
-            safeAlert((result && result.message) || 'Login failed.');
-            return;
-          }
-          saveSession(result.user, result.sessionToken, result.sessionExpiry);
-          setAuthMessage('Login successful.', false);
-          safeAlert('Login successful.');
-          safeAlert('Connecting to Google Sheets...');
-          syncLiveData(true);
-        }, function(error) {
-          setAuthMessage(error.message || 'Login failed.', true);
-          safeAlert(error.message || 'Login failed.');
-        });
-      }).catch(function(error) {
-        setAuthMessage(error.message || 'Could not secure password.', true);
-        safeAlert(error.message || 'Could not secure password.');
-      });
-    }
-
-    function handleLogout() {
-      var session = getSavedSession();
-      if (session && session.user && session.user.email) {
-        popupBridgeRequest(formEls.appScriptUrl.value, { action: 'logout', email: session.user.email }, function() {}, function() {});
-      }
-      clearSession();
-    }
-
     function saveDemoData() {
       var entryType = formEls.entryType.value;
       var form = getFormData();
@@ -929,7 +578,6 @@
     }
 
     function saveToGoogleSheets() {
-      formEls.appScriptUrl.value = normalizeUrl(formEls.appScriptUrl.value);
       if (!formEls.appScriptUrl.value || formEls.appScriptUrl.value.indexOf('YOUR_DEPLOYMENT_ID') > -1) {
         alert('Please paste your deployed Google Apps Script web app URL first.');
         return;
@@ -970,9 +618,8 @@
 
     function syncLiveData(showAlert) {
       if (showAlert === undefined) showAlert = true;
-      formEls.appScriptUrl.value = normalizeUrl(formEls.appScriptUrl.value);
       if (!formEls.appScriptUrl.value || formEls.appScriptUrl.value.indexOf('YOUR_DEPLOYMENT_ID') > -1) {
-        if (showAlert) safeAlert('Please paste your deployed Google Apps Script web app URL first.');
+        if (showAlert) alert('Please paste your deployed Google Apps Script web app URL first.');
         return;
       }
 
@@ -980,23 +627,19 @@
         if (!result || !result.ok) {
           connected = false;
           renderConnection();
-          if (showAlert) safeAlert((result && result.message) || 'Could not fetch live data.');
+          if (showAlert) alert((result && result.message) || 'Could not fetch live data.');
           return;
         }
         connected = !!result.live;
         applyLivePayload(result);
         renderAll();
         localStorage.setItem('tenderingDashboardLiveUrl', formEls.appScriptUrl.value);
-        if (currentUser) {
-          updateUserBar();
-          showAuthOverlay(false);
-        }
-        if (showAlert) safeAlert('Connected to Google Sheets successfully.');
+        if (showAlert) alert('Live data synced successfully.');
       }, function(error) {
         console.error(error);
         connected = false;
         renderConnection();
-        if (showAlert) safeAlert('Could not fetch live data. Check Apps Script deployment access and URL.');
+        if (showAlert) alert('Could not fetch live data. Check Apps Script deployment access and URL.');
       });
     }
 
@@ -1049,38 +692,12 @@
       var savedUrl = localStorage.getItem('tenderingDashboardLiveUrl');
       if (savedUrl) formEls.appScriptUrl.value = savedUrl;
 
-
       document.getElementById('saveDemoBtn').addEventListener('click', saveDemoData);
       document.getElementById('saveSheetsBtn').addEventListener('click', saveToGoogleSheets);
       document.getElementById('syncLiveBtn').addEventListener('click', function() { syncLiveData(true); });
 
-      document.getElementById('loginTabBtn').addEventListener('click', function() { switchAuthTab('login'); });
-      document.getElementById('registerTabBtn').addEventListener('click', function() { switchAuthTab('register'); });
-      document.getElementById('loginBtn').addEventListener('click', handleLogin);
-      document.getElementById('registerBtn').addEventListener('click', handleRegister);
-      document.getElementById('logoutBtn').addEventListener('click', handleLogout);
-      document.getElementById('loginShowPassword').addEventListener('change', function() {
-        setPasswordVisibility(['loginPassword'], this.checked);
-      });
-      document.getElementById('registerShowPassword').addEventListener('change', function() {
-        setPasswordVisibility(['registerPassword', 'registerPasswordConfirm'], this.checked);
-      });
-
       setupTabs();
       renderAll();
-
-      formEls.appScriptUrl.value = normalizeUrl(formEls.appScriptUrl.value);
-      var savedSession = getSavedSession();
-      if (savedSession) {
-        validateSavedSession(savedSession, function() {
-          syncLiveData(false);
-        }, function() {
-          showAuthOverlay(true);
-        });
-      } else {
-        showAuthOverlay(true);
-      }
-
     }
 
     document.addEventListener('DOMContentLoaded', init);
