@@ -65,6 +65,14 @@
     .status-pill { display: inline-block; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
     .status-connected { background: #dcfce7; color: #166534; }
     .status-demo { background: #fef3c7; color: #92400e; }
+    .matrix-wrap { margin-top: 16px; display: grid; gap: 16px; }
+    .matrix-title { margin: 0 0 10px; font-size: 18px; }
+    .matrix-scroll { overflow-x: auto; }
+    .matrix-table th, .matrix-table td { white-space: nowrap; text-align: center; min-width: 68px; }
+    .matrix-table th:first-child, .matrix-table td:first-child { text-align: left; min-width: 120px; position: sticky; left: 0; background: white; }
+    .entity-card { padding: 0; overflow: hidden; }
+    .entity-head { padding: 18px 18px 0 18px; }
+    .entity-body { padding: 0 18px 18px 18px; }
     @media (max-width: 1100px) {
       .kpi-grid, .grid-2, .grid-3, .form-grid { grid-template-columns: 1fr 1fr; }
       .tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -115,6 +123,8 @@
     </nav>
 
     <section id="dashboard" class="tab-panel active">
+      <div class="matrix-wrap" id="entityMatrixContainer"></div>
+
       <div class="grid-3">
         <div class="card"><h2 class="section-title">Awards to Date Against Target</h2><div class="chart-wrap"><canvas id="awardsChart"></canvas></div></div>
         <div class="card"><h2 class="section-title">Direct Contract Mix by Scope</h2><div class="chart-wrap"><canvas id="scopePieChart"></canvas></div></div>
@@ -184,14 +194,15 @@
           <h2 class="section-title">Apps Script Setup</h2>
           <div class="field">
             <label for="appScriptUrl">Google Apps Script Web App URL</label>
-            <input id="appScriptUrl" value="https://script.google.com/macros/s/AKfycbzw9KfyfnsLU-3UaUdrO0wiL5Qq-8UAAOhF855ipDmkcxK-tpvnnEU3f29VVccKrv8n/exec" />
+            <input id="appScriptUrl" value="https://script.google.com/macros/s/AKfycbxnjnMrWmLYMokcdciJSiOFhoXPtGVB84kyYKJop_CB6ZllRoBMK-mYx9xD9SnJ7ANT/exec" />
           </div>
           <div class="small-note" style="margin-top: 14px;">
             <div><strong>Sheet ID:</strong> 1eU2ktGearF47bLH0EKToOOTWpDkqcbqO1zWGIL9hbsg</div>
             <div><strong>Main Sheet:</strong> Tendering</div>
-            <div style="margin-top: 10px;"><strong>GET health:</strong> ?action=health</div>
-            <div><strong>GET dashboard data:</strong> ?action=dashboardData</div>
-            <div><strong>POST payload:</strong> { sheetId, mainSheet, section, form }</div>
+            <div style="margin-top: 10px;"><strong>Live read:</strong> JSONP from Apps Script</div>
+            <div><strong>GET health:</strong> ?action=health&callback=...</div>
+            <div><strong>GET dashboard data:</strong> ?action=dashboardData&callback=...</div>
+            <div><strong>Save:</strong> GET write fallback for local HTML</div>
             <div style="margin-top: 10px;"><strong>Status:</strong> <span id="statusPill" class="status-pill status-demo">Demo mode</span></div>
           </div>
         </div>
@@ -225,6 +236,7 @@
     var connected = false;
     var charts = {};
     var formEls = {};
+    var jsonpCounter = 0;
 
     var data = {
       tenderSummary: [
@@ -298,8 +310,8 @@
       return total;
     }
 
-    function renderTable(targetId, headers, rows) {
-      var html = '<table><thead><tr>';
+    function renderTable(targetId, headers, rows, className) {
+      var html = '<table class="' + (className || '') + '"><thead><tr>';
       for (var i = 0; i < headers.length; i++) html += '<th>' + headers[i] + '</th>';
       html += '</tr></thead><tbody>';
       for (var r = 0; r < rows.length; r++) {
@@ -309,6 +321,38 @@
       }
       html += '</tbody></table>';
       document.getElementById(targetId).innerHTML = html;
+    }
+
+    function renderEntityMatrices() {
+      var container = document.getElementById('entityMatrixContainer');
+      var html = '';
+      for (var i = 0; i < data.tenderSummary.length; i++) {
+        var entityRow = data.tenderSummary[i];
+        html += '<div class="card entity-card">';
+        html += '<div class="entity-head"><h2 class="matrix-title">' + entityRow.entity + '</h2></div>';
+        html += '<div class="entity-body"><div class="matrix-scroll"><table class="matrix-table"><thead><tr><th>Metric</th>';
+        for (var m = 0; m < MONTHS.length; m++) html += '<th>' + MONTHS[m] + '</th>';
+        html += '</tr></thead><tbody>';
+
+        var metrics = [
+          { label: 'Tenders', key: 'tenders' },
+          { label: 'RFQs', key: 'rfqs' },
+          { label: 'Awards', key: 'awards' }
+        ];
+
+        for (var x = 0; x < metrics.length; x++) {
+          html += '<tr><td><strong>' + metrics[x].label + '</strong></td>';
+          for (var mm = 0; mm < MONTHS.length; mm++) {
+            var month = MONTHS[mm];
+            var val = entityRow[metrics[x].key] && entityRow[metrics[x].key][month];
+            html += '<td>' + (val === 0 || val === null || typeof val === 'undefined' || val === '' ? '' : val) + '</td>';
+          }
+          html += '</tr>';
+        }
+
+        html += '</tbody></table></div></div></div>';
+      }
+      container.innerHTML = html;
     }
 
     function renderKPIs() {
@@ -461,6 +505,45 @@
       };
     }
 
+    function buildQuery(params) {
+      var parts = [];
+      for (var key in params) {
+        parts.push(encodeURIComponent(key) + '=' + encodeURIComponent(params[key] == null ? '' : params[key]));
+      }
+      return parts.join('&');
+    }
+
+    function jsonpRequest(baseUrl, params, onSuccess, onError) {
+      var callbackName = '__tenderingJsonpCallback' + (++jsonpCounter);
+      params = params || {};
+      params.callback = callbackName;
+      var url = baseUrl + (baseUrl.indexOf('?') > -1 ? '&' : '?') + buildQuery(params);
+      var script = document.createElement('script');
+      var timeoutId = setTimeout(function() {
+        cleanup();
+        if (onError) onError(new Error('Request timed out'));
+      }, 15000);
+
+      function cleanup() {
+        clearTimeout(timeoutId);
+        if (script.parentNode) script.parentNode.removeChild(script);
+        try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
+      }
+
+      window[callbackName] = function(result) {
+        cleanup();
+        if (onSuccess) onSuccess(result);
+      };
+
+      script.onerror = function() {
+        cleanup();
+        if (onError) onError(new Error('Failed to load Apps Script response'));
+      };
+
+      script.src = url;
+      document.body.appendChild(script);
+    }
+
     function saveDemoData() {
       var entryType = formEls.entryType.value;
       var form = getFormData();
@@ -500,31 +583,26 @@
         return;
       }
 
-      var payload = {
-        sheetId: SHEET_ID,
-        mainSheet: MAIN_SHEET,
-        section: formEls.entryType.value,
-        form: getFormData()
-      };
+      var params = getFormData();
+      params.action = 'write';
+      params.section = formEls.entryType.value;
 
-      fetch(formEls.appScriptUrl.value, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-      })
-      .then(function (response) { return response.json(); })
-      .then(function (result) {
-        if (!result.ok) throw new Error(result.message || 'Failed to save data');
+      jsonpRequest(formEls.appScriptUrl.value, params, function(result) {
+        if (!result || !result.ok) {
+          connected = false;
+          renderConnection();
+          alert((result && result.message) || 'Failed to save data.');
+          return;
+        }
         connected = !!result.live;
         renderConnection();
-        syncLiveData();
+        syncLiveData(false);
         alert('Saved to Google Sheets successfully.');
-      })
-      .catch(function (error) {
+      }, function(error) {
         console.error(error);
         connected = false;
         renderConnection();
-        alert('Connection failed. Staying in demo mode.');
+        alert('Connection failed. Please check the deployed Apps Script URL and sharing access.');
       });
     }
 
@@ -538,32 +616,37 @@
       if (result.data.pipeline) data.pipeline = result.data.pipeline;
     }
 
-    function syncLiveData() {
+    function syncLiveData(showAlert) {
+      if (showAlert === undefined) showAlert = true;
       if (!formEls.appScriptUrl.value || formEls.appScriptUrl.value.indexOf('YOUR_DEPLOYMENT_ID') > -1) {
-        alert('Please paste your deployed Google Apps Script web app URL first.');
+        if (showAlert) alert('Please paste your deployed Google Apps Script web app URL first.');
         return;
       }
 
-      fetch(formEls.appScriptUrl.value + '?action=dashboardData')
-        .then(function (response) { return response.json(); })
-        .then(function (result) {
-          if (!result.ok) throw new Error(result.message || 'Could not fetch live data');
-          connected = !!result.live;
-          applyLivePayload(result);
-          renderAll();
-          localStorage.setItem('tenderingDashboardLiveUrl', formEls.appScriptUrl.value);
-        })
-        .catch(function (error) {
-          console.error(error);
+      jsonpRequest(formEls.appScriptUrl.value, { action: 'dashboardData' }, function(result) {
+        if (!result || !result.ok) {
           connected = false;
           renderConnection();
-          alert('Could not fetch live data. Dashboard remains in demo mode.');
-        });
+          if (showAlert) alert((result && result.message) || 'Could not fetch live data.');
+          return;
+        }
+        connected = !!result.live;
+        applyLivePayload(result);
+        renderAll();
+        localStorage.setItem('tenderingDashboardLiveUrl', formEls.appScriptUrl.value);
+        if (showAlert) alert('Live data synced successfully.');
+      }, function(error) {
+        console.error(error);
+        connected = false;
+        renderConnection();
+        if (showAlert) alert('Could not fetch live data. Check Apps Script deployment access and URL.');
+      });
     }
 
     function renderAll() {
       renderConnection();
       renderKPIs();
+      renderEntityMatrices();
       renderTables();
       renderCharts();
     }
@@ -611,7 +694,7 @@
 
       document.getElementById('saveDemoBtn').addEventListener('click', saveDemoData);
       document.getElementById('saveSheetsBtn').addEventListener('click', saveToGoogleSheets);
-      document.getElementById('syncLiveBtn').addEventListener('click', syncLiveData);
+      document.getElementById('syncLiveBtn').addEventListener('click', function() { syncLiveData(true); });
 
       setupTabs();
       renderAll();
