@@ -120,6 +120,7 @@
         <div id="loginPanel" class="auth-panel active">
           <div class="field"><label for="loginEmail">Email</label><input id="loginEmail" type="email" placeholder="name@company.com" /></div>
           <div class="field" style="margin-top:12px;"><label for="loginPassword">Password</label><input id="loginPassword" type="password" placeholder="Enter password" /></div>
+          <div class="field" style="margin-top:8px;"><label><input id="loginShowPassword" type="checkbox" style="width:auto;margin-right:8px;" /> Show password</label></div>
           <div class="actions"><button class="btn btn-primary" id="loginBtn" type="button">Login</button></div>
         </div>
 
@@ -127,6 +128,8 @@
           <div class="field"><label for="registerName">Full Name</label><input id="registerName" type="text" placeholder="Your full name" /></div>
           <div class="field" style="margin-top:12px;"><label for="registerEmail">Email</label><input id="registerEmail" type="email" placeholder="name@company.com" /></div>
           <div class="field" style="margin-top:12px;"><label for="registerPassword">Password</label><input id="registerPassword" type="password" placeholder="Create password" /></div>
+          <div class="field" style="margin-top:12px;"><label for="registerPasswordConfirm">Confirm Password</label><input id="registerPasswordConfirm" type="password" placeholder="Confirm password" /></div>
+          <div class="field" style="margin-top:8px;"><label><input id="registerShowPassword" type="checkbox" style="width:auto;margin-right:8px;" /> Show passwords</label></div>
           <div class="actions"><button class="btn btn-primary" id="registerBtn" type="button">Create Account</button></div>
         </div>
 
@@ -249,7 +252,7 @@
           <h2 class="section-title">Apps Script Setup</h2>
           <div class="field">
             <label for="appScriptUrl">Google Apps Script Web App URL</label>
-            <input id="appScriptUrl" value="https://script.google.com/macros/s/AKfycbwomiGmmP0fU-B8lOKar9LqlTxLbg5wjUrpQ_GYyslk6xuKL6SPhg84uE2MVo_C5Vvf/exec" />
+            <input id="appScriptUrl" value="https://script.google.com/macros/s/AKfycbxnjnMrWmLYMokcdciJSiOFhoXPtGVB84kyYKJop_CB6ZllRoBMK-mYx9xD9SnJ7ANT/exec" />
           </div>
           <div class="small-note" style="margin-top: 14px;">
             <div><strong>Sheet ID:</strong> 1eU2ktGearF47bLH0EKToOOTWpDkqcbqO1zWGIL9hbsg</div>
@@ -612,6 +615,13 @@
       if (message) window.alert(message);
     }
 
+    function setPasswordVisibility(inputIds, visible) {
+      for (var i = 0; i < inputIds.length; i++) {
+        var el = document.getElementById(inputIds[i]);
+        if (el) el.type = visible ? 'text' : 'password';
+      }
+    }
+
     function showAuthOverlay(show) {
       document.getElementById('authOverlay').style.display = show ? 'flex' : 'none';
       document.getElementById('topUserbar').style.display = show ? 'none' : 'flex';
@@ -702,10 +712,16 @@
       var name = document.getElementById('registerName').value.trim();
       var email = document.getElementById('registerEmail').value.trim().toLowerCase();
       var password = document.getElementById('registerPassword').value;
+      var confirmPassword = document.getElementById('registerPasswordConfirm').value;
       formEls.appScriptUrl.value = normalizeUrl(formEls.appScriptUrl.value);
-      if (!name || !email || !password) {
+      if (!name || !email || !password || !confirmPassword) {
         setAuthMessage('Complete all registration fields.', true);
         safeAlert('Complete all registration fields.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setAuthMessage('Passwords do not match.', true);
+        safeAlert('Passwords do not match.');
         return;
       }
       if (!formEls.appScriptUrl.value || formEls.appScriptUrl.value.indexOf('/exec') === -1) {
@@ -956,6 +972,12 @@
       document.getElementById('loginBtn').addEventListener('click', handleLogin);
       document.getElementById('registerBtn').addEventListener('click', handleRegister);
       document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+      document.getElementById('loginShowPassword').addEventListener('change', function() {
+        setPasswordVisibility(['loginPassword'], this.checked);
+      });
+      document.getElementById('registerShowPassword').addEventListener('change', function() {
+        setPasswordVisibility(['registerPassword', 'registerPasswordConfirm'], this.checked);
+      });
 
       setupTabs();
       renderAll();
