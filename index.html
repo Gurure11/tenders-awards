@@ -249,7 +249,7 @@
           <h2 class="section-title">Apps Script Setup</h2>
           <div class="field">
             <label for="appScriptUrl">Google Apps Script Web App URL</label>
-            <input id="appScriptUrl" value="https://script.google.com/macros/s/AKfycbzMVC32Wqhii0mEBBayI-Vo7lNZk-VoPCPO5VFW_mawnWZefuzVpWOt068WtrKcoADV/exec" />
+            <input id="appScriptUrl" value="https://script.google.com/macros/s/AKfycbwomiGmmP0fU-B8lOKar9LqlTxLbg5wjUrpQ_GYyslk6xuKL6SPhg84uE2MVo_C5Vvf/exec" />
           </div>
           <div class="small-note" style="margin-top: 14px;">
             <div><strong>Sheet ID:</strong> 1eU2ktGearF47bLH0EKToOOTWpDkqcbqO1zWGIL9hbsg</div>
@@ -608,6 +608,10 @@
       el.style.color = isError ? '#991b1b' : '#64748b';
     }
 
+    function safeAlert(message) {
+      if (message) window.alert(message);
+    }
+
     function showAuthOverlay(show) {
       document.getElementById('authOverlay').style.display = show ? 'flex' : 'none';
       document.getElementById('topUserbar').style.display = show ? 'none' : 'flex';
@@ -698,11 +702,19 @@
       var name = document.getElementById('registerName').value.trim();
       var email = document.getElementById('registerEmail').value.trim().toLowerCase();
       var password = document.getElementById('registerPassword').value;
+      formEls.appScriptUrl.value = normalizeUrl(formEls.appScriptUrl.value);
       if (!name || !email || !password) {
         setAuthMessage('Complete all registration fields.', true);
+        safeAlert('Complete all registration fields.');
         return;
       }
-      setAuthMessage('Creating account...', false);
+      if (!formEls.appScriptUrl.value || formEls.appScriptUrl.value.indexOf('/exec') === -1) {
+        setAuthMessage('Apps Script URL is missing or invalid.', true);
+        safeAlert('Apps Script URL is missing or invalid.');
+        return;
+      }
+      setAuthMessage('Registering new user...', false);
+      safeAlert('Registering new user...');
       sha256Hex(password).then(function(passwordHash) {
         jsonpRequest(formEls.appScriptUrl.value, {
           action: 'register',
@@ -712,27 +724,40 @@
         }, function(result) {
           if (!result || !result.ok) {
             setAuthMessage((result && result.message) || 'Registration failed.', true);
+            safeAlert((result && result.message) || 'Registration failed.');
             return;
           }
           saveSession(result.user, result.sessionToken, result.sessionExpiry);
           setAuthMessage('Registration successful.', false);
-          syncLiveData(false);
+          safeAlert('Registration successful.');
+          safeAlert('Connecting to Google Sheets...');
+          syncLiveData(true);
         }, function(error) {
           setAuthMessage(error.message || 'Registration failed.', true);
+          safeAlert(error.message || 'Registration failed.');
         });
       }).catch(function(error) {
         setAuthMessage(error.message || 'Could not secure password.', true);
+        safeAlert(error.message || 'Could not secure password.');
       });
     }
 
     function handleLogin() {
       var email = document.getElementById('loginEmail').value.trim().toLowerCase();
       var password = document.getElementById('loginPassword').value;
+      formEls.appScriptUrl.value = normalizeUrl(formEls.appScriptUrl.value);
       if (!email || !password) {
         setAuthMessage('Enter email and password.', true);
+        safeAlert('Enter email and password.');
         return;
       }
-      setAuthMessage('Signing in...', false);
+      if (!formEls.appScriptUrl.value || formEls.appScriptUrl.value.indexOf('/exec') === -1) {
+        setAuthMessage('Apps Script URL is missing or invalid.', true);
+        safeAlert('Apps Script URL is missing or invalid.');
+        return;
+      }
+      setAuthMessage('Logging in...', false);
+      safeAlert('Logging in...');
       sha256Hex(password).then(function(passwordHash) {
         jsonpRequest(formEls.appScriptUrl.value, {
           action: 'login',
@@ -741,16 +766,21 @@
         }, function(result) {
           if (!result || !result.ok) {
             setAuthMessage((result && result.message) || 'Login failed.', true);
+            safeAlert((result && result.message) || 'Login failed.');
             return;
           }
           saveSession(result.user, result.sessionToken, result.sessionExpiry);
           setAuthMessage('Login successful.', false);
-          syncLiveData(false);
+          safeAlert('Login successful.');
+          safeAlert('Connecting to Google Sheets...');
+          syncLiveData(true);
         }, function(error) {
           setAuthMessage(error.message || 'Login failed.', true);
+          safeAlert(error.message || 'Login failed.');
         });
       }).catch(function(error) {
         setAuthMessage(error.message || 'Could not secure password.', true);
+        safeAlert(error.message || 'Could not secure password.');
       });
     }
 
@@ -839,7 +869,7 @@
       if (showAlert === undefined) showAlert = true;
       formEls.appScriptUrl.value = normalizeUrl(formEls.appScriptUrl.value);
       if (!formEls.appScriptUrl.value || formEls.appScriptUrl.value.indexOf('YOUR_DEPLOYMENT_ID') > -1) {
-        if (showAlert) alert('Please paste your deployed Google Apps Script web app URL first.');
+        if (showAlert) safeAlert('Please paste your deployed Google Apps Script web app URL first.');
         return;
       }
 
@@ -847,7 +877,7 @@
         if (!result || !result.ok) {
           connected = false;
           renderConnection();
-          if (showAlert) alert((result && result.message) || 'Could not fetch live data.');
+          if (showAlert) safeAlert((result && result.message) || 'Could not fetch live data.');
           return;
         }
         connected = !!result.live;
@@ -858,12 +888,12 @@
           updateUserBar();
           showAuthOverlay(false);
         }
-        if (showAlert) alert('Live data synced successfully.');
+        if (showAlert) safeAlert('Connected to Google Sheets successfully.');
       }, function(error) {
         console.error(error);
         connected = false;
         renderConnection();
-        if (showAlert) alert('Could not fetch live data. Check Apps Script deployment access and URL.');
+        if (showAlert) safeAlert('Could not fetch live data. Check Apps Script deployment access and URL.');
       });
     }
 
