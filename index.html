@@ -3,1622 +3,621 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Onpoint Tendering Feed</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+  <title>Tendering Performance Dashboard</title>
   <style>
     :root {
-      --bg:#eef4ff; --card:#ffffff; --line:#d8e4ff; --text:#122033; --muted:#58708f;
-      --primary:#0b3b91; --primary2:#1d4ed8; --soft:#e8f0ff; --good:#15803d; --warn:#b45309; --bad:#b91c1c;
-      --shadow:0 16px 34px rgba(29,78,216,.10); --radius:20px;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --primary: #0f766e;
+      --warn-bg: #fffbeb;
+      --warn-border: #fde68a;
+      --warn-text: #92400e;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      --radius: 22px;
     }
-    * { box-sizing:border-box; }
-    body { margin:0; background:linear-gradient(180deg,#f8fbff 0%, var(--bg) 100%); color:var(--text); font:14px/1.45 Arial,sans-serif; }
-    .wrap { max-width:1500px; margin:0 auto; padding:18px; }
-    .card { background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px; }
-    .topbar { display:grid; grid-template-columns:1fr auto auto; gap:12px; align-items:center; background:linear-gradient(135deg,#0b3b91 0%,#1d4ed8 60%,#60a5fa 100%); color:#fff; }
-    .topbar .muted, .topbar h1 { color:#fff; margin:0; }
-    .muted { color:var(--muted); }
-    .hero, .kpis, .grid, .form-grid, .toolbar, .stats-grid { display:grid; gap:14px; }
-    .hero { grid-template-columns:1.2fr .8fr; margin-top:16px; }
-    .toolbar { grid-template-columns:repeat(4,minmax(150px,1fr)) auto; align-items:end; }
-    .kpis { grid-template-columns:repeat(5,1fr); margin-top:16px; }
-    .grid.two { grid-template-columns:1fr 1fr; }
-    .grid.three { grid-template-columns:repeat(3,1fr); }
-    .form-grid { grid-template-columns:repeat(12,1fr); }
-    .span-2{grid-column:span 2} .span-3{grid-column:span 3} .span-4{grid-column:span 4} .span-6{grid-column:span 6} .span-12{grid-column:span 12}
-    input, select, textarea, button { width:100%; padding:12px 13px; border:1px solid #cfe0ff; border-radius:14px; font:inherit; color:var(--text); background:#fff; }
-    input:focus, select:focus, textarea:focus { outline:none; border-color:#60a5fa; box-shadow:0 0 0 4px rgba(96,165,250,.18); }
-    button { background:linear-gradient(135deg,var(--primary) 0%,var(--primary2) 100%); color:#fff; cursor:pointer; }
-    button.secondary { background:#fff; color:var(--text); }
-    .field { display:flex; flex-direction:column; gap:6px; }
-    .field label { font-size:12px; color:var(--muted); text-transform:uppercase; font-weight:700; letter-spacing:.05em; }
-    .kpi { padding:16px; border:1px solid var(--line); border-radius:18px; background:linear-gradient(180deg,#fff 0%,#f8fbff 100%); }
-    .kpi .label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.06em; }
-    .kpi .value { font-size:28px; font-weight:700; color:var(--primary); margin-top:8px; }
-    .kpi .sub { color:var(--muted); margin-top:4px; }
-    .tabs { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:18px; }
-    .tab { padding:12px; border:1px solid var(--line); border-radius:14px; background:#eaf2ff; color:#10356f; cursor:pointer; text-align:center; font-weight:700; }
-    .tab.active { background:#fff; box-shadow:0 10px 20px rgba(29,78,216,.08); }
-    .panel { display:none; margin-top:16px; }
-    .panel.active { display:block; }
-    .section-chip { display:inline-flex; align-items:center; gap:8px; padding:7px 12px; border-radius:999px; background:#eaf2ff; color:#0b3b91; font-size:12px; font-weight:700; margin-bottom:12px; }
-    .table-wrap { overflow:auto; border:1px solid var(--line); border-radius:16px; background:#fff; }
-    table { width:100%; border-collapse:collapse; }
-    th, td { padding:12px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
-    th { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; background:#f8fafc; position:sticky; top:0; z-index:1; }
-    .right { text-align:right; }
-    .badge { display:inline-block; padding:5px 10px; border-radius:999px; font-size:12px; font-weight:700; }
-    .ok { background:#dcfce7; color:#15803d; }
-    .warn { background:#fef3c7; color:#b45309; }
-    .bad { background:#fee2e2; color:#b91c1c; }
-    .chart-box { position:relative; height:320px; }
-    .hero-title { font-size:30px; margin:4px 0 8px; }
-    .callout { padding:16px; border:1px solid var(--line); border-radius:18px; background:linear-gradient(180deg,#ffffff 0%, #f5f9ff 100%); }
-    .footer-note { margin-top:12px; font-size:12px; color:var(--muted); }
-.save-note{font-size:12px;color:var(--muted);margin-top:8px}
-.mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-@media (max-width:1100px){.mini-grid{grid-template-columns:1fr;}}
-    @media (max-width:1100px) {
-      .hero,.toolbar,.kpis,.grid.two,.grid.three,.tabs { grid-template-columns:1fr; }
-      .form-grid { grid-template-columns:1fr; }
-      .span-2,.span-3,.span-4,.span-6,.span-12 { grid-column:span 1; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: var(--bg); color: var(--text); }
+    .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+    .hero { background: linear-gradient(135deg, #0f172a, #1e293b, #065f46); color: white; border-radius: 28px; padding: 28px; box-shadow: var(--shadow); display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+    .badge-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .badge { background: rgba(255,255,255,0.14); color: white; padding: 8px 12px; border-radius: 999px; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
+    .hero h1 { margin: 0 0 8px; font-size: 34px; }
+    .hero p { margin: 0; color: #dbeafe; max-width: 760px; }
+    .hero-mini { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 12px; min-width: 320px; }
+    .mini-card, .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .mini-card { background: rgba(255,255,255,0.10); color: white; padding: 16px; backdrop-filter: blur(6px); }
+    .mini-card .label { font-size: 12px; text-transform: uppercase; color: #cbd5e1; margin-bottom: 6px; }
+    .alert { margin-top: 18px; padding: 16px 18px; border-radius: 20px; background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn-text); }
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
+    .card { padding: 18px; }
+    .kpi-title { color: var(--muted); font-size: 14px; margin-bottom: 8px; }
+    .kpi-value { font-size: 30px; font-weight: 700; }
+    .kpi-sub { margin-top: 6px; color: var(--muted); font-size: 13px; }
+    .tabs { margin-top: 20px; background: white; border-radius: 22px; padding: 8px; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 8px; box-shadow: var(--shadow); }
+    .tab-btn { border: 0; background: transparent; padding: 12px 10px; border-radius: 14px; cursor: pointer; font-weight: 600; color: var(--muted); }
+    .tab-btn.active { background: #ecfeff; color: var(--primary); }
+    .tab-panel { display: none; margin-top: 18px; }
+    .tab-panel.active { display: block; }
+    .grid-2, .grid-3 { display: grid; gap: 16px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: 2fr 1fr; }
+    .section-title { margin: 0 0 14px; font-size: 20px; }
+    .chart-wrap { width: 100%; overflow-x: auto; }
+    canvas { width: 100% !important; max-height: 360px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .field { display: flex; flex-direction: column; gap: 8px; }
+    .field.full { grid-column: 1 / -1; }
+    label { font-size: 13px; font-weight: 600; color: #334155; }
+    input, select, textarea { width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; font: inherit; background: white; }
+    textarea { min-height: 90px; resize: vertical; }
+    .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+    .btn { border: 0; border-radius: 14px; padding: 12px 16px; font-weight: 700; cursor: pointer; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-outline { background: white; color: var(--primary); border: 1px solid #99f6e4; }
+    .btn-secondary { background: #e2e8f0; color: #0f172a; }
+    .small-note { background: #f8fafc; border-radius: 18px; padding: 14px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .status-pill { display: inline-block; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .status-connected { background: #dcfce7; color: #166534; }
+    .status-demo { background: #fef3c7; color: #92400e; }
+    @media (max-width: 1100px) {
+      .kpi-grid, .grid-2, .grid-3, .form-grid { grid-template-columns: 1fr 1fr; }
+      .tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .grid-3 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 760px) {
+      .container { padding: 16px; }
+      .kpi-grid, .grid-2, .form-grid, .hero-mini, .tabs { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 28px; }
     }
   </style>
 </head>
 <body>
-
-  <div id="loginOverlay" style="position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;">
-    <div class="card" style="width:min(760px,100%);max-height:calc(100vh - 40px);overflow:auto;">
-      <h2 style="margin:0 0 8px;color:#0b3b91;">Onpoint Tendering Feed Login</h2>
-      <div class="muted" style="margin-bottom:14px;">Login and registration are stored on the same spreadsheet in the <strong>Login</strong> tab.</div>
-      <div class="grid two">
-        <div class="card" style="padding:16px;">
-          <h3 style="margin-top:0">Login</h3>
-          <div class="form-grid">
-            <div class="field span-12"><label>Username</label><input id="loginUsername" autocomplete="username"></div>
-            <div class="field span-12"><label>Password</label><input id="loginPassword" type="password" autocomplete="current-password"></div>
-            <div class="field span-12"><button id="loginBtn" type="button">Login</button></div>
-          </div>
-        </div>
-        <div class="card" style="padding:16px;">
-          <h3 style="margin-top:0">Register New User</h3>
-          <div class="form-grid">
-            <div class="field span-12"><label>Full Name</label><input id="registerName"></div>
-            <div class="field span-12"><label>Username</label><input id="registerUsername"></div>
-            <div class="field span-12"><label>Password</label><input id="registerPassword" type="password"></div>
-            <div class="field span-12"><label>Role</label><select id="registerRole"><option>User</option><option>Admin</option></select></div>
-            <div class="field span-12"><button id="registerBtn" type="button">Register User</button></div>
-          </div>
-        </div>
-      </div>
-      <div id="loginMessage" class="footer-note">Please sign in to continue.</div>
-    </div>
-  </div>
-  <div id="loadingOverlay" style="position:fixed;inset:0;background:rgba(255,255,255,.78);display:none;align-items:center;justify-content:center;z-index:9998;">
-    <div class="card" style="padding:22px 28px;text-align:center;min-width:280px;">
-      <div style="font-size:18px;font-weight:700;color:#0b3b91;" id="loadingText">Loading data...</div>
-      <div class="footer-note">Please wait while the dashboard synchronises.</div>
-    </div>
-  </div>
-
-  <div class="wrap">
-    <div class="card topbar">
+  <div class="container">
+    <section class="hero">
       <div>
-        <div class="muted">Onpoint</div>
-        <h1>Onpoint (Tendering Feed)</h1>
-      </div>
-      <div id="connBadge" class="badge warn">Using seed data</div>
-      <div style="display:flex; gap:10px; align-items:center;">
-        <div id="currentUserChip" class="badge warn">Not logged in</div>
-        <button id="refreshBtn" type="button">Refresh</button>
-        <button id="logoutBtn" type="button" class="secondary">Logout</button>
-      </div>
-    </div>
-
-    <div class="card hero">
-      <div>
-        <div class="section-chip">Tender pipeline dashboard</div>
-        <div class="hero-title">Pipeline, targets, variance and tender capture in one place</div>
-      </div>
-      <div class="callout">
-        <div style="font-size:13px; text-transform:uppercase; color:var(--muted); font-weight:700;">Current view</div>
-        <div style="font-size:22px; font-weight:700; margin-top:8px;">Tendering overview</div>
-      </div>
-    </div>
-
-    <div class="kpis" id="kpis"></div>
-
-    <div class="tabs">
-      <div class="tab active" data-panel="dashboardPanel">Dashboard</div>
-      <div class="tab" data-panel="rfqPanel">RFQ</div>
-      <div class="tab" data-panel="capturePanel">Capture Tender</div>
-      <div class="tab" data-panel="contractsPanel">Awards % Rate</div>
-      <div class="tab" data-panel="summaryPanel">Targets & Variance</div>
-      <div class="tab" data-panel="awardsPanel">Tendering & Awards</div>
-    </div>
-
-    <div class="panel active" id="dashboardPanel">
-      <div class="card" style="margin-bottom:16px;">
-        <div class="toolbar">
-          <div class="field">
-            <label>Cost Center</label>
-            <select id="dashboardCostCenterFilter"></select>
-          </div>
-          <div class="field">
-            <label>Project Name</label>
-            <select id="dashboardProjectFilter"></select>
-          </div>
-          <div class="field">
-            <label>Chart View</label>
-            <select id="dashboardGroupBy">
-              <option value="businessUnit">Cost Center</option>
-              <option value="clientName">Company</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Current Date & Time</label>
-            <div id="dashboardDateTime" style="padding:12px 13px;border:1px solid #cfe0ff;border-radius:14px;background:#fff;min-height:46px;display:flex;align-items:center;font-weight:700;color:var(--primary);"></div>
-          </div>
+        <div class="badge-row">
+          <span class="badge">2026/27 FY</span>
+          <span class="badge">Tendering Department</span>
+          <span class="badge">Live Dashboard</span>
         </div>
-        <div style="margin-top:16px;border:1px solid var(--line);border-radius:18px;padding:16px;background:linear-gradient(180deg,#fff 0%,#f8fbff 100%);">
-          <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
-            <div>
-              <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;">Tendered Amount vs Total Target</div>
-              <div id="progressHeadline" style="font-size:24px;font-weight:700;color:var(--primary);margin-top:6px;">R0 / R0</div>
+        <h1>Tendering Performance Dashboard</h1>
+        <p>HTML dashboard connected to Google Sheets through Apps Script. Each section fetches from its matching tab and shows live connection when the API responds successfully.</p>
+      </div>
+      <div class="hero-mini">
+        <div class="mini-card"><div class="label">Connection</div><div id="connectionLabel">Not connected</div></div>
+        <div class="mini-card"><div class="label">Main Sheet</div><div>Tendering</div></div>
+        <div class="mini-card"><div class="label">Sheet ID</div><div style="word-break: break-all;">1eU2ktGearF47bLH0EKToOOTWpDkqcbqO1zWGIL9hbsg</div></div>
+        <div class="mini-card"><div class="label">Mode</div><div id="modeLabel">Demo data active</div></div>
+      </div>
+    </section>
+
+    <div id="offlineAlert" class="alert">
+      <strong>Not connected.</strong> Demo data is currently displayed. Add your Apps Script web app URL and click <strong>Sync Live Data</strong>.
+    </div>
+
+    <section class="kpi-grid" id="kpiGrid"></section>
+
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+      <button class="tab-btn" data-tab="tender-summary">Tenders & RFQs</button>
+      <button class="tab-btn" data-tab="awards">Awards</button>
+      <button class="tab-btn" data-tab="direct-entity">Direct by Entity</button>
+      <button class="tab-btn" data-tab="direct-scope">Direct by Scope</button>
+      <button class="tab-btn" data-tab="private-sector">Private Sector</button>
+      <button class="tab-btn" data-tab="pipeline">Pipeline</button>
+      <button class="tab-btn" data-tab="input">Data Input</button>
+    </nav>
+
+    <section id="dashboard" class="tab-panel active">
+      <div class="grid-3">
+        <div class="card"><h2 class="section-title">Awards to Date Against Target</h2><div class="chart-wrap"><canvas id="awardsChart"></canvas></div></div>
+        <div class="card"><h2 class="section-title">Direct Contract Mix by Scope</h2><div class="chart-wrap"><canvas id="scopePieChart"></canvas></div></div>
+      </div>
+      <div class="grid-2" style="margin-top: 16px;">
+        <div class="card"><h2 class="section-title">Value of Direct Contracts by Entity</h2><div class="chart-wrap"><canvas id="entityValueChart"></canvas></div></div>
+        <div class="card"><h2 class="section-title">Private Sector Awards</h2><div class="chart-wrap"><canvas id="privateSectorChart"></canvas></div></div>
+      </div>
+    </section>
+
+    <section id="tender-summary" class="tab-panel"><div class="card"><h2 class="section-title">Summary of Tenders, RFQs and Awards by Entity</h2><div id="tenderSummaryTable"></div></div></section>
+    <section id="awards" class="tab-panel"><div class="card"><h2 class="section-title">Awards to Date by Entity</h2><div id="awardsTable"></div></div></section>
+    <section id="direct-entity" class="tab-panel"><div class="card"><h2 class="section-title">Value of Direct Contracts to Date by Entity</h2><div id="directEntityTable"></div></div></section>
+    <section id="direct-scope" class="tab-panel"><div class="card"><h2 class="section-title">Value of Direct Contracts by Scope</h2><div id="directScopeTable"></div></div></section>
+    <section id="private-sector" class="tab-panel"><div class="card"><h2 class="section-title">Private Sector Awards by Entity</h2><div id="privateSectorTable"></div></div></section>
+    <section id="pipeline" class="tab-panel"><div class="card"><h2 class="section-title">Pipeline</h2><div id="pipelineTable"></div></div></section>
+
+    <section id="input" class="tab-panel">
+      <div class="grid-3">
+        <div class="card">
+          <h2 class="section-title">Data Input Section</h2>
+          <div class="form-grid">
+            <div class="field">
+              <label for="entryType">Section</label>
+              <select id="entryType">
+                <option value="tenderSummary">Tender Summary</option>
+                <option value="awardsTargets">Awards Targets</option>
+                <option value="directContractsByEntity">Direct Contracts by Entity</option>
+                <option value="directContractsByScope">Direct Contracts by Scope</option>
+                <option value="privateSector">Private Sector Awards</option>
+                <option value="pipeline">Pipeline</option>
+              </select>
             </div>
-            <div style="text-align:right;">
-              <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;">Variance</div>
-              <div id="progressVariance" style="font-size:18px;font-weight:700;color:var(--text);margin-top:6px;">0.00% (R0)</div>
+            <div class="field"><label for="entity">Entity</label><select id="entity"></select></div>
+            <div class="field"><label for="month">Month</label><select id="month"></select></div>
+            <div class="field">
+              <label for="metric">Metric</label>
+              <select id="metric">
+                <option value="tenders">Tenders</option>
+                <option value="rfqs">RFQs</option>
+                <option value="awards">Awards</option>
+              </select>
             </div>
+            <div class="field"><label for="scope">Scope</label><select id="scope"></select></div>
+            <div class="field">
+              <label for="stage">Stage</label>
+              <select id="stage">
+                <option value="Prospecting">Prospecting</option>
+                <option value="Bid Submitted">Bid Submitted</option>
+                <option value="Evaluation">Evaluation</option>
+                <option value="Negotiation">Negotiation</option>
+                <option value="Awarded">Awarded</option>
+              </select>
+            </div>
+            <div class="field full"><label for="opportunity">Opportunity / Description</label><textarea id="opportunity" placeholder="Enter pipeline opportunity or entry note"></textarea></div>
+            <div class="field"><label for="expectedMonth">Expected Month</label><select id="expectedMonth"></select></div>
+            <div class="field"><label for="value">Value / Count</label><input id="value" type="number" placeholder="Enter amount or count" /></div>
           </div>
-          <div style="margin-top:14px;height:16px;border-radius:999px;background:#e8f0ff;overflow:hidden;border:1px solid var(--line);">
-            <div id="targetProgressBar" style="height:100%;width:0%;background:linear-gradient(135deg,var(--primary) 0%,var(--primary2) 100%);border-radius:999px;"></div>
+          <div class="actions">
+            <button class="btn btn-primary" id="saveDemoBtn" type="button">Save Demo Data</button>
+            <button class="btn btn-outline" id="saveSheetsBtn" type="button">Save to Google Sheets</button>
+            <button class="btn btn-secondary" id="syncLiveBtn" type="button">Sync Live Data</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="section-title">Apps Script Setup</h2>
+          <div class="field">
+            <label for="appScriptUrl">Google Apps Script Web App URL</label>
+            <input id="appScriptUrl" value="https://script.google.com/macros/s/AKfycbzw9KfyfnsLU-3UaUdrO0wiL5Qq-8UAAOhF855ipDmkcxK-tpvnnEU3f29VVccKrv8n/exec" />
+          </div>
+          <div class="small-note" style="margin-top: 14px;">
+            <div><strong>Sheet ID:</strong> 1eU2ktGearF47bLH0EKToOOTWpDkqcbqO1zWGIL9hbsg</div>
+            <div><strong>Main Sheet:</strong> Tendering</div>
+            <div style="margin-top: 10px;"><strong>GET health:</strong> ?action=health</div>
+            <div><strong>GET dashboard data:</strong> ?action=dashboardData</div>
+            <div><strong>POST payload:</strong> { sheetId, mainSheet, section, form }</div>
+            <div style="margin-top: 10px;"><strong>Status:</strong> <span id="statusPill" class="status-pill status-demo">Demo mode</span></div>
           </div>
         </div>
       </div>
-      <div class="grid two">
-        <div class="card">
-          <h3 style="margin-top:0">Target totals by scope</h3>
-          <div class="chart-box"><canvas id="businessUnitChart"></canvas></div>
-        </div>
-        <div class="card">
-          <h3 style="margin-top:0">Tender value by cost center / company</h3>
-          <div class="chart-box"><canvas id="scopeChart"></canvas></div>
-        </div>
+      <div class="card" style="margin-top: 16px;">
+        <h2 class="section-title">Recommended Google Sheets Tabs</h2>
+        <div id="sheetTabsTable"></div>
       </div>
-      <div class="card" style="margin-top:16px;">
-        <h3 style="margin-top:0">Actual vs Target by Cost Center</h3>
-        <div class="chart-box"><canvas id="actualVsTargetChart"></canvas></div>
-      </div>
-      <div class="grid two" style="margin-top:16px;">
-        <div class="card">
-          <h3 style="margin-top:0">Target totals by scope</h3>
-          <div class="table-wrap"><table id="topClientsTable"></table></div>
-        </div>
-        <div class="card">
-          <h3 style="margin-top:0">Tenders, RFQ & Awards by Cost Center (Mar-26 - Feb-27)</h3>
-          <div class="table-wrap"><table id="monthlyAwardsSummaryTable"></table></div>
-        </div>
-      </div>
-          <div class="card" style="margin-top:16px;">
-        <h3 style="margin-top:0">Contracts % Rate</h3>
-        <div class="table-wrap"><table id="contractsDashboardTable"></table></div>
-      </div>
-</div>
-
-    
-    <div class="panel" id="rfqPanel">
-      <div class="card">
-        <div class="section-chip">Store RFQs directly to Google Sheet tab RFQ</div>
-        <h3 style="margin-top:0">Capture RFQ</h3>
-        <div class="form-grid">
-          <div class="field span-3"><label>Cost Center / Business Unit</label><select id="rfqBusinessUnit"></select></div>
-          <div class="field span-3"><label>Company Name</label><select id="rfqCompanyName"></select></div>
-          <div class="field span-3"><label>Scope</label><select id="rfqScopeType"></select></div>
-          <div class="field span-3"><label>Tender Amount</label><input id="rfqTenderAmount" placeholder="R0.00"></div>
-          <div class="field span-4"><label>Contact Person</label><input id="rfqContactPerson"></div>
-          <div class="field span-4"><label>RFQ Status</label><select id="rfqStatus"><option>Forecast</option><option>Confirmed</option></select></div>
-          <div class="field span-4"><label>Notes</label><input id="rfqNotes"></div>
-          <div class="field span-12"><button id="saveRfqBtn" type="button">Save RFQ</button></div>
-        </div>
-        <div class="save-note">RFQs save to tab <strong>RFQ</strong> in spreadsheet <strong>Performance Tracker - Tendering(Pipeline)</strong>.</div>
-      </div>
-      <div class="grid two" style="margin-top:16px;">
-        <div class="card">
-          <h3 style="margin-top:0">RFQ vs Awarded Tenders journal</h3>
-          <div class="chart-box"><canvas id="rfqAwardedChart"></canvas></div>
-        </div>
-        <div class="card">
-          <h3 style="margin-top:0">Each cost center RFQ vs Awarded by scope</h3>
-          <div class="chart-box"><canvas id="rfqScopeByCostCenterChart"></canvas></div>
-        </div>
-      </div>
-      <div class="card" style="margin-top:16px;">
-        <h3 style="margin-top:0">RFQ transaction journal</h3>
-        <div class="table-wrap"><table id="rfqTable"></table></div>
-      </div>
-    </div>
-
-    <div class="panel" id="capturePanel">
-      <div class="card">
-        <div class="section-chip">Store directly to Google Sheet</div>
-        <h3 style="margin-top:0">Capture Tender</h3>
-        <div class="form-grid">
-          <div class="field span-3"><label>Cost Center / Business Unit</label><select id="formBusinessUnit"></select></div>
-          <div class="field span-3"><label>Client Name</label><select id="formClientName"></select></div>
-          <div class="field span-3"><label>Project Name</label><select id="formProjectName"></select></div>
-          <div class="field span-3"><label>Contract Description</label><input id="formContractDescription"></div>
-          <div class="field span-3"><label>Scope Type</label><select id="formScopeType"></select></div>
-          <div class="field span-3"><label>Scope Value</label><input id="formScopeValue" placeholder="R0.00 or RATES-PANEL"></div>
-          <div class="field span-3"><label>Total Value</label><input id="formTotalValue" placeholder="R0.00"></div>
-          <div class="field span-3"><label>Status</label><select id="formStatus"><option>Ongoing</option><option>On-hold</option><option>Completed</option></select></div>
-          <div class="field span-3"><label>Probability %</label><input id="formProbability" type="number" min="0" max="100" value="50"></div>
-          <div class="field span-3"><label>Expected Close Month</label><input id="formCloseMonth" type="month"></div>
-          <div class="field span-6"><label>Notes</label><textarea id="formNotes" rows="3"></textarea></div>
-          <div class="field span-12"><button id="saveTenderBtn" type="button">Save Tender</button></div>
-        </div>
-        <div class="footer-note">This build is configured for spreadsheet ID <strong>1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0</strong> and tab <strong>Tenders</strong>. Until your deployed Apps Script URL is added, save will store locally in the browser so you can still test the interface.</div>
-      </div>
-    </div>
-
-    <div class="panel" id="contractsPanel">
-      <div class="card">
-        <div class="section-chip">Store directly to Google Sheet tab Contracts</div>
-        <h3 style="margin-top:0">Contracts % Rate</h3>
-        <div class="form-grid">
-          <div class="field span-2"><label>Entity</label><select id="contractEntity"></select></div>
-          <div class="field span-2"><label>Target</label><input id="contractTarget" placeholder="50"></div>
-          <div class="field span-2"><label>Actual Achieved</label><input id="contractActualAchieved" placeholder="1"></div>
-          <div class="field span-2"><label>% Performance</label><input id="contractPerformancePercent" placeholder="2.00%"></div>
-          <div class="field span-2"><label>Tenders Submitted</label><input id="contractTendersSubmitted" placeholder="145"></div>
-          <div class="field span-2"><label>Win Rate</label><input id="contractWinRate" placeholder="0.69%"></div>
-          <div class="field span-12"><button id="saveContractBtn" type="button">Save Contracts % Rate</button></div>
-        </div>
-        <div class="save-note">Contracts % Rate saves to tab <strong>Contracts</strong> in spreadsheet <strong>Performance Tracker - Tendering(Pipeline)</strong>.</div>
-      </div>
-      <div class="card" style="margin-top:16px;">
-        <h3 style="margin-top:0">Contracts % Rate Journal</h3>
-        <div class="table-wrap"><table id="contractsTable"></table></div>
-      </div>
-    </div>
-
-    
-    <div class="panel" id="awardsPanel">
-      <div class="card">
-        <div class="section-chip">Store directly to Google Sheet tab Awards</div>
-        <h3 style="margin-top:0">Tendering & Awards Dashboard</h3>
-        <div class="form-grid">
-          <div class="field span-3"><label>Entity</label><select id="awardEntity"></select></div>
-          <div class="field span-2"><label>Month</label><select id="awardMonth">
-            <option>MAR</option><option>APR</option><option>MAY</option><option>JUNE</option><option>JUL</option><option>AUG</option><option>SEP</option><option>OCT</option><option>NOV</option><option>DEC</option><option>JAN</option><option>FEB</option>
-          </select></div>
-          <div class="field span-2"><label>Tenders</label><input id="awardTenders" placeholder="0"></div>
-          <div class="field span-2"><label>RFQs</label><input id="awardRfqs" placeholder="0"></div>
-          <div class="field span-2"><label>Awards</label><input id="awardAwards" placeholder="0"></div>
-          <div class="field span-12"><button id="saveAwardBtn" type="button">Save Tendering & Awards</button></div>
-        </div>
-      </div>
-      <div class="card" style="margin-top:16px;">
-        <h3 style="margin-top:0">Tendering & Awards Dashboard</h3>
-        <div class="table-wrap"><table id="awardsTable"></table></div>
-      </div>
-    </div>
-
-<div class="panel" id="summaryPanel">
-      <div class="card" style="margin-bottom:16px;">
-        <div class="section-chip">Store directly to Google Sheet tab Scope Target</div>
-        <h3 style="margin-top:0">Set Annual Targets by Cost Center</h3>
-        <div class="form-grid">
-          <div class="field span-4"><label>Cost Center</label><select id="targetCostCenter"></select></div>
-          <div class="field span-4"><label>Target Set</label><input id="targetAmount" type="number" min="0" step="0.01" placeholder="480000000"></div>
-          <div class="field span-4"><label>Year</label><select id="targetYear"><option value="2026">2026</option></select></div>
-          <div class="field span-12"><button id="saveTargetBtn" type="button">Save Cost Center Target</button></div>
-        </div>
-        <div class="save-note">Targets save to tab <strong>Scope Target</strong> in spreadsheet <strong>Performance Tracker - Tendering(Pipeline)</strong>.</div>
-      </div>
-      <div class="card" style="margin-bottom:16px;">
-        <h3 style="margin-top:0">Cost Center Targets</h3>
-        <div class="table-wrap"><table id="scopeTargetsTable"></table></div>
-      </div>
-      <div class="grid two">
-        <div class="card">
-          <h3 style="margin-top:0">Summary totals from Tenders tab</h3>
-          <div class="table-wrap"><table id="summaryTotalsTable"></table></div>
-        </div>
-        <div class="card">
-          <h3 style="margin-top:0">Target vs actual by scope</h3>
-          <div class="chart-box"><canvas id="targetChart"></canvas></div>
-        </div>
-      </div>
-    </div>
+    </section>
   </div>
 
-<script>
-const APP_CONFIG = {
-  rfqTab: "RFQ",
-  loginTab: "Login",
-  appsScriptUrl: "https://script.google.com/macros/s/AKfycbx-q_zz5uqlaQlAgn4IiYqj9PDmPNfAAxTDL6jzY4djbpPMRO_CZi_5TIoitUsLPX6IZQ/exec", // Paste your deployed Apps Script web app URL here after deploying Code.gs
-  spreadsheetId: "1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0",
-  driveFileId: "1t2Cqb5Q_thBw57iff1earF2AIb3sjtqTUw9KCgU3bZ0",
-  spreadsheetName: "Performance Tracker - Tendering(Pipeline)",
-  pipelineTab: "Tenders",
-  contractsTab: "Contracts",
-  awardsTab: "Awards",
-  scopeTargetTab: "Scope Target"
-};
-const APPS_SCRIPT_URL = APP_CONFIG.appsScriptUrl;
-const COST_CENTER_OPTIONS = ["Onpoint Ontime","Nkanyezi","Aqua Telecoms","Distinct Hire"];
-const SCOPE_OPTIONS = ["CIVIL","BUILDING","ELECTRICAL","TELECOMS","MECHANICAL","ROADS","PLANT HIRE"];
-const CLIENT_NAME_OPTIONS = ["ETHEKWINI","COEGA","ESKOM-LOU","JRA","MSUNDUZI","NKANYEZI","DISTINCT","AQUATELECOMS","ESKOM"];
-const STATUS_OPTIONS = ["Ongoing","On-hold","Completed"];
-const CUSTOM_CLIENT_OPTIONS_KEY = "onpoint_tendering_feed_custom_clients_v1";
-const CUSTOM_PROJECT_OPTIONS_KEY = "onpoint_tendering_feed_custom_projects_v1";
-const LOCAL_STORAGE_KEY = "onpoint_tendering_feed_local_v1";
-const LOCAL_RFQ_STORAGE_KEY = "onpoint_tendering_feed_rfq_local_v1";
-const LOCAL_CONTRACTS_STORAGE_KEY = "onpoint_tendering_feed_contracts_local_v1";
-const LOCAL_AWARDS_STORAGE_KEY = "onpoint_tendering_feed_awards_local_v1";
-const LOCAL_SCOPE_TARGETS_STORAGE_KEY = "onpoint_tendering_feed_scope_targets_local_v1";
-const SESSION_USER_KEY = "onpoint_tendering_feed_session_user_v1";
-const SEED_DATA = {
-  "pipeline": [
-    {
-      "businessUnit": "Onpoint Ontime",
-      "clientName": "ETHEKWINI",
-      "contractDescription": "VERULAM WASTE WATER TREATMENT WORKS REHABILITATION",
-      "scopeType": "CIVIL",
-      "scopeValue": "R29,800,000.00",
-      "totalValue": "R29,800,000.00",
-      "status": "Ongoing",
-      "probability": 70,
-      "closeMonth": "",
-      "notes": ""
-    },
-    {
-      "businessUnit": "Onpoint Ontime",
-      "clientName": "COEGA",
-      "contractDescription": "STORM DAMAGE REPAIRS TO  SCHOOL",
-      "scopeType": "BUILDING",
-      "scopeValue": "R25,000,000.00",
-      "totalValue": "R25,000,000.00",
-      "status": "Ongoing",
-      "probability": 70,
-      "closeMonth": "",
-      "notes": ""
-    },
-    {
-      "businessUnit": "Onpoint Ontime",
-      "clientName": "ESKOM-LOU",
-      "contractDescription": "EPHRAIM MOGALE SUBSTATION EXPANSION",
-      "scopeType": "CIVIL",
-      "scopeValue": "R30,137,219.00",
-      "totalValue": "R30,137,219.00",
-      "status": "Ongoing",
-      "probability": 70,
-      "closeMonth": "",
-      "notes": ""
-    },
-    {
-      "businessUnit": "Onpoint Ontime",
-      "clientName": "ESKOM-LOU",
-      "contractDescription": "CONSTRUCTION & DISMANTLING OF MV & HV SUBSTATIONS & SWITCHING STATIONS",
-      "scopeType": "ELECTRICAL",
-      "scopeValue": "RATES-PANEL",
-      "totalValue": "R0.00",
-      "status": "Ongoing",
-      "probability": 50,
-      "closeMonth": "",
-      "notes": ""
-    },
-    {
-      "businessUnit": "Onpoint Ontime",
-      "clientName": "ESKOM-LOU",
-      "contractDescription": "CONSTRUCTION & DISMANTLING OF HV DISTRIBUTION WITHIN THE MPUMALANGA AREA",
-      "scopeType": "ELECTRICAL",
-      "scopeValue": "RATES-PANEL",
-      "totalValue": "R0.00",
-      "status": "Ongoing",
-      "probability": 50,
-      "closeMonth": "",
-      "notes": ""
-    },
-    {
-      "businessUnit": "Onpoint Ontime",
-      "clientName": "JRA",
-      "contractDescription": "CONSTRUCTION OF STORMWATER INFRASTRUCTURE",
-      "scopeType": "CIVIL",
-      "scopeValue": "RATES - PANEL",
-      "totalValue": "R0.00",
-      "status": "Ongoing",
-      "probability": 50,
-      "closeMonth": "",
-      "notes": ""
-    },
-    {
-      "businessUnit": "Onpoint Ontime",
-      "clientName": "MSUNDUZI",
-      "contractDescription": "E50 of 2025: REPAIRS AND MAINTENANCE OF HIGH VOLTAGE 33KV OILE FILLED AND 132KV XLPE UNDERGROUND CABLES",
-      "scopeType": "CIVIL",
-      "scopeValue": "RATES - PANEL",
-      "totalValue": "R0.00",
-      "status": "Ongoing",
-      "probability": 50,
-      "closeMonth": "",
-      "notes": ""
-    },
-    {
-      "businessUnit": "Aqua Telecoms",
-      "clientName": "ESKOM",
-      "contractDescription": "SUPPLY & DELIVERY OF ELECTRICAL CABLES",
-      "scopeType": "ELECTRICAL",
-      "scopeValue": "RATES-PANEL",
-      "totalValue": "R0.00",
-      "status": "Ongoing",
-      "probability": 50,
-      "closeMonth": "",
-      "notes": ""
-    },
-    {
-      "businessUnit": "Aqua Telecoms",
-      "clientName": "ESKOM",
-      "contractDescription": "VEGETATION MANAGEMENT",
-      "scopeType": "ELECTRICAL",
-      "scopeValue": "RATES-PANEL",
-      "totalValue": "R0.00",
-      "status": "Ongoing",
-      "probability": 50,
-      "closeMonth": "",
-      "notes": ""
-    }
-  ],
-  "summary": {
-    "total": {
-      "civil": "R59,937,219.00",
-      "building": "R25,000,000.00",
-      "electrical": "R0.00",
-      "telecoms": "R0.00",
-      "mechanical": "R0.00",
-      "roads": "R0.00",
-      "plantHire": "R0.00",
-      "overall": "R84,937,219.00"
-    },
-    "target": {
-      "civil": "R105,000,000.00",
-      "building": "R105,000,000.00",
-      "electrical": "R202,000,000.00",
-      "telecoms": "R75,000,000.00",
-      "mechanical": "R100,000,000.00",
-      "roads": "R106,000,000.00",
-      "plantHire": "R10,000,000.00",
-      "overall": "R703,000,000.00"
-    },
-    "variance": {
-      "civil": "-R45,062,781.00",
-      "building": "-R80,000,000.00",
-      "electrical": "-R202,000,000.00",
-      "telecoms": "-R75,000,000.00",
-      "mechanical": "-R100,000,000.00",
-      "roads": "-R106,000,000.00",
-      "plantHire": "-R10,000,000.00",
-      "overall": "-R618,062,781.00"
-    }
-  }
-};
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    var SHEET_ID = "1eU2ktGearF47bLH0EKToOOTWpDkqcbqO1zWGIL9hbsg";
+    var MAIN_SHEET = "Tendering";
+    var MONTHS = ["MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC", "JAN", "FEB"];
+    var ENTITIES = ["On Point", "Nkanyezi", "Aqua Telecoms", "Distinct", "Aquatech", "Advantedge"];
+    var SCOPES = ["Civils", "Roads", "Building", "Electrical", "Telecoms", "Mechanical", "Plant Hire"];
+    var SHEET_TABS = [
+      { tab: "Tendering", headline: "Tendering Dashboard Overview & KPIs" },
+      { tab: "Tender_Summary", headline: "Summary of Tenders, RFQs and Awards by Entity" },
+      { tab: "Awards_Targets", headline: "Awards to Date Against Annual Targets" },
+      { tab: "Direct_Contracts", headline: "Direct Contracts Awarded and Value to Date" },
+      { tab: "Direct_By_Entity", headline: "Value of Direct Contracts by Entity" },
+      { tab: "Direct_By_Scope", headline: "Value of Direct Contracts by Scope" },
+      { tab: "Private_Sector", headline: "Private Sector Awards by Entity" },
+      { tab: "Pipeline", headline: "Tendering Pipeline and Opportunity Tracker" },
+      { tab: "Settings", headline: "Google Apps Script Connection and Dashboard Settings" }
+    ];
 
-const state = {
-  rows: [],
-  rfqs: [],
-  contracts: [],
-  awards: [],
-  scopeTargets: [],
-  summary: SEED_DATA.summary,
-  currentUser: null,
-  filters: { unit:"All", scope:"All", status:"All", search:"", project:"All" }
-};
-let charts = {};
-let chartsReady = false;
-let chartsScheduled = false;
+    var connected = false;
+    var charts = {};
+    var formEls = {};
 
-const $ = id => document.getElementById(id);
-const text = v => String(v ?? "").trim();
-const num = v => {
-  const s = text(v).replace(/,/g,"").replace(/R/g,"").replace(/\s/g,"");
-  const n = Number(s);
-  return Number.isFinite(n) ? n : 0;
-};
-const money = v => new Intl.NumberFormat("en-ZA",{style:"currency",currency:"ZAR",maximumFractionDigits:0}).format(num(v));
-function percentText(value, decimals = 2) {
-  const raw = text(value);
-  if (!raw) return "0.00%";
-  if (raw.includes("%")) return raw;
-  const n = Number(raw.toString().replace(",", "."));
-  if (!Number.isFinite(n)) return raw;
-  return `${n.toFixed(decimals)}%`;
-}
-function derivePercent(part, whole) {
-  const p = num(part);
-  const w = num(whole);
-  if (!w) return "0.00%";
-  return `${((p / w) * 100).toFixed(2)}%`;
-}
-
-function isChartJsReady() {
-  return typeof window.Chart !== 'undefined';
-}
-function waitForChartJs(timeout = 8000) {
-  return new Promise((resolve, reject) => {
-    if (isChartJsReady()) return resolve();
-    const start = Date.now();
-    const timer = setInterval(() => {
-      if (isChartJsReady()) {
-        clearInterval(timer);
-        resolve();
-      } else if (Date.now() - start > timeout) {
-        clearInterval(timer);
-        reject(new Error('Chart.js load timeout'));
-      }
-    }, 50);
-  });
-}
-function scheduleChartsRender() {
-  if (chartsScheduled) return;
-  chartsScheduled = true;
-  const run = () => {
-    chartsScheduled = false;
-    if (!chartsReady) return;
-    try { renderCharts(); } catch (e) { console.error(e); }
-  };
-  if (window.requestIdleCallback) requestIdleCallback(run, { timeout: 300 });
-  else setTimeout(run, 0);
-}
-
-function setLoading(show, message) {
-  const overlay = $("loadingOverlay");
-  const textEl = $("loadingText");
-  if (textEl && message) textEl.textContent = message;
-  if (overlay) overlay.style.display = show ? "flex" : "none";
-}
-function notifyLoaded(message) {
-  alert(message || "Data loaded successfully.");
-}
-function saveSessionUser(user) {
-  try { localStorage.setItem(SESSION_USER_KEY, JSON.stringify(user || null)); } catch (e) {}
-}
-function restoreSessionUser() {
-  try { return JSON.parse(localStorage.getItem(SESSION_USER_KEY) || "null"); } catch (e) { return null; }
-}
-function setCurrentUser(user) {
-  state.currentUser = user || null;
-  saveSessionUser(state.currentUser);
-  const chip = $("currentUserChip");
-  if (chip) {
-    chip.textContent = state.currentUser ? `${state.currentUser.name || state.currentUser.username} | ${state.currentUser.role || "User"}` : "Not logged in";
-    chip.className = `badge ${state.currentUser ? "ok" : "warn"}`;
-  }
-  if ($("loginOverlay")) $("loginOverlay").style.display = state.currentUser ? "none" : "flex";
-}
-
-const badgeClass = status => {
-  const s = text(status).toLowerCase();
-  if (s === "completed") return "ok";
-  if (s === "on-hold") return "bad";
-  return "warn";
-};
-function setConn(label, cls) {
-  const el = $("connBadge");
-  el.textContent = label;
-  el.className = `badge ${cls}`;
-}
-function loadLocalRows() {
-  try { return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || "[]"); } catch { return []; }
-}
-function saveLocalRows(rows) {
-  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(rows));
-}
-function loadLocalRfqs() {
-  try { return JSON.parse(localStorage.getItem(LOCAL_RFQ_STORAGE_KEY) || "[]"); } catch { return []; }
-}
-function saveLocalRfqs(rows) {
-  localStorage.setItem(LOCAL_RFQ_STORAGE_KEY, JSON.stringify(rows));
-}
-function loadLocalContracts() {
-  try { return JSON.parse(localStorage.getItem(LOCAL_CONTRACTS_STORAGE_KEY) || "[]"); } catch { return []; }
-}
-function saveLocalContracts(rows) {
-  localStorage.setItem(LOCAL_CONTRACTS_STORAGE_KEY, JSON.stringify(rows));
-}
-function loadLocalAwards() {
-  try { return JSON.parse(localStorage.getItem(LOCAL_AWARDS_STORAGE_KEY) || "[]"); } catch { return []; }
-}
-function saveLocalAwards(rows) {
-  localStorage.setItem(LOCAL_AWARDS_STORAGE_KEY, JSON.stringify(rows));
-}
-function loadLocalScopeTargets() {
-  try { return JSON.parse(localStorage.getItem(LOCAL_SCOPE_TARGETS_STORAGE_KEY) || "[]"); } catch { return []; }
-}
-function saveLocalScopeTargets(rows) {
-  localStorage.setItem(LOCAL_SCOPE_TARGETS_STORAGE_KEY, JSON.stringify(rows));
-}
-
-function normaliseRow(row) {
-  return {
-    businessUnit: text(row.businessUnit || row.costCenter || row["Business Unit"] || row["Cost Center"]),
-    clientName: text(row.clientName || row["Client Name"] || row.Client || row.client),
-    contractDescription: text(row.contractDescription || row["Contract Description"] || row["Tender Name"] || row.tenderName),
-    scopeType: text(row.scopeType || row.Scope || row.scope || "CIVIL").toUpperCase(),
-    scopeValue: text(row.scopeValue || row["Scope Value"] || ""),
-    totalValue: text(row.totalValue || row["Tender Value"] || row["Total Value"] || row["Projected Revenue"] || 0),
-    status: text(row.status || row["Tender Status"] || "Ongoing"),
-    probability: Number(row.probability || row["Probability %"] || 0),
-    closeMonth: text(row.closeMonth || row["Closing Date"] || ""),
-    notes: text(row.notes || row["Comments"] || "")
-  };
-}
-
-function normaliseRfqRow(row) {
-  return {
-    businessUnit: text(row.businessUnit || row.costCenter || row["Business Unit"] || row["Cost Center"]),
-    companyName: text(row.companyName || row["Company Name"] || row.clientName || row.Client || row.client),
-    scopeType: text(row.scopeType || row.Scope || row.scope || "CIVIL").toUpperCase(),
-    tenderAmount: text(row.tenderAmount || row["Tender Amount"] || row.totalValue || row["Total Value"] || 0),
-    contactPerson: text(row.contactPerson || row["Contact Person"] || ""),
-    status: text(row.status || row["RFQ Status"] || "Forecast"),
-    notes: text(row.notes || row["Comments"] || ""),
-    createdAt: text(row.createdAt || row["Created At"] || "")
-  };
-}
-
-function normaliseContractRow(row) {
-  return {
-    entity: text(row.entity || row.businessUnit || row.costCenter || row["Entity"] || row["Cost Center"]),
-    target: text(row.target || row["Target"] || 0),
-    actualAchieved: text(row.actualAchieved || row.actual || row["Actual Achieved"] || 0),
-    performancePercent: text(row.performancePercent || row["% Performance"] || row.performance || ""),
-    tendersSubmitted: text(row.tendersSubmitted || row["Tenders Submitted"] || 0),
-    winRate: text(row.winRate || row["Win Rate"] || ""),
-    createdBy: text(row.createdBy || row["Created By"] || ""),
-    createdAt: text(row.createdAt || row["Created At"] || "")
-  };
-}
-
-function normaliseAwardRow(row) {
-  return {
-    entity: text(row.entity || row.businessUnit || row.costCenter || row["Entity"] || ""),
-    month: text(row.month || row["Month"] || ""),
-    tenders: text(row.tenders || row["Tenders"] || 0),
-    rfqs: text(row.rfqs || row["RFQs"] || row["Rfqs"] || 0),
-    awards: text(row.awards || row["Awards"] || 0),
-    createdBy: text(row.createdBy || row["Created By"] || ""),
-    createdAt: text(row.createdAt || row["Created At"] || "")
-  };
-}
-function normaliseScopeTargetRow(row) {
-  return {
-    costCenter: text(row.costCenter || row.businessUnit || row.entity || row["Cost Center"] || row["Entity"] || ""),
-    targetSet: text(row.targetSet || row.target || row["Target Set"] || row["Target"] || 0),
-    year: text(row.year || row["Year"] || "2026"),
-    createdBy: text(row.createdBy || row["Created By"] || ""),
-    createdAt: text(row.createdAt || row["Created At"] || "")
-  };
-}
-
-function mapAwardToRfqRow(row) {
-  const award = normaliseAwardRow(row);
-  return {
-    businessUnit: award.entity,
-    companyName: award.entity,
-    scopeType: award.month || 'TOTAL',
-    tenderAmount: award.rfqs,
-    contactPerson: '',
-    status: 'Confirmed',
-    notes: award.month ? `Source: Awards | ${award.month}` : 'Source: Awards',
-    createdAt: award.createdAt
-  };
-}
-
-function computeSummaryFromRows(rows) {
-  const total = {civil:0, building:0, electrical:0, telecoms:0, mechanical:0, roads:0, plantHire:0, overall:0};
-  rows.forEach(r => {
-    const scope = text(r.scopeType).toLowerCase();
-    const value = num(r.totalValue);
-    if (scope === "civil") total.civil += value;
-    else if (scope === "building") total.building += value;
-    else if (scope === "electrical") total.electrical += value;
-    else if (scope === "telecoms") total.telecoms += value;
-    else if (scope === "mechanical") total.mechanical += value;
-    else if (scope === "roads") total.roads += value;
-    else if (scope === "plant hire" || scope === "planthire") total.plantHire += value;
-    total.overall += value;
-  });
-  const zeroes = {civil:0, building:0, electrical:0, telecoms:0, mechanical:0, roads:0, plantHire:0, overall:0};
-  const variance = {
-    civil: total.civil - zeroes.civil,
-    building: total.building - zeroes.building,
-    electrical: total.electrical - zeroes.electrical,
-    telecoms: total.telecoms - zeroes.telecoms,
-    mechanical: total.mechanical - zeroes.mechanical,
-    roads: total.roads - zeroes.roads,
-    plantHire: total.plantHire - zeroes.plantHire,
-    overall: total.overall - zeroes.overall
-  };
-  const variancePercent = {civil:0, building:0, electrical:0, telecoms:0, mechanical:0, roads:0, plantHire:0, overall:0};
-  return { total, target: zeroes, variance, variancePercent };
-}
-async function fetchJson(url, options={}) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 20000);
-  try {
-    const res = await fetch(url, Object.assign({}, options, { signal: controller.signal }));
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } finally {
-    clearTimeout(timer);
-  }
-}
-async function loadData(showAlert = false) {
-  setLoading(true, "Loading data...");
-  let loadedFromServer = false;
-  try {
-    const localRows = loadLocalRows().map(normaliseRow);
-    const localRfqs = loadLocalRfqs().map(normaliseRfqRow);
-    const localContracts = loadLocalContracts().map(normaliseContractRow);
-    const localAwards = loadLocalAwards().map(normaliseAwardRow);
-    const localScopeTargets = loadLocalScopeTargets().map(normaliseScopeTargetRow);
-    state.rows = [...SEED_DATA.pipeline.map(normaliseRow), ...localRows];
-    state.rfqs = [...localRfqs];
-    state.contracts = [...localContracts];
-    state.awards = [...localAwards];
-    state.scopeTargets = [...localScopeTargets];
-    state.summary = computeSummaryFromRows(state.rows);
-    if (APPS_SCRIPT_URL) {
-      try {
-        const payload = await fetchJson(`${APPS_SCRIPT_URL}?action=getAllData`);
-        if (Array.isArray(payload.rows)) state.rows = payload.rows.map(normaliseRow);
-        if (Array.isArray(payload.rfqs)) state.rfqs = payload.rfqs.map(normaliseRfqRow);
-        if (Array.isArray(payload.contracts)) state.contracts = payload.contracts.map(normaliseContractRow);
-        if (Array.isArray(payload.awards)) state.awards = payload.awards.map(normaliseAwardRow);
-        if (Array.isArray(payload.scopeTargets)) state.scopeTargets = payload.scopeTargets.map(normaliseScopeTargetRow);
-        else if (Array.isArray(payload.targets)) state.scopeTargets = payload.targets.map(normaliseScopeTargetRow);
-        if (Array.isArray(payload.awards) && payload.awards.length) state.rfqs = payload.awards.map(normaliseAwardRow).map(mapAwardToRfqRow);
-        state.summary = payload.summary || computeSummaryFromRows(state.rows);
-        if (payload.currentUser && !state.currentUser) setCurrentUser(payload.currentUser);
-        setConn("Connected", "ok");
-        loadedFromServer = true;
-      } catch (e) {
-        console.error(e);
-        setConn("Connection failed", "bad");
-        console.log("Apps Script connection failed:", e);
-      }
-    } else {
-      setConn("Apps Script URL missing", "bad");
-    }
-    populateFilters();
-    renderAll();
-    if (showAlert) notifyLoaded(loadedFromServer ? "Data loaded successfully." : "Loaded local/seed data. Google Sheets connection was not available.");
-  } finally {
-    setLoading(false);
-  }
-}
-function unique(values) {
-  return [...new Set(values.map(text).filter(Boolean))];
-}
-function populateSelect(id, values, selected) {
-  const el = $(id);
-  if (!el) return;
-  el.innerHTML = values.map(v => `<option value="${v}" ${v===selected?"selected":""}>${v}</option>`).join("");
-}
-
-function getCustomOptions(key) {
-  try { return JSON.parse(localStorage.getItem(key) || "[]").map(text).filter(Boolean); } catch { return []; }
-}
-function saveCustomOption(key, value) {
-  const name = text(value);
-  if (!name) return [];
-  const merged = [...new Set([...getCustomOptions(key), name])];
-  localStorage.setItem(key, JSON.stringify(merged));
-  return merged;
-}
-function populateSelectWithAdd(selectId, values, selected, addLabel) {
-  const el = $(selectId);
-  if (!el) return;
-  el.innerHTML = [...values, addLabel].map(v => `<option value="${v}" ${v===selected?"selected":""}>${v}</option>`).join("");
-}
-function handleAddableSelect(selectId, storageKey, addLabel) {
-  const el = $(selectId);
-  if (!el) return;
-  if (el.value !== addLabel) return;
-  const entered = window.prompt(`Enter new ${addLabel.toLowerCase().replace("add new ","")}`);
-  const name = text(entered);
-  if (!name) { populateFilters(); return; }
-  saveCustomOption(storageKey, name);
-  populateFilters();
-  if ($(selectId)) $(selectId).value = name;
-}
-function populateFilters() {
-  const units = ["All", ...unique([...COST_CENTER_OPTIONS, ...state.rows.map(r => r.businessUnit)])];
-  const scopes = ["All", ...SCOPE_OPTIONS];
-  const statuses = ["All", ...STATUS_OPTIONS];
-  const clientOptions = [...new Set([...CLIENT_NAME_OPTIONS, ...getCustomOptions(CUSTOM_CLIENT_OPTIONS_KEY)])];
-  const projectOptions = unique([
-    ...getCustomOptions(CUSTOM_PROJECT_OPTIONS_KEY),
-    ...state.rows.map(r => r.projectName || r.contractDescription)
-  ]);
-  if (!units.includes(state.filters.unit)) state.filters.unit = "All";
-  if (!scopes.includes(state.filters.scope)) state.filters.scope = "All";
-  if (!statuses.includes(state.filters.status)) state.filters.status = "All";
-  if (!["All", ...projectOptions].includes(state.filters.project)) state.filters.project = "All";
-  populateSelect("unitFilter", units, state.filters.unit);
-  populateSelect("scopeFilter", scopes, state.filters.scope);
-  populateSelect("statusFilter", statuses, state.filters.status);
-  populateSelect("dashboardCostCenterFilter", units, state.filters.unit);
-  populateSelect("dashboardProjectFilter", ["All", ...projectOptions], state.filters.project);
-  populateSelect("formBusinessUnit", COST_CENTER_OPTIONS, "Onpoint Ontime");
-  populateSelect("rfqBusinessUnit", COST_CENTER_OPTIONS, "Onpoint Ontime");
-  populateSelect("contractEntity", COST_CENTER_OPTIONS, "Onpoint Ontime");
-  populateSelect("awardEntity", COST_CENTER_OPTIONS, "Onpoint Ontime");
-  populateSelect("targetCostCenter", COST_CENTER_OPTIONS, "Onpoint Ontime");
-  populateSelect("formScopeType", SCOPE_OPTIONS, "CIVIL");
-  populateSelect("rfqScopeType", SCOPE_OPTIONS, "CIVIL");
-  populateSelectWithAdd("formClientName", clientOptions, clientOptions[0] || "ETHEKWINI", "Add new name");
-  populateSelectWithAdd("rfqCompanyName", clientOptions, clientOptions[0] || "ETHEKWINI", "Add new name");
-  populateSelectWithAdd("formProjectName", projectOptions, projectOptions[0] || "Add new project name", "Add new project name");
-}
-function filteredRfqsRows() {
-  return state.rfqs.filter(r => {
-    if (state.filters.unit !== "All" && text(r.businessUnit) !== state.filters.unit) return false;
-    if (state.filters.scope !== "All" && text(r.scopeType) !== state.filters.scope) return false;
-    const statusValue = text(r.status || "Forecast");
-    if (state.filters.status !== "All") {
-      if (state.filters.status === "Completed" && statusValue !== "Confirmed") return false;
-      if (state.filters.status === "Ongoing" && statusValue !== "Forecast") return false;
-      if (state.filters.status === "On-hold") return false;
-    }
-    const hay = `${text(r.companyName)} ${text(r.contactPerson)} ${text(r.notes)}`.toLowerCase();
-    if (state.filters.search && !hay.includes(state.filters.search.toLowerCase())) return false;
-    return true;
-  });
-}
-function filteredRows() {
-  return state.rows.filter(r => {
-    if (state.filters.unit !== "All" && text(r.businessUnit) !== state.filters.unit) return false;
-    if (state.filters.scope !== "All" && text(r.scopeType) !== state.filters.scope) return false;
-    if (state.filters.status !== "All" && text(r.status || "Ongoing") !== state.filters.status) return false;
-    const projectName = text(r.projectName || r.contractDescription);
-    if (state.filters.project !== "All" && projectName !== state.filters.project) return false;
-    const hay = `${text(r.clientName)} ${text(r.contractDescription)} ${projectName}`.toLowerCase();
-    if (state.filters.search && !hay.includes(state.filters.search.toLowerCase())) return false;
-    return true;
-  });
-}
-function filteredContractsRows() {
-  return state.contracts.filter(r => {
-    if (state.filters.unit !== "All" && text(r.entity) !== state.filters.unit) return false;
-    return true;
-  });
-}
-function kpiRows() {
-  const rows = filteredRows();
-  const filteredRfqs = filteredRfqsRows();
-  const totalTenders = rows.length;
-  const totalRfqs = filteredRfqs.reduce((s,r)=>s+num(r.tenderAmount),0);
-  const totalTarget = num(state.summary?.target?.overall) || state.scopeTargets.reduce((s,r)=>s + (text(r.year || '2026') === '2026' ? num(r.targetSet) : 0), 0);
-  const totalTenderAmount = rows.reduce((s,r)=>s+num(r.totalValue),0);
-  return [
-    ["Total Tenders", String(totalTenders), "All filtered tenders"],
-    ["Total RFQs", String(totalRfqs), "From RFQ tab"],
-    ["Total Target", money(totalTarget), "Overall target from Target tab"],
-    ["Tender Amount Total", money(totalTenderAmount), "Running total amount"]
-  ];
-}
-function renderKPIs() {
-  $("kpis").innerHTML = kpiRows().map(([label,value,sub]) => `
-    <div class="kpi"><div class="label">${label}</div><div class="value">${value}</div><div class="sub">${sub}</div></div>
-  `).join("");
-}
-function buildTable(el, headers, rows) {
-  el.innerHTML = `
-    <thead><tr>${headers.map(h => `<th class="${h.className||""}">${h.label}</th>`).join("")}</tr></thead>
-    <tbody>${rows.map(r => `<tr>${r.map((c,i)=>`<td class="${headers[i].className||""}">${c}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${headers.length}" class="muted">No rows found.</td></tr>`}</tbody>
-  `;
-}
-function aggregateBy(key, valueKey="totalValue") {
-  const map = new Map();
-  filteredRows().forEach(r => {
-    const k = text(r[key]) || "Unspecified";
-    const increment = valueKey === "__count__" ? 1 : num(r[valueKey]);
-    map.set(k, (map.get(k)||0) + increment);
-  });
-  return [...map.entries()].map(([label,value]) => ({label, value})).sort((a,b)=>b.value-a.value);
-}
-function destroyChart(name) {
-  if (charts[name]) { charts[name].destroy(); charts[name] = null; }
-}
-
-function monthlyAwardsMatrix() {
-  const months = ["MAR-26","APR-26","MAY-26","JUN-26","JUL-26","AUG-26","SEP-26","OCT-26","NOV-26","DEC-26","JAN-27","FEB-27"];
-  const costCenters = COST_CENTER_OPTIONS.slice();
-  return {
-    months,
-    costCenters,
-    rows: costCenters.map(center => {
-      const awardsRows = state.awards.filter(r => text(r.entity) === center);
-      const monthly = months.map(month => {
-        const items = awardsRows.filter(r => text(r.month).toUpperCase() === month || text(r.month).toUpperCase().startsWith(month.split("-")[0]));
-        return {
-          tenders: items.reduce((s,r)=>s+num(r.tenders),0),
-          rfqs: items.reduce((s,r)=>s+num(r.rfqs),0),
-          awards: items.reduce((s,r)=>s+num(r.awards),0)
-        };
-      });
-      return { center, monthly };
-    })
-  };
-}
-
-function renderMonthlyAwardsSummaryTable() {
-  const table = $("monthlyAwardsSummaryTable");
-  if (!table) return;
-  const { months, rows } = monthlyAwardsMatrix();
-  const rowColors = {
-    "Onpoint Ontime":"#e8f0ff",
-    "Aqua Telecoms":"#e8f7ee",
-    "Nkanyezi":"#fff4df",
-    "Distinct Hire":"#f6eefe"
-  };
-  const thead = `<thead>
-    <tr>
-      <th rowspan="2">Cost Center</th>
-      <th rowspan="2">Line</th>
-      ${months.map(m => `<th>${m}</th>`).join("")}
-      <th rowspan="2">Total</th>
-    </tr>
-    <tr>${months.map(() => `<th class="right">Value</th>`).join("")}</tr>
-  </thead>`;
-  const metricDefs = [
-    { key:"tenders", label:"Tenders" },
-    { key:"rfqs", label:"RFQs" },
-    { key:"awards", label:"Awards" }
-  ];
-  const bodyRows = [];
-  rows.forEach(r => {
-    const bg = rowColors[r.center] || "#ffffff";
-    metricDefs.forEach((metric, idx) => {
-      const values = r.monthly.map(m => Number(m[metric.key] || 0));
-      const total = values.reduce((s,v)=>s+v,0);
-      bodyRows.push(`<tr style="background:${bg}">
-        ${idx === 0 ? `<td rowspan="3"><strong>${r.center}</strong></td>` : ""}
-        <td><strong>${metric.label}</strong></td>
-        ${values.map(v => `<td class="right">${v === 0 ? "" : v}</td>`).join("")}
-        <td class="right"><strong>${total === 0 ? "" : total}</strong></td>
-      </tr>`);
-    });
-  });
-  table.innerHTML = thead + `<tbody>${bodyRows.join("")}</tbody>`;
-}
-
-function actualVsTargetByCostCenter() {
-  const centers = COST_CENTER_OPTIONS.slice();
-  const actualMap = new Map();
-  filteredRows().forEach(r => {
-    const key = text(r.businessUnit);
-    actualMap.set(key, (actualMap.get(key) || 0) + num(r.totalValue));
-  });
-  const targetMap = new Map();
-  state.scopeTargets.forEach(r => {
-    if (text(r.year || '2026') !== '2026') return;
-    const key = text(r.costCenter);
-    targetMap.set(key, (targetMap.get(key) || 0) + num(r.targetSet));
-  });
-  return centers.map(center => ({
-    center,
-    actual: actualMap.get(center) || 0,
-    target: targetMap.get(center) || 0
-  }));
-}
-
-function renderScopeTargetsTable() {
-  const table = $("scopeTargetsTable");
-  if (!table) return;
-  const rows = [...state.scopeTargets]
-    .filter(r => text(r.year || '2026') === '2026')
-    .sort((a,b) => text(a.costCenter).localeCompare(text(b.costCenter)));
-  buildTable(table,
-    [{label:"Cost Center"},{label:"Target Set",className:"right"},{label:"Year"},{label:"Created By"}],
-    rows.map(r => [
-      r.costCenter,
-      money(r.targetSet),
-      r.year || '2026',
-      r.createdBy || ''
-    ])
-  );
-}
-
-function renderCharts() {
-  destroyChart("businessUnitChart"); destroyChart("scopeChart"); destroyChart("targetChart"); destroyChart("rfqAwardedChart"); destroyChart("rfqScopeByCostCenterChart"); destroyChart("actualVsTargetChart");
-  const rows = filteredRows();
-  const summary = state.summary || {};
-
-  const scopeLabels = ["Civil","Building","Electrical","Telecoms","Mechanical","Roads","Plant Hire"];
-  const targetTotals = [summary.target?.civil, summary.target?.building, summary.target?.electrical, summary.target?.telecoms, summary.target?.mechanical, summary.target?.roads, summary.target?.plantHire].map(num);
-  charts.businessUnitChart = new Chart($("businessUnitChart"), {
-    type:"pie",
-    data:{ labels: scopeLabels, datasets:[{ label:"Target", data: targetTotals }] },
-    options:{ responsive:true, maintainAspectRatio:false, animation:false }
-  });
-
-  const groupBy = $("dashboardGroupBy") ? $("dashboardGroupBy").value : "businessUnit";
-  const grouped = aggregateBy(groupBy);
-  charts.scopeChart = new Chart($("scopeChart"), {
-    type:"pie",
-    data:{ labels: grouped.map(r => r.label), datasets:[{ label:"Tender Value", data: grouped.map(r => r.value) }] },
-    options:{ responsive:true, maintainAspectRatio:false, animation:false }
-  });
-
-  if ($("actualVsTargetChart")) {
-    const byCenter = actualVsTargetByCostCenter();
-    charts.actualVsTargetChart = new Chart($("actualVsTargetChart"), {
-      type:"bar",
-      data:{
-        labels: byCenter.map(r => r.center),
-        datasets:[
-          {label:"Actual", data: byCenter.map(r => r.actual)},
-          {label:"Target", data: byCenter.map(r => r.target)}
-        ]
-      },
-      options:{ responsive:true, maintainAspectRatio:false, animation:false }
-    });
-  }
-
-  if ($("targetChart")) {
-    const actual = [summary.total?.civil,summary.total?.building,summary.total?.electrical,summary.total?.telecoms,summary.total?.mechanical,summary.total?.roads,summary.total?.plantHire].map(num);
-    charts.targetChart = new Chart($("targetChart"), {
-      type:"bar",
-      data:{ labels: scopeLabels, datasets:[{label:"Totals from Tenders tab", data: actual}] },
-      options:{ responsive:true, maintainAspectRatio:false, animation:false }
-    });
-  }
-
-  if ($("rfqAwardedChart")) {
-    const filteredRfqs = filteredRfqsRows();
-    const totalRfqs = filteredRfqs.reduce((s,r) => s + num(r.tenderAmount), 0);
-    const totalAwarded = state.awards.filter(r => state.filters.unit === 'All' || text(r.entity) === state.filters.unit).reduce((s,r) => s + num(r.awards), 0);
-    const percent = totalRfqs ? ((totalAwarded / totalRfqs) * 100) : 0;
-    charts.rfqAwardedChart = new Chart($("rfqAwardedChart"), {
-      type:"bar",
-      data:{ labels:["All Cost Centers"], datasets:[{label:"RFQs", data:[totalRfqs]}, {label:"Awarded Tenders", data:[totalAwarded]}, {label:"Awarded % of RFQs", data:[percent]}] },
-      options:{ responsive:true, maintainAspectRatio:false, animation:false }
-    });
-  }
-
-  if ($("rfqScopeByCostCenterChart")) {
-    const filteredRfqs = filteredRfqsRows();
-    const selectedCenters = state.filters.unit === "All" ? COST_CENTER_OPTIONS : [state.filters.unit];
-    const labels2 = [];
-    const rfqData = [];
-    const awardedData = [];
-    const periods = unique(state.awards.map(r => r.month)).length ? unique(state.awards.map(r => r.month)) : ["TOTAL"];
-    selectedCenters.forEach(cc => {
-      periods.forEach(period => {
-        labels2.push(`${cc} - ${period}`);
-        rfqData.push(filteredRfqs.filter(r => text(r.businessUnit) === cc && text(r.scopeType) === period).reduce((s,r) => s + num(r.tenderAmount), 0));
-        awardedData.push(state.awards.filter(r => text(r.entity) === cc && text(r.month) === period).reduce((s,r) => s + num(r.awards), 0));
-      });
-    });
-    charts.rfqScopeByCostCenterChart = new Chart($("rfqScopeByCostCenterChart"), {
-      type:"bar",
-      data:{ labels: labels2, datasets:[{label:"RFQs", data: rfqData}, {label:"Awarded Tenders", data: awardedData}] },
-      options:{ responsive:true, maintainAspectRatio:false, animation:false }
-    });
-  }
-}
-function renderDashboardTables() {
-  const s = state.summary || {};
-  const scopeRows = [
-    ["Civil", s.target?.civil],
-    ["Building", s.target?.building],
-    ["Electrical", s.target?.electrical],
-    ["Telecoms", s.target?.telecoms],
-    ["Mechanical", s.target?.mechanical],
-    ["Roads", s.target?.roads],
-    ["Plant Hire", s.target?.plantHire],
-    ["Overall", s.target?.overall]
-  ];
-  buildTable($("topClientsTable"),
-    [{label:"Scope"},{label:"Target",className:"right"}],
-    scopeRows.map(r => [r[0], money(r[1])])
-  );
-
-}
-
-function renderRfqTable() {
-  if (!$("rfqTable")) return;
-  buildTable($("rfqTable"),
-    [{label:"Cost Center"},{label:"Entity"},{label:"Period"},{label:"RFQs",className:"right"},{label:"Source"},{label:"RFQ Status"},{label:"Notes"}],
-    filteredRfqsRows().map(r => [
-      r.businessUnit,
-      r.companyName,
-      r.scopeType,
-      String(num(r.tenderAmount)),
-      'Awards',
-      `<span class="badge ${text(r.status)==="Confirmed" ? "ok" : "warn"}">${r.status || "Forecast"}</span>`,
-      r.notes || ""
-    ])
-  );
-}
-function formatVarianceWithPercent(value, percent) {
-  const pct = Number(percent || 0);
-  const pctText = `${pct.toFixed(1)}%`;
-  return `${money(value)} (${pctText})`;
-}
-
-function renderContractsDashboardTable() {
-  if (!$("contractsDashboardTable")) return;
-  const rows = filteredContractsRows();
-  buildTable($("contractsDashboardTable"),
-    [{label:"Entity"},{label:"Target",className:"right"},{label:"Actual Achieved",className:"right"},{label:"% Performance",className:"right"},{label:"Tenders Submitted",className:"right"},{label:"Win Rate",className:"right"}],
-    rows.map(r => [
-      r.entity,
-      text(r.target),
-      text(r.actualAchieved),
-      percentText(r.performancePercent),
-      text(r.tendersSubmitted),
-      percentText(r.winRate)
-    ])
-  );
-}
-
-function renderContractsTable() {
-  if (!$("contractsTable")) return;
-  const rows = [...state.contracts].reverse();
-  buildTable($("contractsTable"),
-    [{label:"Entity"},{label:"Target",className:"right"},{label:"Actual Achieved",className:"right"},{label:"% Performance",className:"right"},{label:"Tenders Submitted",className:"right"},{label:"Win Rate",className:"right"}],
-    rows.map(r => [
-      r.entity,
-      text(r.target),
-      text(r.actualAchieved),
-      percentText(r.performancePercent),
-      text(r.tendersSubmitted),
-      percentText(r.winRate)
-    ])
-  );
-}
-
-function renderAwardsTable() {
-  if (!$("awardsTable")) return;
-  const entities = ["Onpoint Ontime","Aqua Telecoms","Nkanyezi","Distinct Hire"];
-  const rows = entities.map(entity => {
-    const list = state.awards.filter(r => text(r.entity) === entity);
-    const tenders = list.reduce((s,r) => s + num(r.tenders), 0);
-    const rfqs = list.reduce((s,r) => s + num(r.rfqs), 0);
-    const awards = list.reduce((s,r) => s + num(r.awards), 0);
-    return [entity, tenders, rfqs, awards];
-  });
-  buildTable($("awardsTable"),
-    [{label:"Entity"},{label:"Tenders",className:"right"},{label:"RFQs",className:"right"},{label:"Awards",className:"right"}],
-    rows.map(r => [r[0], String(r[1]), String(r[2]), String(r[3])])
-  );
-}
-
-function renderProgressBlock() {
-  const actual = num(state.summary?.total?.overall);
-  const target = num(state.summary?.target?.overall);
-  const variance = actual - target;
-  const variancePct = target ? ((variance / target) * 100) : 0;
-  const progressPct = target ? Math.max(0, Math.min((actual / target) * 100, 100)) : 0;
-  if ($("progressHeadline")) $("progressHeadline").textContent = `${money(actual)} / ${money(target)}`;
-  if ($("progressVariance")) $("progressVariance").textContent = `${variancePct.toFixed(2)}% (${money(variance)})`;
-  if ($("targetProgressBar")) $("targetProgressBar").style.width = `${progressPct}%`;
-}
-
-function updateDashboardDateTime() {
-  if (!$("dashboardDateTime")) return;
-  const now = new Date();
-  $("dashboardDateTime").textContent = new Intl.DateTimeFormat('en-ZA',{dateStyle:'medium', timeStyle:'medium'}).format(now);
-}
-
-function renderSummaryTable() {
-  const s = state.summary || {};
-  const variancePercent = s.variancePercent || {};
-  const rows = [
-    ["Total", s.total?.civil, s.total?.building, s.total?.electrical, s.total?.telecoms, s.total?.mechanical, s.total?.roads, s.total?.plantHire, s.total?.overall],
-    ["Target", s.target?.civil, s.target?.building, s.target?.electrical, s.target?.telecoms, s.target?.mechanical, s.target?.roads, s.target?.plantHire, s.target?.overall],
-    ["Variance", s.variance?.civil, s.variance?.building, s.variance?.electrical, s.variance?.telecoms, s.variance?.mechanical, s.variance?.roads, s.variance?.plantHire, s.variance?.overall]
-  ];
-  buildTable($("summaryTotalsTable"),
-    [{label:"Metric"},{label:"Civil",className:"right"},{label:"Building",className:"right"},{label:"Electrical",className:"right"},{label:"Telecoms",className:"right"},{label:"Mechanical",className:"right"},{label:"Roads",className:"right"},{label:"Plant Hire",className:"right"},{label:"Overall",className:"right"}],
-    rows.map(r => {
-      if (r[0] === "Variance") {
-        return [
-          r[0],
-          formatVarianceWithPercent(r[1], variancePercent.civil),
-          formatVarianceWithPercent(r[2], variancePercent.building),
-          formatVarianceWithPercent(r[3], variancePercent.electrical),
-          formatVarianceWithPercent(r[4], variancePercent.telecoms),
-          formatVarianceWithPercent(r[5], variancePercent.mechanical),
-          formatVarianceWithPercent(r[6], variancePercent.roads),
-          formatVarianceWithPercent(r[7], variancePercent.plantHire),
-          formatVarianceWithPercent(r[8], variancePercent.overall)
-        ];
-      }
-      return [r[0], money(r[1]), money(r[2]), money(r[3]), money(r[4]), money(r[5]), money(r[6]), money(r[7]), money(r[8])];
-    })
-  );
-}
-function renderAll() {
-  renderKPIs();
-  renderDashboardTables();
-  renderProgressBlock();
-  renderMonthlyAwardsSummaryTable();
-  renderScopeTargetsTable();
-  renderContractsDashboardTable();
-  renderRfqTable();
-  renderContractsTable();
-  renderAwardsTable();
-  renderSummaryTable();
-  updateDashboardDateTime();
-  scheduleChartsRender();
-}
-async function saveRfq() {
-  if (!state.currentUser) {
-    alert("Please login first.");
-    return;
-  }
-  const row = {
-    businessUnit: $("rfqBusinessUnit").value,
-    companyName: $("rfqCompanyName").value,
-    scopeType: $("rfqScopeType").value,
-    tenderAmount: $("rfqTenderAmount").value,
-    contactPerson: $("rfqContactPerson").value,
-    status: $("rfqStatus").value,
-    notes: $("rfqNotes").value,
-    createdBy: state.currentUser.username
-  };
-  if (!text(row.companyName) || !text(row.scopeType)) {
-    alert("Please complete at least Company Name and Scope.");
-    return;
-  }
-  const saveBtn = $("saveRfqBtn");
-  const oldText = saveBtn.textContent;
-  saveBtn.disabled = true;
-  saveBtn.textContent = "Synchronising...";
-  setConn("Synchronising", "warn");
-  setLoading(true, "Saving RFQ...");
-  try {
-    if (APPS_SCRIPT_URL) {
-      const res = await fetchJson(APPS_SCRIPT_URL, {
-        method:"POST",
-        headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body: JSON.stringify({ action:"saveRfqRow", row, currentUser: state.currentUser })
-      });
-      if (res.success === false) throw new Error(res.error || "Save failed");
-      alert("RFQ saved successfully.");
-      await loadData(false);
-      return;
-    }
-    const localRows = loadLocalRfqs();
-    localRows.unshift(row);
-    saveLocalRfqs(localRows);
-    alert("RFQ saved successfully.");
-    await loadData(false);
-  } catch (e) {
-    console.error(e);
-    alert("RFQ save failed. Please check the Apps Script connection.");
-  } finally {
-    setLoading(false);
-    saveBtn.disabled = false;
-    saveBtn.textContent = oldText;
-  }
-}
-async function saveTender() {
-  if (!state.currentUser) {
-    alert("Please login first.");
-    return;
-  }
-  const row = {
-    businessUnit: $("formBusinessUnit").value,
-    clientName: $("formClientName").value,
-    projectName: $("formProjectName") ? $("formProjectName").value : "",
-    contractDescription: $("formContractDescription").value,
-    scopeType: $("formScopeType").value,
-    scopeValue: $("formScopeValue").value,
-    totalValue: $("formTotalValue").value,
-    status: $("formStatus").value,
-    probability: Number($("formProbability").value || 0),
-    closeMonth: $("formCloseMonth").value,
-    notes: $("formNotes").value,
-    createdBy: state.currentUser.username
-  };
-  if (!text(row.clientName) || !text(row.contractDescription)) {
-    alert("Please complete at least Client Name and Contract Description.");
-    return;
-  }
-  const saveBtn = $("saveTenderBtn");
-  const oldText = saveBtn.textContent;
-  saveBtn.disabled = true;
-  saveBtn.textContent = "Synchronising...";
-  setConn("Synchronising", "warn");
-  setLoading(true, "Saving tender...");
-  try {
-    if (APPS_SCRIPT_URL) {
-      const res = await fetchJson(APPS_SCRIPT_URL, {
-        method:"POST",
-        headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body: JSON.stringify({ action:"savePipelineRow", row, currentUser: state.currentUser })
-      });
-      if (res.success === false) throw new Error(res.error || "Save failed");
-      alert("Tender saved successfully.");
-      await loadData(false);
-      return;
-    }
-    const localRows = loadLocalRows();
-    localRows.unshift(row);
-    saveLocalRows(localRows);
-    alert("Tender saved successfully.");
-    await loadData(false);
-  } catch (e) {
-    console.error(e);
-    alert("Save failed. Please check the Apps Script connection.");
-  } finally {
-    setLoading(false);
-    saveBtn.disabled = false;
-    saveBtn.textContent = oldText;
-  }
-}
-
-
-async function saveScopeTarget() {
-  if (!state.currentUser) {
-    alert("Please login first.");
-    return;
-  }
-  const row = {
-    costCenter: $("targetCostCenter").value,
-    targetSet: $("targetAmount").value,
-    year: $("targetYear").value,
-    createdBy: state.currentUser.username
-  };
-  if (!text(row.costCenter) || !text(row.targetSet)) {
-    alert("Please complete Cost Center and Target Set.");
-    return;
-  }
-  const saveBtn = $("saveTargetBtn");
-  const oldText = saveBtn.textContent;
-  saveBtn.disabled = true;
-  saveBtn.textContent = "Synchronising...";
-  setConn("Synchronising", "warn");
-  setLoading(true, "Saving scope target...");
-  try {
-    if (APPS_SCRIPT_URL) {
-      const res = await fetchJson(APPS_SCRIPT_URL, {
-        method:"POST",
-        headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body: JSON.stringify({ action:"saveScopeTargetRow", row, currentUser: state.currentUser })
-      });
-      if (res.success === false) throw new Error(res.error || "Save failed");
-      alert("Cost center target saved successfully.");
-      await loadData(false);
-      return;
-    }
-    const localRows = loadLocalScopeTargets();
-    localRows.unshift(row);
-    saveLocalScopeTargets(localRows);
-    alert("Cost center target saved successfully.");
-    await loadData(false);
-  } catch (e) {
-    console.error(e);
-    alert("Cost center target save failed. Please check the Apps Script connection.");
-  } finally {
-    setLoading(false);
-    saveBtn.disabled = false;
-    saveBtn.textContent = oldText;
-  }
-}
-
-async function saveContract() {
-  if (!state.currentUser) {
-    alert("Please login first.");
-    return;
-  }
-  const row = {
-    entity: $("contractEntity").value,
-    target: $("contractTarget").value,
-    actualAchieved: $("contractActualAchieved").value,
-    performancePercent: $("contractPerformancePercent").value || derivePercent($("contractActualAchieved").value, $("contractTarget").value),
-    tendersSubmitted: $("contractTendersSubmitted").value,
-    winRate: $("contractWinRate").value || derivePercent($("contractActualAchieved").value, $("contractTendersSubmitted").value),
-    createdBy: state.currentUser.username
-  };
-  if (!text(row.entity)) {
-    alert("Please select Entity.");
-    return;
-  }
-  const saveBtn = $("saveContractBtn");
-  const oldText = saveBtn.textContent;
-  saveBtn.disabled = true;
-  saveBtn.textContent = "Synchronising...";
-  setConn("Synchronising", "warn");
-  setLoading(true, "Saving contracts % rate...");
-  try {
-    if (APPS_SCRIPT_URL) {
-      const res = await fetchJson(APPS_SCRIPT_URL, {
-        method:"POST",
-        headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body: JSON.stringify({ action:"saveContractRow", row, currentUser: state.currentUser })
-      });
-      if (res.success === false) throw new Error(res.error || "Save failed");
-      alert("Contracts % Rate saved successfully.");
-      await loadData(false);
-      return;
-    }
-    const localRows = loadLocalContracts();
-    localRows.unshift(row);
-    saveLocalContracts(localRows);
-    alert("Contracts % Rate saved successfully.");
-    await loadData(false);
-  } catch (e) {
-    console.error(e);
-    alert("Contracts % Rate save failed. Please check the Apps Script connection.");
-  } finally {
-    setLoading(false);
-    saveBtn.disabled = false;
-    saveBtn.textContent = oldText;
-  }
-}
-
-async function saveAward() {
-  if (!state.currentUser) {
-    alert("Please login first.");
-    return;
-  }
-  const row = {
-    entity: $("awardEntity").value,
-    month: $("awardMonth").value,
-    tenders: $("awardTenders").value,
-    rfqs: $("awardRfqs").value,
-    awards: $("awardAwards").value,
-    createdBy: state.currentUser.username
-  };
-  const saveBtn = $("saveAwardBtn");
-  const oldText = saveBtn.textContent;
-  saveBtn.disabled = true;
-  saveBtn.textContent = "Synchronising...";
-  setConn("Synchronising", "warn");
-  setLoading(true, "Saving tendering & awards...");
-  try {
-    if (APPS_SCRIPT_URL) {
-      const res = await fetchJson(APPS_SCRIPT_URL, {
-        method:"POST",
-        headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body: JSON.stringify({ action:"saveAwardRow", row, currentUser: state.currentUser })
-      });
-      if (res.success === false) throw new Error(res.error || "Save failed");
-      alert("Tendering & Awards saved successfully.");
-      await loadData(false);
-      return;
-    }
-    const localRows = loadLocalAwards();
-    localRows.unshift(row);
-    saveLocalAwards(localRows);
-    alert("Tendering & Awards saved successfully.");
-    await loadData(false);
-  } catch (e) {
-    console.error(e);
-    alert("Tendering & Awards save failed. Please check the Apps Script connection.");
-  } finally {
-    setLoading(false);
-    saveBtn.disabled = false;
-    saveBtn.textContent = oldText;
-  }
-}
-
-async function loginUser() {
-  const username = text($("loginUsername")?.value);
-  const password = text($("loginPassword")?.value);
-  if (!username || !password) {
-    alert("Enter username and password.");
-    return;
-  }
-  if (!APPS_SCRIPT_URL) {
-    alert("Apps Script URL is missing in the HTML. Add it first.");
-    return;
-  }
-  setLoading(true, "Signing in...");
-  try {
-    const [res] = await Promise.all([
-      fetchJson(APPS_SCRIPT_URL, {
-        method:"POST",
-        headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body: JSON.stringify({ action:"loginUser", username, password })
-      }),
-      waitForChartJs().then(() => { chartsReady = true; }).catch(() => {})
-    ]);
-    if (res.success === false || !res.user) throw new Error(res.error || "Login failed");
-    setCurrentUser(res.user);
-    if ($("loginMessage")) $("loginMessage").textContent = `Logged in as ${res.user.name || res.user.username}`;
-    await loadData(false);
-    alert("Login successful.");
-  } catch (e) {
-    console.error(e);
-    alert(e.message || "Login failed.");
-  } finally {
-    setLoading(false);
-  }
-}
-
-async function registerUser() {
-  const name = text($("registerName")?.value);
-  const username = text($("registerUsername")?.value);
-  const password = text($("registerPassword")?.value);
-  const role = text($("registerRole")?.value || "User");
-  if (!name || !username || !password) {
-    alert("Complete all registration fields.");
-    return;
-  }
-  if (!APPS_SCRIPT_URL) {
-    alert("Apps Script URL is missing in the HTML. Add it first.");
-    return;
-  }
-  setLoading(true, "Registering user...");
-  try {
-    const res = await fetchJson(APPS_SCRIPT_URL, {
-      method:"POST",
-      headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body: JSON.stringify({ action:"registerUser", row:{ name, username, password, role } })
-    });
-    if (res.success === false) throw new Error(res.error || "Registration failed");
-    alert("User registered successfully.");
-    if ($("loginUsername")) $("loginUsername").value = username;
-  } catch (e) {
-    console.error(e);
-    alert(e.message || "Registration failed.");
-  } finally {
-    setLoading(false);
-  }
-}
-
-function logoutUser() {
-  setCurrentUser(null);
-updateDashboardDateTime();
-setInterval(updateDashboardDateTime, 1000);
-  if ($("loginMessage")) $("loginMessage").textContent = "Please sign in to continue.";
-}
-function wireEvents() {
-  document.querySelectorAll(".tab").forEach(tab => {
-    tab.onclick = () => {
-      document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
-      document.querySelectorAll(".panel").forEach(x => x.classList.remove("active"));
-      tab.classList.add("active");
-      $(tab.dataset.panel).classList.add("active");
-      renderAll();
+    var data = {
+      tenderSummary: [
+        { entity: "On Point", tenders: { MAR: 11, APR: 17 }, rfqs: { MAR: 20, APR: 8 }, awards: { MAR: 2, APR: 2 } },
+        { entity: "Nkanyezi", tenders: { MAR: 8, APR: 12 }, rfqs: { MAR: 28, APR: 2 }, awards: { MAR: 1, APR: 1 } },
+        { entity: "Aqua Telecoms", tenders: { MAR: 5, APR: 11 }, rfqs: { MAR: 3, APR: 1 }, awards: { MAR: 0, APR: 0 } },
+        { entity: "Distinct", tenders: { MAR: 3, APR: 4 }, rfqs: { MAR: 2, APR: 1 }, awards: { MAR: 0, APR: 0 } },
+        { entity: "Aquatech", tenders: {}, rfqs: {}, awards: {} },
+        { entity: "Advantedge", tenders: {}, rfqs: {}, awards: {} }
+      ],
+      awardsTargets: [
+        { entity: "On Point", target: 50, actual: 4 },
+        { entity: "Nkanyezi", target: 30, actual: 2 },
+        { entity: "Aqua Telecoms", target: 24, actual: 0 },
+        { entity: "Distinct", target: 10, actual: 0 }
+      ],
+      directContractsByEntity: [
+        { entity: "On Point", actual: 135641627.97, target: 480000000 },
+        { entity: "Aqua Telecoms", actual: 0, target: 175000000 },
+        { entity: "Nkanyezi", actual: 0, target: 30000000 },
+        { entity: "Distinct", actual: 0, target: 18000000 }
+      ],
+      directContractsByScope: [
+        { scope: "Civils", actual: 0, target: 105000000 },
+        { scope: "Roads", actual: 107810713.23, target: 106000000 },
+        { scope: "Building", actual: 27830914.74, target: 105000000 },
+        { scope: "Electrical", actual: 0, target: 202000000 },
+        { scope: "Telecoms", actual: 0, target: 75000000 },
+        { scope: "Mechanical", actual: 0, target: 100000000 },
+        { scope: "Plant Hire", actual: 0, target: 10000000 }
+      ],
+      privateSector: [
+        { entity: "On Point", actual: 0, target: 20000000 },
+        { entity: "Aqua Telecoms", actual: 0, target: 20000000 },
+        { entity: "Nkanyezi", actual: 0, target: 10000000 },
+        { entity: "Distinct", actual: 0, target: 0 }
+      ],
+      pipeline: [
+        { id: 1, opportunity: "Sample opportunity 1", entity: "On Point", scope: "Roads", stage: "Prospecting", value: 25000000, expectedMonth: "JUN" },
+        { id: 2, opportunity: "Sample opportunity 2", entity: "Nkanyezi", scope: "Telecoms", stage: "Bid Submitted", value: 12000000, expectedMonth: "JUL" }
+      ]
     };
-  });
-  if ($("unitFilter")) $("unitFilter").onchange = e => { state.filters.unit = e.target.value; renderAll(); };
-  if ($("scopeFilter")) $("scopeFilter").onchange = e => { state.filters.scope = e.target.value; renderAll(); };
-  if ($("statusFilter")) $("statusFilter").onchange = e => { state.filters.status = e.target.value; renderAll(); };
-  if ($("searchFilter")) $("searchFilter").oninput = e => { state.filters.search = e.target.value; renderAll(); };
-  if ($("dashboardCostCenterFilter")) $("dashboardCostCenterFilter").onchange = e => { state.filters.unit = e.target.value; renderAll(); };
-  if ($("dashboardProjectFilter")) $("dashboardProjectFilter").onchange = e => { state.filters.project = e.target.value; renderAll(); };
-  if ($("dashboardGroupBy")) $("dashboardGroupBy").onchange = () => { renderAll(); };
-  if ($("saveTenderBtn")) $("saveTenderBtn").onclick = saveTender;
-  if ($("saveRfqBtn")) $("saveRfqBtn").onclick = saveRfq;
-  if ($("saveContractBtn")) $("saveContractBtn").onclick = saveContract;
-  if ($("saveAwardBtn")) $("saveAwardBtn").onclick = saveAward;
-  if ($("saveTargetBtn")) $("saveTargetBtn").onclick = saveScopeTarget;
-  if ($("refreshBtn")) $("refreshBtn").onclick = () => loadData(true);
-  if ($("loginBtn")) $("loginBtn").onclick = loginUser;
-  if ($("registerBtn")) $("registerBtn").onclick = registerUser;
-  if ($("logoutBtn")) $("logoutBtn").onclick = logoutUser;
-  if ($("formClientName")) $("formClientName").onchange = () => handleAddableSelect("formClientName", CUSTOM_CLIENT_OPTIONS_KEY, "Add new name");
-  if ($("rfqCompanyName")) $("rfqCompanyName").onchange = () => handleAddableSelect("rfqCompanyName", CUSTOM_CLIENT_OPTIONS_KEY, "Add new name");
-  if ($("formProjectName")) $("formProjectName").onchange = () => handleAddableSelect("formProjectName", CUSTOM_PROJECT_OPTIONS_KEY, "Add new project name");
-}
-wireEvents();
-waitForChartJs().then(() => {
-  chartsReady = true;
-  scheduleChartsRender();
-}).catch(() => {});
-setCurrentUser(null);
-updateDashboardDateTime();
-setInterval(updateDashboardDateTime, 1000);
-</script>
+
+    function populateSelect(select, values) {
+      var html = "";
+      for (var i = 0; i < values.length; i++) html += '<option value="' + values[i] + '">' + values[i] + '</option>';
+      select.innerHTML = html;
+    }
+
+    function currency(n) {
+      return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', maximumFractionDigits: 2 }).format(Number(n || 0));
+    }
+
+    function integer(n) {
+      return new Intl.NumberFormat('en-ZA').format(Number(n || 0));
+    }
+
+    function percent(actual, target) {
+      if (!target) return '0.00%';
+      return ((Number(actual || 0) / Number(target || 0)) * 100).toFixed(2) + '%';
+    }
+
+    function totalRow(rows, actualKey, targetKey) {
+      var aKey = actualKey || 'actual';
+      var tKey = targetKey || 'target';
+      var total = { actual: 0, target: 0 };
+      for (var i = 0; i < rows.length; i++) {
+        total.actual += Number(rows[i][aKey] || 0);
+        total.target += Number(rows[i][tKey] || 0);
+      }
+      return total;
+    }
+
+    function renderTable(targetId, headers, rows) {
+      var html = '<table><thead><tr>';
+      for (var i = 0; i < headers.length; i++) html += '<th>' + headers[i] + '</th>';
+      html += '</tr></thead><tbody>';
+      for (var r = 0; r < rows.length; r++) {
+        html += '<tr>';
+        for (var c = 0; c < rows[r].length; c++) html += '<td>' + rows[r][c] + '</td>';
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+      document.getElementById(targetId).innerHTML = html;
+    }
+
+    function renderKPIs() {
+      var awardsTotals = totalRow(data.awardsTargets);
+      var directTotals = totalRow(data.directContractsByEntity);
+      var privateTotals = totalRow(data.privateSector);
+      var cards = [
+        { title: 'Awards to Date', value: integer(awardsTotals.actual), sub: 'Target ' + integer(awardsTotals.target) },
+        { title: 'Awards Performance', value: percent(awardsTotals.actual, awardsTotals.target), sub: 'Group performance' },
+        { title: 'Direct Contracts Value', value: currency(directTotals.actual), sub: 'Target ' + currency(703000000) },
+        { title: 'Private Sector Awards', value: currency(privateTotals.actual), sub: 'Target ' + currency(privateTotals.target) }
+      ];
+      var html = '';
+      for (var i = 0; i < cards.length; i++) {
+        html += '<div class="card"><div class="kpi-title">' + cards[i].title + '</div><div class="kpi-value">' + cards[i].value + '</div><div class="kpi-sub">' + cards[i].sub + '</div></div>';
+      }
+      document.getElementById('kpiGrid').innerHTML = html;
+    }
+
+    function renderTables() {
+      var rows = [];
+      for (var i = 0; i < data.tenderSummary.length; i++) {
+        var row = data.tenderSummary[i], tendersTotal = 0, rfqsTotal = 0, awardsTotal = 0;
+        for (var key in row.tenders) tendersTotal += Number(row.tenders[key] || 0);
+        for (var key2 in row.rfqs) rfqsTotal += Number(row.rfqs[key2] || 0);
+        for (var key3 in row.awards) awardsTotal += Number(row.awards[key3] || 0);
+        rows.push([row.entity, integer(tendersTotal), integer(rfqsTotal), integer(awardsTotal)]);
+      }
+      renderTable('tenderSummaryTable', ['Entity', 'Tenders Total', 'RFQs Total', 'Awards Total'], rows);
+
+      var awardsRows = [];
+      for (var a = 0; a < data.awardsTargets.length; a++) {
+        var ar = data.awardsTargets[a];
+        awardsRows.push([ar.entity, integer(ar.target), integer(ar.actual), percent(ar.actual, ar.target)]);
+      }
+      var awardTotals = totalRow(data.awardsTargets);
+      awardsRows.push(['<strong>TOTAL</strong>', '<strong>' + integer(awardTotals.target) + '</strong>', '<strong>' + integer(awardTotals.actual) + '</strong>', '<strong>' + percent(awardTotals.actual, awardTotals.target) + '</strong>']);
+      renderTable('awardsTable', ['Entity', 'Target', 'Actual Achieved', '% Performance'], awardsRows);
+
+      var deRows = [];
+      for (var d = 0; d < data.directContractsByEntity.length; d++) {
+        var der = data.directContractsByEntity[d];
+        deRows.push([der.entity, currency(der.actual), currency(der.target), percent(der.actual, der.target)]);
+      }
+      renderTable('directEntityTable', ['Entity', 'Actual', 'Target', '% Performance'], deRows);
+
+      var dsRows = [];
+      for (var s = 0; s < data.directContractsByScope.length; s++) {
+        var dsr = data.directContractsByScope[s];
+        dsRows.push([dsr.scope, currency(dsr.actual), currency(dsr.target), percent(dsr.actual, dsr.target)]);
+      }
+      renderTable('directScopeTable', ['Scope', 'Actual', 'Target', '% Performance'], dsRows);
+
+      var psRows = [];
+      for (var p = 0; p < data.privateSector.length; p++) {
+        var psr = data.privateSector[p];
+        psRows.push([psr.entity, currency(psr.actual), currency(psr.target), percent(psr.actual, psr.target)]);
+      }
+      renderTable('privateSectorTable', ['Entity', 'Actual', 'Target', '% Performance'], psRows);
+
+      var pipeRows = [];
+      for (var q = 0; q < data.pipeline.length; q++) {
+        var pr = data.pipeline[q];
+        pipeRows.push([pr.opportunity, pr.entity, pr.scope, pr.stage, pr.expectedMonth, currency(pr.value)]);
+      }
+      renderTable('pipelineTable', ['Opportunity', 'Entity', 'Scope', 'Stage', 'Expected Month', 'Estimated Value'], pipeRows);
+
+      var sheetRows = [];
+      for (var t = 0; t < SHEET_TABS.length; t++) sheetRows.push([SHEET_TABS[t].tab, SHEET_TABS[t].headline]);
+      renderTable('sheetTabsTable', ['Sheet Tab Name', 'Headline'], sheetRows);
+    }
+
+    function destroyCharts() {
+      for (var key in charts) if (charts[key]) charts[key].destroy();
+      charts = {};
+    }
+
+    function renderCharts() {
+      if (typeof Chart === 'undefined') return;
+      destroyCharts();
+
+      charts.awards = new Chart(document.getElementById('awardsChart'), {
+        type: 'bar',
+        data: {
+          labels: data.awardsTargets.map(function (x) { return x.entity; }),
+          datasets: [
+            { label: 'Target', data: data.awardsTargets.map(function (x) { return x.target; }), backgroundColor: '#94a3b8' },
+            { label: 'Actual', data: data.awardsTargets.map(function (x) { return x.actual; }), backgroundColor: '#0f766e' }
+          ]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'top' } } }
+      });
+
+      var scopeActuals = [];
+      for (var i = 0; i < data.directContractsByScope.length; i++) if (Number(data.directContractsByScope[i].actual) > 0) scopeActuals.push(data.directContractsByScope[i]);
+
+      charts.scopePie = new Chart(document.getElementById('scopePieChart'), {
+        type: 'pie',
+        data: {
+          labels: scopeActuals.map(function (x) { return x.scope; }),
+          datasets: [{ data: scopeActuals.map(function (x) { return x.actual; }), backgroundColor: ['#0f766e', '#14b8a6', '#2dd4bf', '#5eead4'] }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+      });
+
+      charts.entityValue = new Chart(document.getElementById('entityValueChart'), {
+        type: 'bar',
+        data: {
+          labels: data.directContractsByEntity.map(function (x) { return x.entity; }),
+          datasets: [
+            { label: 'Target', data: data.directContractsByEntity.map(function (x) { return x.target; }), backgroundColor: '#cbd5e1' },
+            { label: 'Actual', data: data.directContractsByEntity.map(function (x) { return x.actual; }), backgroundColor: '#059669' }
+          ]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'top' } } }
+      });
+
+      charts.privateSector = new Chart(document.getElementById('privateSectorChart'), {
+        type: 'bar',
+        data: {
+          labels: data.privateSector.map(function (x) { return x.entity; }),
+          datasets: [
+            { label: 'Target', data: data.privateSector.map(function (x) { return x.target; }), backgroundColor: '#cbd5e1' },
+            { label: 'Actual', data: data.privateSector.map(function (x) { return x.actual; }), backgroundColor: '#0f766e' }
+          ]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'top' } } }
+      });
+    }
+
+    function renderConnection() {
+      document.getElementById('connectionLabel').textContent = connected ? 'Connected' : 'Not connected';
+      document.getElementById('modeLabel').textContent = connected ? 'Live sync enabled' : 'Demo data active';
+      document.getElementById('offlineAlert').style.display = connected ? 'none' : 'block';
+      var pill = document.getElementById('statusPill');
+      pill.textContent = connected ? 'Connected' : 'Demo mode';
+      pill.className = 'status-pill ' + (connected ? 'status-connected' : 'status-demo');
+    }
+
+    function getFormData() {
+      return {
+        entity: formEls.entity.value,
+        month: formEls.month.value,
+        metric: formEls.metric.value,
+        value: formEls.value.value,
+        scope: formEls.scope.value,
+        stage: formEls.stage.value,
+        opportunity: formEls.opportunity.value,
+        expectedMonth: formEls.expectedMonth.value
+      };
+    }
+
+    function saveDemoData() {
+      var entryType = formEls.entryType.value;
+      var form = getFormData();
+      var value = Number(form.value || 0), i;
+
+      if (entryType === 'tenderSummary') {
+        for (i = 0; i < data.tenderSummary.length; i++) {
+          if (data.tenderSummary[i].entity === form.entity) {
+            if (!data.tenderSummary[i][form.metric]) data.tenderSummary[i][form.metric] = {};
+            data.tenderSummary[i][form.metric][form.month] = value;
+          }
+        }
+      }
+      if (entryType === 'awardsTargets') for (i = 0; i < data.awardsTargets.length; i++) if (data.awardsTargets[i].entity === form.entity) data.awardsTargets[i].actual = value;
+      if (entryType === 'directContractsByEntity') for (i = 0; i < data.directContractsByEntity.length; i++) if (data.directContractsByEntity[i].entity === form.entity) data.directContractsByEntity[i].actual = value;
+      if (entryType === 'directContractsByScope') for (i = 0; i < data.directContractsByScope.length; i++) if (data.directContractsByScope[i].scope === form.scope) data.directContractsByScope[i].actual = value;
+      if (entryType === 'privateSector') for (i = 0; i < data.privateSector.length; i++) if (data.privateSector[i].entity === form.entity) data.privateSector[i].actual = value;
+      if (entryType === 'pipeline') {
+        data.pipeline.push({
+          id: new Date().getTime(),
+          opportunity: form.opportunity || 'New opportunity',
+          entity: form.entity,
+          scope: form.scope,
+          stage: form.stage,
+          value: value,
+          expectedMonth: form.expectedMonth
+        });
+      }
+      renderAll();
+      localStorage.setItem('tenderingDashboardDemoData', JSON.stringify(data));
+      alert('Demo data saved locally.');
+    }
+
+    function saveToGoogleSheets() {
+      if (!formEls.appScriptUrl.value || formEls.appScriptUrl.value.indexOf('YOUR_DEPLOYMENT_ID') > -1) {
+        alert('Please paste your deployed Google Apps Script web app URL first.');
+        return;
+      }
+
+      var payload = {
+        sheetId: SHEET_ID,
+        mainSheet: MAIN_SHEET,
+        section: formEls.entryType.value,
+        form: getFormData()
+      };
+
+      fetch(formEls.appScriptUrl.value, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      })
+      .then(function (response) { return response.json(); })
+      .then(function (result) {
+        if (!result.ok) throw new Error(result.message || 'Failed to save data');
+        connected = !!result.live;
+        renderConnection();
+        syncLiveData();
+        alert('Saved to Google Sheets successfully.');
+      })
+      .catch(function (error) {
+        console.error(error);
+        connected = false;
+        renderConnection();
+        alert('Connection failed. Staying in demo mode.');
+      });
+    }
+
+    function applyLivePayload(result) {
+      if (!result || !result.data) return;
+      if (result.data.tenderSummary) data.tenderSummary = result.data.tenderSummary;
+      if (result.data.awardsTargets) data.awardsTargets = result.data.awardsTargets;
+      if (result.data.directContractsByEntity) data.directContractsByEntity = result.data.directContractsByEntity;
+      if (result.data.directContractsByScope) data.directContractsByScope = result.data.directContractsByScope;
+      if (result.data.privateSector) data.privateSector = result.data.privateSector;
+      if (result.data.pipeline) data.pipeline = result.data.pipeline;
+    }
+
+    function syncLiveData() {
+      if (!formEls.appScriptUrl.value || formEls.appScriptUrl.value.indexOf('YOUR_DEPLOYMENT_ID') > -1) {
+        alert('Please paste your deployed Google Apps Script web app URL first.');
+        return;
+      }
+
+      fetch(formEls.appScriptUrl.value + '?action=dashboardData')
+        .then(function (response) { return response.json(); })
+        .then(function (result) {
+          if (!result.ok) throw new Error(result.message || 'Could not fetch live data');
+          connected = !!result.live;
+          applyLivePayload(result);
+          renderAll();
+          localStorage.setItem('tenderingDashboardLiveUrl', formEls.appScriptUrl.value);
+        })
+        .catch(function (error) {
+          console.error(error);
+          connected = false;
+          renderConnection();
+          alert('Could not fetch live data. Dashboard remains in demo mode.');
+        });
+    }
+
+    function renderAll() {
+      renderConnection();
+      renderKPIs();
+      renderTables();
+      renderCharts();
+    }
+
+    function setupTabs() {
+      var buttons = document.querySelectorAll('.tab-btn');
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].addEventListener('click', function () {
+          var allBtns = document.querySelectorAll('.tab-btn');
+          var panels = document.querySelectorAll('.tab-panel');
+          for (var b = 0; b < allBtns.length; b++) allBtns[b].classList.remove('active');
+          for (var p = 0; p < panels.length; p++) panels[p].classList.remove('active');
+          this.classList.add('active');
+          document.getElementById(this.getAttribute('data-tab')).classList.add('active');
+        });
+      }
+    }
+
+    function init() {
+      formEls = {
+        entryType: document.getElementById('entryType'),
+        entity: document.getElementById('entity'),
+        month: document.getElementById('month'),
+        metric: document.getElementById('metric'),
+        scope: document.getElementById('scope'),
+        stage: document.getElementById('stage'),
+        opportunity: document.getElementById('opportunity'),
+        expectedMonth: document.getElementById('expectedMonth'),
+        value: document.getElementById('value'),
+        appScriptUrl: document.getElementById('appScriptUrl')
+      };
+
+      populateSelect(formEls.entity, ENTITIES);
+      populateSelect(formEls.month, MONTHS);
+      populateSelect(formEls.expectedMonth, MONTHS);
+      populateSelect(formEls.scope, SCOPES);
+
+      var saved = localStorage.getItem('tenderingDashboardDemoData');
+      if (saved) {
+        try { data = JSON.parse(saved); } catch (e) { console.error(e); }
+      }
+
+      var savedUrl = localStorage.getItem('tenderingDashboardLiveUrl');
+      if (savedUrl) formEls.appScriptUrl.value = savedUrl;
+
+      document.getElementById('saveDemoBtn').addEventListener('click', saveDemoData);
+      document.getElementById('saveSheetsBtn').addEventListener('click', saveToGoogleSheets);
+      document.getElementById('syncLiveBtn').addEventListener('click', syncLiveData);
+
+      setupTabs();
+      renderAll();
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
 </body>
 </html>
