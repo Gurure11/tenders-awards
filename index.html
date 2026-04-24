@@ -65,6 +65,7 @@
     .status-pill { display: inline-block; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
     .status-connected { background: #dcfce7; color: #166534; }
     .status-demo { background: #fef3c7; color: #92400e; }
+    .status-syncing { background: #dbeafe; color: #1e40af; }
     .matrix-wrap { margin-top: 16px; display: grid; gap: 16px; }
     .matrix-title { margin: 0 0 10px; font-size: 18px; }
     .matrix-scroll { overflow-x: auto; }
@@ -73,6 +74,9 @@
     .entity-card { padding: 0; overflow: hidden; }
     .entity-head { padding: 18px 18px 0 18px; }
     .entity-body { padding: 0 18px 18px 18px; }
+    .award-list { margin-top: 12px; display: grid; gap: 8px; }
+    .award-chip { padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; background: #f8fafc; font-size: 13px; }
+    .award-chip strong { color: var(--primary); }
     @media (max-width: 1100px) {
       .kpi-grid, .grid-2, .grid-3, .form-grid { grid-template-columns: 1fr 1fr; }
       .tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -106,7 +110,7 @@
     </section>
 
     <div id="offlineAlert" class="alert">
-      <strong>Not connected.</strong> Demo data is currently displayed. Add your Apps Script web app URL and click <strong>Sync Live Data</strong>.
+      <strong>Connecting...</strong> The dashboard is connecting automatically to Google Sheets live data.
     </div>
 
     <section class="kpi-grid" id="kpiGrid"></section>
@@ -132,6 +136,10 @@
       <div class="grid-2" style="margin-top: 16px;">
         <div class="card"><h2 class="section-title">Value of Direct Contracts by Entity</h2><div class="chart-wrap"><canvas id="entityValueChart"></canvas></div></div>
         <div class="card"><h2 class="section-title">Private Sector Awards</h2><div class="chart-wrap"><canvas id="privateSectorChart"></canvas></div></div>
+      </div>
+      <div class="card" style="margin-top: 16px;">
+        <h2 class="section-title">Executive Awards Detail</h2>
+        <div id="executiveAwardsTable"></div>
       </div>
     </section>
 
@@ -179,7 +187,9 @@
                 <option value="Awarded">Awarded</option>
               </select>
             </div>
-            <div class="field full"><label for="opportunity">Opportunity / Description</label><textarea id="opportunity" placeholder="Enter pipeline opportunity or entry note"></textarea></div>
+            <div class="field"><label for="awardedCompany">Awarded By / Client Company</label><input id="awardedCompany" placeholder="Example: Coega" /></div>
+            <div class="field"><label for="tenderRef">Tender Reference</label><input id="tenderRef" placeholder="Tender / contract reference" /></div>
+            <div class="field full"><label for="opportunity">Opportunity / Description</label><textarea id="opportunity" placeholder="Enter awarded tender, pipeline opportunity, or entry note"></textarea></div>
             <div class="field"><label for="expectedMonth">Expected Month</label><select id="expectedMonth"></select></div>
             <div class="field"><label for="value">Value / Count</label><input id="value" type="number" placeholder="Enter amount or count" /></div>
           </div>
@@ -191,19 +201,13 @@
         </div>
 
         <div class="card">
-          <h2 class="section-title">Apps Script Setup</h2>
-          <div class="field">
-            <label for="appScriptUrl">Google Apps Script Web App URL</label>
-            <input id="appScriptUrl" value="https://script.google.com/macros/s/AKfycbzv9bHIzgrG1PBSgbrLu2kf6-FXinDxS8iVWN5SEP_AAO0sAb-PPo0BXvTuXd67OUA/exec" />
-          </div>
-          <div class="small-note" style="margin-top: 14px;">
+          <h2 class="section-title">Live Google Sheets Connection</h2>
+          <div class="small-note">
             <div><strong>Sheet ID:</strong> 1eU2ktGearF47bLH0EKToOOTWpDkqcbqO1zWGIL9hbsg</div>
             <div><strong>Main Sheet:</strong> Tendering</div>
-            <div style="margin-top: 10px;"><strong>Live read:</strong> JSONP from Apps Script</div>
-            <div><strong>GET health:</strong> ?action=health&callback=...</div>
-            <div><strong>GET dashboard data:</strong> ?action=dashboardData&callback=...</div>
-            <div><strong>Save:</strong> GET write fallback for local HTML</div>
-            <div style="margin-top: 10px;"><strong>Status:</strong> <span id="statusPill" class="status-pill status-demo">Demo mode</span></div>
+            <div style="margin-top: 10px;"><strong>Apps Script URL:</strong> Stored once inside the HTML script.</div>
+            <div><strong>Status:</strong> <span id="statusPill" class="status-pill status-syncing">Connecting...</span></div>
+            <div id="lastActionNote" style="margin-top: 10px;">Waiting for automatic sync...</div>
           </div>
         </div>
       </div>
@@ -216,6 +220,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
+    var APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw1Zw65QovUneVCATnEgiblfIb06Q3v7FyaIasKHDI26Q6nL_nshOBMwGK4ePCw-m0DbA/exec";
     var SHEET_ID = "1eU2ktGearF47bLH0EKToOOTWpDkqcbqO1zWGIL9hbsg";
     var MAIN_SHEET = "Tendering";
     var MONTHS = ["MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC", "JAN", "FEB"];
@@ -274,6 +279,9 @@
         { entity: "Nkanyezi", actual: 0, target: 10000000 },
         { entity: "Distinct", actual: 0, target: 0 }
       ],
+      awardsDetail: [
+        { entity: "On Point", awardedCompany: "Coega", description: "Building / contract award", scope: "Building", month: "APR", value: 27830914.7, tenderRef: "" }
+      ],
       pipeline: [
         { id: 1, opportunity: "Sample opportunity 1", entity: "On Point", scope: "Roads", stage: "Prospecting", value: 25000000, expectedMonth: "JUN" },
         { id: 2, opportunity: "Sample opportunity 2", entity: "Nkanyezi", scope: "Telecoms", stage: "Bid Submitted", value: 12000000, expectedMonth: "JUL" }
@@ -323,7 +331,126 @@
       document.getElementById(targetId).innerHTML = html;
     }
 
+
+
+    function normalizeEntityName(name) {
+      var cleaned = String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+      if (cleaned === 'onpoint' || cleaned === 'on point') return 'On Point';
+      if (cleaned === 'nkanyezi') return 'Nkanyezi';
+      if (cleaned === 'aqua telecoms') return 'Aqua Telecoms';
+      if (cleaned === 'distinct') return 'Distinct';
+      if (cleaned === 'aquatech') return 'Aquatech';
+      if (cleaned === 'advantedge') return 'Advantedge';
+      return String(name || '').trim() || 'Unknown';
+    }
+
+    function normalizeMonthName(month) {
+      var raw = String(month || '').trim();
+      var cleaned = raw.toUpperCase().replace(/[^A-Z]/g, ' ');
+      var parts = cleaned.split(/\s+/).filter(Boolean);
+      var monthMap = {
+        MAR: 'MAR', MARCH: 'MAR',
+        APR: 'APR', APRIL: 'APR',
+        MAY: 'MAY',
+        JUN: 'JUN', JUNE: 'JUN',
+        JUL: 'JUL', JULY: 'JUL',
+        AUG: 'AUG', AUGUST: 'AUG',
+        SEP: 'SEP', SEPT: 'SEP', SEPTEMBER: 'SEP',
+        OCT: 'OCT', OCTOBER: 'OCT',
+        NOV: 'NOV', NOVEMBER: 'NOV',
+        DEC: 'DEC', DECEMBER: 'DEC',
+        JAN: 'JAN', JANUARY: 'JAN',
+        FEB: 'FEB', FEBRUARY: 'FEB'
+      };
+
+      for (var i = 0; i < parts.length; i++) {
+        if (monthMap[parts[i]]) return monthMap[parts[i]];
+      }
+      return monthMap[cleaned] || cleaned;
+    }
+
+    function getCellValue(row, names) {
+      for (var i = 0; i < names.length; i++) {
+        if (row[names[i]] !== undefined && row[names[i]] !== null && row[names[i]] !== '') return row[names[i]];
+      }
+      return '';
+    }
+
+    function getAwardActual(award) {
+      var value = getCellValue(award, [
+        'actual', 'Actual', 'Actual Achieved', 'Actual_Achieved', 'ActualAchieved',
+        'achieved', 'Achieved', 'value', 'Value', 'count', 'Count', 'awards', 'Awards'
+      ]);
+      return Number(String(value).replace(/[^0-9.-]/g, '') || 0);
+    }
+
+    function getAwardTarget(award) {
+      var value = getCellValue(award, ['target', 'Target', 'Annual Target', 'Annual_Target', 'AnnualTarget']);
+      return Number(String(value).replace(/[^0-9.-]/g, '') || 0);
+    }
+
+    function getAwardEntity(award) {
+      return normalizeEntityName(getCellValue(award, ['entity', 'Entity', 'Cost Center', 'Cost_Center', 'CostCenter', 'Company', 'company']) || 'Unknown');
+    }
+
+    function getAwardMonth(award) {
+      // Awards_Targets column E is headed Month. It can contain values such as MAR, March, or Onpoint March.
+      return normalizeMonthName(getCellValue(award, ['month', 'Month', 'MONTH']));
+    }
+
+    function ensureMonthlyAwardsFromAwardTargets() {
+      var awardMonthMap = {};
+
+      for (var a = 0; a < data.awardsTargets.length; a++) {
+        var award = data.awardsTargets[a];
+        var entity = getAwardEntity(award);
+        var month = getAwardMonth(award);
+        var actual = getAwardActual(award);
+
+        if (!awardMonthMap[entity]) awardMonthMap[entity] = {};
+        if (MONTHS.indexOf(month) > -1) {
+          awardMonthMap[entity][month] = Number(awardMonthMap[entity][month] || 0) + actual;
+        }
+      }
+
+      for (var i = 0; i < data.tenderSummary.length; i++) {
+        var row = data.tenderSummary[i];
+        row.entity = normalizeEntityName(row.entity || row.Entity);
+        row.awards = {};
+
+        if (awardMonthMap[row.entity]) {
+          for (var m in awardMonthMap[row.entity]) {
+            row.awards[m] = awardMonthMap[row.entity][m];
+          }
+        }
+      }
+    }
+
+    function getAwardsTotalForEntity(entity) {
+      var total = 0;
+      var wanted = normalizeEntityName(entity);
+
+      for (var i = 0; i < data.awardsTargets.length; i++) {
+        var award = data.awardsTargets[i];
+        if (getAwardEntity(award) === wanted) {
+          total += getAwardActual(award);
+        }
+      }
+
+      return total;
+    }
+
+    function monthlyMetricTotal(row, key) {
+      var total = 0;
+      var values = row[key] || {};
+      for (var i = 0; i < MONTHS.length; i++) {
+        total += Number(values[MONTHS[i]] || 0);
+      }
+      return total;
+    }
+
     function renderEntityMatrices() {
+      ensureMonthlyAwardsFromAwardTargets();
       var container = document.getElementById('entityMatrixContainer');
       var html = '';
       for (var i = 0; i < data.tenderSummary.length; i++) {
@@ -332,6 +459,7 @@
         html += '<div class="entity-head"><h2 class="matrix-title">' + entityRow.entity + '</h2></div>';
         html += '<div class="entity-body"><div class="matrix-scroll"><table class="matrix-table"><thead><tr><th>Metric</th>';
         for (var m = 0; m < MONTHS.length; m++) html += '<th>' + MONTHS[m] + '</th>';
+        html += '<th>Total</th>';
         html += '</tr></thead><tbody>';
 
         var metrics = [
@@ -347,6 +475,8 @@
             var val = entityRow[metrics[x].key] && entityRow[metrics[x].key][month];
             html += '<td>' + (val === 0 || val === null || typeof val === 'undefined' || val === '' ? '' : val) + '</td>';
           }
+          var rowTotal = monthlyMetricTotal(entityRow, metrics[x].key);
+          html += '<td><strong>' + (rowTotal ? rowTotal : '') + '</strong></td>';
           html += '</tr>';
         }
 
@@ -356,7 +486,7 @@
     }
 
     function renderKPIs() {
-      var awardsTotals = totalRow(data.awardsTargets);
+      var awardsTotals = totalAwardsTargets();
       var directTotals = totalRow(data.directContractsByEntity);
       var privateTotals = totalRow(data.privateSector);
       var cards = [
@@ -372,13 +502,22 @@
       document.getElementById('kpiGrid').innerHTML = html;
     }
 
+    function totalAwardsTargets() {
+      var total = { actual: 0, target: 0 };
+      for (var i = 0; i < data.awardsTargets.length; i++) {
+        total.actual += getAwardActual(data.awardsTargets[i]);
+        total.target += getAwardTarget(data.awardsTargets[i]);
+      }
+      return total;
+    }
+
     function renderTables() {
       var rows = [];
       for (var i = 0; i < data.tenderSummary.length; i++) {
         var row = data.tenderSummary[i], tendersTotal = 0, rfqsTotal = 0, awardsTotal = 0;
         for (var key in row.tenders) tendersTotal += Number(row.tenders[key] || 0);
         for (var key2 in row.rfqs) rfqsTotal += Number(row.rfqs[key2] || 0);
-        for (var key3 in row.awards) awardsTotal += Number(row.awards[key3] || 0);
+        awardsTotal = getAwardsTotalForEntity(row.entity);
         rows.push([row.entity, integer(tendersTotal), integer(rfqsTotal), integer(awardsTotal)]);
       }
       renderTable('tenderSummaryTable', ['Entity', 'Tenders Total', 'RFQs Total', 'Awards Total'], rows);
@@ -386,11 +525,11 @@
       var awardsRows = [];
       for (var a = 0; a < data.awardsTargets.length; a++) {
         var ar = data.awardsTargets[a];
-        awardsRows.push([ar.entity, integer(ar.target), integer(ar.actual), percent(ar.actual, ar.target)]);
+        awardsRows.push([getAwardEntity(ar), getAwardMonth(ar), integer(getAwardTarget(ar)), integer(getAwardActual(ar)), percent(getAwardActual(ar), getAwardTarget(ar))]);
       }
-      var awardTotals = totalRow(data.awardsTargets);
-      awardsRows.push(['<strong>TOTAL</strong>', '<strong>' + integer(awardTotals.target) + '</strong>', '<strong>' + integer(awardTotals.actual) + '</strong>', '<strong>' + percent(awardTotals.actual, awardTotals.target) + '</strong>']);
-      renderTable('awardsTable', ['Entity', 'Target', 'Actual Achieved', '% Performance'], awardsRows);
+      var awardTotals = totalAwardsTargets();
+      awardsRows.push(['<strong>TOTAL</strong>', '', '<strong>' + integer(awardTotals.target) + '</strong>', '<strong>' + integer(awardTotals.actual) + '</strong>', '<strong>' + percent(awardTotals.actual, awardTotals.target) + '</strong>']);
+      renderTable('awardsTable', ['Entity', 'Month', 'Target', 'Actual Achieved', '% Performance'], awardsRows);
 
       var deRows = [];
       for (var d = 0; d < data.directContractsByEntity.length; d++) {
@@ -420,6 +559,24 @@
       }
       renderTable('pipelineTable', ['Opportunity', 'Entity', 'Scope', 'Stage', 'Expected Month', 'Estimated Value'], pipeRows);
 
+      var execRows = [];
+      var details = data.awardsDetail || [];
+      for (var ed = 0; ed < details.length; ed++) {
+        var item = details[ed];
+        execRows.push([
+          normalizeEntityName(item.entity || item.Entity),
+          item.awardedCompany || item.AwardedCompany || '',
+          item.description || '',
+          item.scope || '',
+          normalizeMonthName(item.month || item.Month),
+          currency(item.value || item.Actual || 0),
+          item.tenderRef || ''
+        ]);
+      }
+      if (document.getElementById('executiveAwardsTable')) {
+        renderTable('executiveAwardsTable', ['Entity', 'Awarded By / Client', 'Award / Description', 'Scope', 'Month', 'Value', 'Tender Ref'], execRows);
+      }
+
       var sheetRows = [];
       for (var t = 0; t < SHEET_TABS.length; t++) sheetRows.push([SHEET_TABS[t].tab, SHEET_TABS[t].headline]);
       renderTable('sheetTabsTable', ['Sheet Tab Name', 'Headline'], sheetRows);
@@ -437,10 +594,10 @@
       charts.awards = new Chart(document.getElementById('awardsChart'), {
         type: 'bar',
         data: {
-          labels: data.awardsTargets.map(function (x) { return x.entity; }),
+          labels: data.awardsTargets.map(function (x) { return getAwardEntity(x) + (getAwardMonth(x) ? ' ' + getAwardMonth(x) : ''); }),
           datasets: [
-            { label: 'Target', data: data.awardsTargets.map(function (x) { return x.target; }), backgroundColor: '#94a3b8' },
-            { label: 'Actual', data: data.awardsTargets.map(function (x) { return x.actual; }), backgroundColor: '#0f766e' }
+            { label: 'Target', data: data.awardsTargets.map(function (x) { return getAwardTarget(x); }), backgroundColor: '#94a3b8' },
+            { label: 'Actual', data: data.awardsTargets.map(function (x) { return getAwardActual(x); }), backgroundColor: '#0f766e' }
           ]
         },
         options: { responsive: true, plugins: { legend: { position: 'top' } } }
@@ -483,13 +640,30 @@
       });
     }
 
-    function renderConnection() {
-      document.getElementById('connectionLabel').textContent = connected ? 'Connected' : 'Not connected';
-      document.getElementById('modeLabel').textContent = connected ? 'Live sync enabled' : 'Demo data active';
-      document.getElementById('offlineAlert').style.display = connected ? 'none' : 'block';
+    function setStatus(message, state) {
       var pill = document.getElementById('statusPill');
-      pill.textContent = connected ? 'Connected' : 'Demo mode';
-      pill.className = 'status-pill ' + (connected ? 'status-connected' : 'status-demo');
+      var note = document.getElementById('lastActionNote');
+      if (pill) {
+        pill.textContent = message;
+        pill.className = 'status-pill ' + (
+          state === 'connected' ? 'status-connected' :
+          state === 'syncing' ? 'status-syncing' :
+          'status-demo'
+        );
+      }
+      if (note) note.textContent = message;
+    }
+
+    function renderConnection() {
+      document.getElementById('connectionLabel').textContent = connected ? 'Connected to live data' : 'Connecting...';
+      document.getElementById('modeLabel').textContent = connected ? 'Live data active' : 'Connecting / demo fallback';
+      document.getElementById('offlineAlert').style.display = connected ? 'none' : 'block';
+
+      if (connected) {
+        setStatus('Connected to live data', 'connected');
+      } else {
+        setStatus('Connecting to Google Sheets...', 'syncing');
+      }
     }
 
     function getFormData() {
@@ -501,7 +675,9 @@
         scope: formEls.scope.value,
         stage: formEls.stage.value,
         opportunity: formEls.opportunity.value,
-        expectedMonth: formEls.expectedMonth.value
+        expectedMonth: formEls.expectedMonth.value,
+        awardedCompany: formEls.awardedCompany.value,
+        tenderRef: formEls.tenderRef.value
       };
     }
 
@@ -545,6 +721,7 @@
     }
 
     function saveDemoData() {
+      setStatus('Save demo button clicked. Saving locally...', 'syncing');
       var entryType = formEls.entryType.value;
       var form = getFormData();
       var value = Number(form.value || 0), i;
@@ -557,7 +734,28 @@
           }
         }
       }
-      if (entryType === 'awardsTargets') for (i = 0; i < data.awardsTargets.length; i++) if (data.awardsTargets[i].entity === form.entity) data.awardsTargets[i].actual = value;
+      if (entryType === 'awardsTargets') {
+        data.awardsTargets.push({
+          entity: form.entity,
+          target: 0,
+          actual: value,
+          month: form.month,
+          awardedCompany: form.awardedCompany || '',
+          description: form.opportunity || 'Awarded tender',
+          scope: form.scope || '',
+          tenderRef: form.tenderRef || ''
+        });
+        if (!data.awardsDetail) data.awardsDetail = [];
+        data.awardsDetail.push({
+          entity: form.entity,
+          awardedCompany: form.awardedCompany || '',
+          description: form.opportunity || 'Awarded tender',
+          scope: form.scope || '',
+          month: form.month,
+          value: value,
+          tenderRef: form.tenderRef || ''
+        });
+      }
       if (entryType === 'directContractsByEntity') for (i = 0; i < data.directContractsByEntity.length; i++) if (data.directContractsByEntity[i].entity === form.entity) data.directContractsByEntity[i].actual = value;
       if (entryType === 'directContractsByScope') for (i = 0; i < data.directContractsByScope.length; i++) if (data.directContractsByScope[i].scope === form.scope) data.directContractsByScope[i].actual = value;
       if (entryType === 'privateSector') for (i = 0; i < data.privateSector.length; i++) if (data.privateSector[i].entity === form.entity) data.privateSector[i].actual = value;
@@ -578,31 +776,31 @@
     }
 
     function saveToGoogleSheets() {
-      if (!formEls.appScriptUrl.value || formEls.appScriptUrl.value.indexOf('YOUR_DEPLOYMENT_ID') > -1) {
-        alert('Please paste your deployed Google Apps Script web app URL first.');
-        return;
-      }
+      setStatus('Save button clicked. Synchronising with Google Sheets...', 'syncing');
 
       var params = getFormData();
       params.action = 'write';
       params.section = formEls.entryType.value;
 
-      jsonpRequest(formEls.appScriptUrl.value, params, function(result) {
+      jsonpRequest(APP_SCRIPT_URL, params, function(result) {
         if (!result || !result.ok) {
           connected = false;
+          setStatus((result && (result.error || result.message)) || 'Failed to save data.', 'demo');
           renderConnection();
-          alert((result && result.message) || 'Failed to save data.');
+          alert((result && (result.error || result.message)) || 'Failed to save data.');
           return;
         }
-        connected = !!result.live;
-        renderConnection();
+
+        connected = true;
+        setStatus('Saved. Synchronising live dashboard...', 'syncing');
         syncLiveData(false);
         alert('Saved to Google Sheets successfully.');
       }, function(error) {
         console.error(error);
         connected = false;
+        setStatus('Connection failed while saving.', 'demo');
         renderConnection();
-        alert('Connection failed. Please check the deployed Apps Script URL and sharing access.');
+        alert('Connection failed. Please check the deployed Apps Script URL and Web App access.');
       });
     }
 
@@ -614,36 +812,40 @@
       if (result.data.directContractsByScope) data.directContractsByScope = result.data.directContractsByScope;
       if (result.data.privateSector) data.privateSector = result.data.privateSector;
       if (result.data.pipeline) data.pipeline = result.data.pipeline;
+      if (result.data.awardsDetail) data.awardsDetail = result.data.awardsDetail;
     }
 
     function syncLiveData(showAlert) {
       if (showAlert === undefined) showAlert = true;
-      if (!formEls.appScriptUrl.value || formEls.appScriptUrl.value.indexOf('YOUR_DEPLOYMENT_ID') > -1) {
-        if (showAlert) alert('Please paste your deployed Google Apps Script web app URL first.');
-        return;
-      }
 
-      jsonpRequest(formEls.appScriptUrl.value, { action: 'dashboardData' }, function(result) {
+      setStatus(showAlert ? 'Sync button clicked. Synchronising...' : 'Synchronising live data...', 'syncing');
+
+      jsonpRequest(APP_SCRIPT_URL, { action: 'dashboardData' }, function(result) {
         if (!result || !result.ok) {
           connected = false;
+          setStatus((result && (result.error || result.message)) || 'Could not fetch live data.', 'demo');
           renderConnection();
-          if (showAlert) alert((result && result.message) || 'Could not fetch live data.');
+          if (showAlert) alert((result && (result.error || result.message)) || 'Could not fetch live data.');
           return;
         }
-        connected = !!result.live;
+
+        connected = true;
         applyLivePayload(result);
         renderAll();
-        localStorage.setItem('tenderingDashboardLiveUrl', formEls.appScriptUrl.value);
+        setStatus('Connected to live data', 'connected');
+
         if (showAlert) alert('Live data synced successfully.');
       }, function(error) {
         console.error(error);
         connected = false;
+        setStatus('Could not connect to Google Sheets live data.', 'demo');
         renderConnection();
         if (showAlert) alert('Could not fetch live data. Check Apps Script deployment access and URL.');
       });
     }
 
     function renderAll() {
+      ensureMonthlyAwardsFromAwardTargets();
       renderConnection();
       renderKPIs();
       renderEntityMatrices();
@@ -675,8 +877,9 @@
         stage: document.getElementById('stage'),
         opportunity: document.getElementById('opportunity'),
         expectedMonth: document.getElementById('expectedMonth'),
-        value: document.getElementById('value'),
-        appScriptUrl: document.getElementById('appScriptUrl')
+        awardedCompany: document.getElementById('awardedCompany'),
+        tenderRef: document.getElementById('tenderRef'),
+        value: document.getElementById('value')
       };
 
       populateSelect(formEls.entity, ENTITIES);
@@ -688,16 +891,18 @@
       if (saved) {
         try { data = JSON.parse(saved); } catch (e) { console.error(e); }
       }
-
-      var savedUrl = localStorage.getItem('tenderingDashboardLiveUrl');
-      if (savedUrl) formEls.appScriptUrl.value = savedUrl;
-
-      document.getElementById('saveDemoBtn').addEventListener('click', saveDemoData);
+document.getElementById('saveDemoBtn').addEventListener('click', saveDemoData);
       document.getElementById('saveSheetsBtn').addEventListener('click', saveToGoogleSheets);
       document.getElementById('syncLiveBtn').addEventListener('click', function() { syncLiveData(true); });
 
       setupTabs();
       renderAll();
+
+      // Automatic live connection on page load.
+      syncLiveData(false);
+
+      // Auto-refresh live data every 2 minutes.
+      setInterval(function() { syncLiveData(false); }, 120000);
     }
 
     document.addEventListener('DOMContentLoaded', init);
