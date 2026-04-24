@@ -220,7 +220,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    var APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw1Zw65QovUneVCATnEgiblfIb06Q3v7FyaIasKHDI26Q6nL_nshOBMwGK4ePCw-m0DbA/exec";
+    var APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyI1TOvjtUcFzGZego69qyRQJvPMdB1ZidqtIAuyqvooPMu-uL1ZmUjmCmU-5p5jmy_/exec";
     var SHEET_ID = "1eU2ktGearF47bLH0EKToOOTWpDkqcbqO1zWGIL9hbsg";
     var MAIN_SHEET = "Tendering";
     var MONTHS = ["MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC", "JAN", "FEB"];
@@ -235,6 +235,7 @@
       { tab: "Direct_By_Scope", headline: "Value of Direct Contracts by Scope" },
       { tab: "Private_Sector", headline: "Private Sector Awards by Entity" },
       { tab: "Pipeline", headline: "Tendering Pipeline and Opportunity Tracker" },
+      { tab: "Executive Awards Detail", headline: "Executive Awards Detail" },
       { tab: "Settings", headline: "Google Apps Script Connection and Dashboard Settings" }
     ];
 
@@ -564,13 +565,13 @@
       for (var ed = 0; ed < details.length; ed++) {
         var item = details[ed];
         execRows.push([
-          normalizeEntityName(item.entity || item.Entity),
-          item.awardedCompany || item.AwardedCompany || '',
-          item.description || '',
-          item.scope || '',
-          normalizeMonthName(item.month || item.Month),
-          currency(item.value || item.Actual || 0),
-          item.tenderRef || ''
+          normalizeEntityName(getCellValue(item, ['entity', 'Entity', 'Company', 'company', 'Cost Center', 'Cost_Center', 'CostCenter'])),
+          getCellValue(item, ['awardedCompany', 'AwardedCompany', 'Awarded Company', 'Awarded_By', 'Awarded By', 'Awarded By / Client', 'Client', 'client']),
+          getCellValue(item, ['description', 'Description', 'Award / Description', 'Award Description', 'Opportunity', 'opportunity']),
+          getCellValue(item, ['scope', 'Scope']),
+          normalizeMonthName(getCellValue(item, ['month', 'Month', 'MONTH'])),
+          currency(getCellValue(item, ['value', 'Value', 'Actual', 'actual', 'Amount', 'amount']) || 0),
+          getCellValue(item, ['tenderRef', 'TenderRef', 'Tender Ref', 'Tender Reference', 'Reference', 'reference'])
         ]);
       }
       if (document.getElementById('executiveAwardsTable')) {
@@ -813,6 +814,8 @@
       if (result.data.privateSector) data.privateSector = result.data.privateSector;
       if (result.data.pipeline) data.pipeline = result.data.pipeline;
       if (result.data.awardsDetail) data.awardsDetail = result.data.awardsDetail;
+      if (result.data.executiveAwardsDetail) data.awardsDetail = result.data.executiveAwardsDetail;
+      if (result.data["Executive Awards Detail"]) data.awardsDetail = result.data["Executive Awards Detail"];
     }
 
     function syncLiveData(showAlert) {
