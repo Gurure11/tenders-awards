@@ -77,20 +77,6 @@
     .award-list { margin-top: 12px; display: grid; gap: 8px; }
     .award-chip { padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; background: #f8fafc; font-size: 13px; }
     .award-chip strong { color: var(--primary); }
-
-    .login-gate { position: fixed; inset: 0; z-index: 9999; background: linear-gradient(135deg, #0f172a, #1e293b, #065f46); display: flex; align-items: center; justify-content: center; padding: 20px; }
-    .login-card { width: 100%; max-width: 430px; background: white; border-radius: 24px; box-shadow: var(--shadow); padding: 24px; }
-    .login-card h2 { margin: 0 0 8px; color: var(--text); }
-    .login-card p { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
-    .login-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
-    .login-tab { border: 0; border-radius: 14px; padding: 10px; font-weight: 700; cursor: pointer; background: #e2e8f0; color: #0f172a; }
-    .login-tab.active { background: var(--primary); color: white; }
-    .login-form { display: none; }
-    .login-form.active { display: grid; gap: 12px; }
-    .login-message { margin-top: 12px; font-size: 13px; color: var(--muted); }
-    .dashboard-logout { align-self: flex-start; background: #ef4444; color: white; border: 0; border-radius: 14px; padding: 12px 16px; font-weight: 700; cursor: pointer; }
-    .dashboard-logout:hover { background: #dc2626; }
-
     @media (max-width: 1100px) {
       .kpi-grid, .grid-2, .grid-3, .form-grid { grid-template-columns: 1fr 1fr; }
       .tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -104,31 +90,6 @@
   </style>
 </head>
 <body>
-  <div id="loginGate" class="login-gate">
-    <div class="login-card">
-      <h2>Tendering Dashboard Login</h2>
-      <p>Sign in or register a new user. New registrations are sent to the Login sheet tab.</p>
-      <div class="login-tabs">
-        <button type="button" class="login-tab active" id="showLoginBtn">Login</button>
-        <button type="button" class="login-tab" id="showRegisterBtn">Register</button>
-      </div>
-      <div id="loginFormBox" class="login-form active">
-        <div class="field"><label for="loginEmail">Email / Username</label><input id="loginEmail" autocomplete="username" /></div>
-        <div class="field"><label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" /></div>
-        <button class="btn btn-primary" id="loginBtn" type="button">Login</button>
-      </div>
-      <div id="registerFormBox" class="login-form">
-        <div class="field"><label for="regName">Full Name</label><input id="regName" /></div>
-        <div class="field"><label for="regEmail">Email</label><input id="regEmail" type="email" autocomplete="email" /></div>
-        <div class="field"><label for="regUsername">Username</label><input id="regUsername" autocomplete="username" /></div>
-        <div class="field"><label for="regPassword">Password</label><input id="regPassword" type="password" autocomplete="new-password" /></div>
-        <div class="field"><label for="regRole">Role</label><select id="regRole"><option value="User">User</option><option value="Admin">Admin</option><option value="Manager">Manager</option></select></div>
-        <button class="btn btn-primary" id="registerBtn" type="button">Register New User</button>
-      </div>
-      <div id="loginMessage" class="login-message"></div>
-    </div>
-  </div>
-
   <div class="container">
     <section class="hero">
       <div>
@@ -145,7 +106,6 @@
         <div class="mini-card"><div class="label">Main Sheet</div><div>Tendering</div></div>
         <div class="mini-card"><div class="label">Sheet ID</div><div style="word-break: break-all;">1eU2ktGearF47bLH0EKToOOTWpDkqcbqO1zWGIL9hbsg</div></div>
         <div class="mini-card"><div class="label">Mode</div><div id="modeLabel">Demo data active</div></div>
-        <button class="dashboard-logout" id="logoutBtn" type="button">Logout</button>
       </div>
     </section>
 
@@ -279,8 +239,7 @@
       { tab: "Direct_By_Scope", headline: "Value of Direct Contracts by Scope" },
       { tab: "Private_Sector", headline: "Private Sector Awards by Entity" },
       { tab: "Pipeline", headline: "Tendering Pipeline and Opportunity Tracker" },
-      { tab: "Settings", headline: "Google Apps Script Connection and Dashboard Settings" },
-      { tab: "Login", headline: "Dashboard user login and registration records" }
+      { tab: "Settings", headline: "Google Apps Script Connection and Dashboard Settings" }
     ];
 
     var connected = false;
@@ -458,7 +417,7 @@
           rows.push(data.awardsDetail[i]);
         }
       }
-      return rows.filter(function(row) { return !isUnwantedManualContract(row); });
+      return rows;
     }
 
     function getContractEntity(row) {
@@ -494,31 +453,6 @@
     function getContractNotes(row) {
       return getCellValue(row, ['Notes', 'notes', 'Description', 'description', 'Opportunity', 'opportunity']) || '';
     }
-    function isUnwantedManualContract(row) {
-      var entity = getContractEntity(row);
-      var scope = String(getContractScope(row) || '').trim().toLowerCase();
-      var value = getContractValue(row);
-      var target = getContractTarget(row);
-      var month = getContractMonth(row);
-      var notes = String(getContractNotes(row) || '').trim().toLowerCase();
-      var awarded = String(getContractAwardedCompany(row) || '').trim().toLowerCase();
-      var tenderRef = String(getContractTenderRef(row) || '').trim().toLowerCase();
-
-      if (scope !== 'civils') return false;
-      if (target !== 0) return false;
-      if (notes !== 'awarded tender') return false;
-      if (month !== 'MAR' && month !== 'APR') return false;
-
-      if (entity === 'On Point' && value === 2 && awarded === 'city of cape cape town' && tenderRef === 'road repairs') return true;
-      if (entity === 'Nkanyezi' && value === 1 && !awarded && !tenderRef) return true;
-      return false;
-    }
-
-    function removeUnwantedManualContracts() {
-      if (Array.isArray(data.directContracts)) data.directContracts = data.directContracts.filter(function(row) { return !isUnwantedManualContract(row); });
-      if (Array.isArray(data.awardsDetail)) data.awardsDetail = data.awardsDetail.filter(function(row) { return !isUnwantedManualContract(row); });
-    }
-
 
 
     function ensureMonthlyAwardsFromAwardTargets() {
@@ -1022,7 +956,6 @@
       if (result.data.directContracts) data.directContracts = result.data.directContracts;
       if (result.data.Direct_Contracts) data.directContracts = result.data.Direct_Contracts;
       if (result.data.awardsDetail) data.awardsDetail = result.data.awardsDetail;
-      removeUnwantedManualContracts();
     }
 
     function syncLiveData(showAlert) {
@@ -1055,7 +988,6 @@
     }
 
     function renderAll() {
-      removeUnwantedManualContracts();
       ensureMonthlyAwardsFromAwardTargets();
       rebuildDirectContractSummaries();
       renderConnection();
@@ -1079,137 +1011,7 @@
       }
     }
 
-    function getStoredUsers() {
-      try { return JSON.parse(localStorage.getItem('tenderingDashboardUsers') || '[]'); } catch (e) { return []; }
-    }
-
-    function saveStoredUsers(users) {
-      localStorage.setItem('tenderingDashboardUsers', JSON.stringify(users));
-    }
-
-    function showLoginPanel(mode) {
-      var isRegister = mode === 'register';
-      document.getElementById('loginFormBox').classList.toggle('active', !isRegister);
-      document.getElementById('registerFormBox').classList.toggle('active', isRegister);
-      document.getElementById('showLoginBtn').classList.toggle('active', !isRegister);
-      document.getElementById('showRegisterBtn').classList.toggle('active', isRegister);
-      document.getElementById('loginMessage').textContent = '';
-    }
-
-    function openDashboardSession(user) {
-      sessionStorage.setItem('tenderingDashboardSession', JSON.stringify(user));
-      document.getElementById('loginGate').style.display = 'none';
-      document.querySelectorAll('.tab-btn').forEach(function(btn) { btn.classList.remove('active'); });
-      document.querySelectorAll('.tab-panel').forEach(function(panel) { panel.classList.remove('active'); });
-      document.querySelector('.tab-btn[data-tab="dashboard"]').classList.add('active');
-      document.getElementById('dashboard').classList.add('active');
-      window.location.hash = 'dashboard';
-    }
-
-    function loginUser() {
-      var email = document.getElementById('loginEmail').value.trim();
-      var password = document.getElementById('loginPassword').value;
-      var msg = document.getElementById('loginMessage');
-
-      if (!email || !password) {
-        msg.textContent = 'Please enter your email/username and password.';
-        alert('Please enter your email/username and password.');
-        return;
-      }
-
-      var users = getStoredUsers();
-      var user = users.find(function(u) { return (u.email === email || u.username === email) && u.password === password; });
-      if (user) {
-        alert('Login successful! Redirecting to main dashboard.');
-        openDashboardSession({ email: user.email, username: user.username, fullName: user.fullName, role: user.role });
-        return;
-      }
-
-      msg.textContent = 'Checking Login sheet...';
-      jsonpRequest(APP_SCRIPT_URL, { action: 'login', section: 'login', sheetName: 'Login', email: email, username: email, password: password }, function(result) {
-        if (result && (result.ok || result.status === 'success')) {
-          var liveUser = result.user || { email: email, username: email, fullName: email, role: 'User' };
-          alert('Login successful! Redirecting to main dashboard.');
-          openDashboardSession(liveUser);
-        } else {
-          msg.textContent = (result && (result.message || result.error)) || 'Invalid login details.';
-          alert(msg.textContent);
-        }
-      }, function() {
-        msg.textContent = 'Login failed. Register first on this device, or check your Login sheet connection.';
-        alert(msg.textContent);
-      });
-    }
-
-    function registerUser() {
-      var fullName = document.getElementById('regName').value.trim();
-      var email = document.getElementById('regEmail').value.trim();
-      var username = document.getElementById('regUsername').value.trim();
-      var password = document.getElementById('regPassword').value;
-      var role = document.getElementById('regRole').value;
-      var msg = document.getElementById('loginMessage');
-
-      if (!fullName || !email || !username || !password) {
-        msg.textContent = 'Please complete full name, email, username and password.';
-        return;
-      }
-
-      var users = getStoredUsers();
-      if (users.some(function(u) { return u.email === email || u.username === username; })) {
-        msg.textContent = 'This email or username is already registered on this device.';
-        return;
-      }
-
-      var user = { fullName: fullName, email: email, username: username, password: password, role: role, registeredAt: new Date().toISOString() };
-      users.push(user);
-      saveStoredUsers(users);
-
-      var params = {
-        action: 'write',
-        section: 'login',
-        sheetName: 'Login',
-        SheetID: SHEET_ID,
-        MainSheet: MAIN_SHEET,
-        Timestamp: user.registeredAt,
-        FullName: fullName,
-        Email: email,
-        Username: username,
-        Password: password,
-        Role: role
-      };
-
-      jsonpRequest(APP_SCRIPT_URL, params, function(result) {
-        msg.textContent = result && result.ok ? 'Registration saved to Login tab. Logging in...' : 'Registered locally. Google Sheets save may need Apps Script support for Login tab.';
-        setTimeout(function() { alert('Registration successful! Login successful! Redirecting to main dashboard.'); openDashboardSession({ email: email, username: username, fullName: fullName, role: role }); }, 700);
-      }, function() {
-        msg.textContent = 'Registered locally. Could not reach Google Sheets Login tab.';
-        setTimeout(function() { alert('Registration successful! Login successful! Redirecting to main dashboard.'); openDashboardSession({ email: email, username: username, fullName: fullName, role: role }); }, 900);
-      });
-    }
-
-    function logoutUser() {
-      sessionStorage.removeItem('tenderingDashboardSession');
-      document.getElementById('loginEmail').value = '';
-      document.getElementById('loginPassword').value = '';
-      document.getElementById('loginMessage').textContent = 'You have been logged out.';
-      showLoginPanel('login');
-      document.getElementById('loginGate').style.display = 'flex';
-      window.location.hash = 'login';
-    }
-
-    function setupLoginGate() {
-      document.getElementById('showLoginBtn').addEventListener('click', function() { showLoginPanel('login'); });
-      document.getElementById('showRegisterBtn').addEventListener('click', function() { showLoginPanel('register'); });
-      document.getElementById('loginBtn').addEventListener('click', loginUser);
-      document.getElementById('registerBtn').addEventListener('click', registerUser);
-      document.getElementById('logoutBtn').addEventListener('click', logoutUser);
-
-      var session = sessionStorage.getItem('tenderingDashboardSession');
-      if (session) document.getElementById('loginGate').style.display = 'none';
-    }
-
     function init() {
-      setupLoginGate();
       formEls = {
         entryType: document.getElementById('entryType'),
         entity: document.getElementById('entity'),
@@ -1234,7 +1036,7 @@
 
       var saved = localStorage.getItem('tenderingDashboardDemoData');
       if (saved) {
-        try { data = JSON.parse(saved); removeUnwantedManualContracts(); localStorage.setItem('tenderingDashboardDemoData', JSON.stringify(data)); } catch (e) { console.error(e); }
+        try { data = JSON.parse(saved); } catch (e) { console.error(e); }
       }
 document.getElementById('saveDemoBtn').addEventListener('click', saveDemoData);
       document.getElementById('saveSheetsBtn').addEventListener('click', saveToGoogleSheets);
