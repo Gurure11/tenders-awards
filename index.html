@@ -88,6 +88,8 @@
     .login-form { display: none; }
     .login-form.active { display: grid; gap: 12px; }
     .login-message { margin-top: 12px; font-size: 13px; color: var(--muted); }
+    .dashboard-logout { align-self: flex-start; background: #ef4444; color: white; border: 0; border-radius: 14px; padding: 12px 16px; font-weight: 700; cursor: pointer; }
+    .dashboard-logout:hover { background: #dc2626; }
 
     @media (max-width: 1100px) {
       .kpi-grid, .grid-2, .grid-3, .form-grid { grid-template-columns: 1fr 1fr; }
@@ -143,6 +145,7 @@
         <div class="mini-card"><div class="label">Main Sheet</div><div>Tendering</div></div>
         <div class="mini-card"><div class="label">Sheet ID</div><div style="word-break: break-all;">1eU2ktGearF47bLH0EKToOOTWpDkqcbqO1zWGIL9hbsg</div></div>
         <div class="mini-card"><div class="label">Mode</div><div id="modeLabel">Demo data active</div></div>
+        <button class="dashboard-logout" id="logoutBtn" type="button">Logout</button>
       </div>
     </section>
 
@@ -1096,18 +1099,46 @@
     function openDashboardSession(user) {
       sessionStorage.setItem('tenderingDashboardSession', JSON.stringify(user));
       document.getElementById('loginGate').style.display = 'none';
+      document.querySelectorAll('.tab-btn').forEach(function(btn) { btn.classList.remove('active'); });
+      document.querySelectorAll('.tab-panel').forEach(function(panel) { panel.classList.remove('active'); });
+      document.querySelector('.tab-btn[data-tab="dashboard"]').classList.add('active');
+      document.getElementById('dashboard').classList.add('active');
+      window.location.hash = 'dashboard';
     }
 
     function loginUser() {
       var email = document.getElementById('loginEmail').value.trim();
       var password = document.getElementById('loginPassword').value;
-      var users = getStoredUsers();
-      var user = users.find(function(u) { return (u.email === email || u.username === email) && u.password === password; });
-      if (!user) {
-        document.getElementById('loginMessage').textContent = 'Login not found locally. Register first on this device, or use your saved credentials.';
+      var msg = document.getElementById('loginMessage');
+
+      if (!email || !password) {
+        msg.textContent = 'Please enter your email/username and password.';
+        alert('Please enter your email/username and password.');
         return;
       }
-      openDashboardSession({ email: user.email, username: user.username, fullName: user.fullName, role: user.role });
+
+      var users = getStoredUsers();
+      var user = users.find(function(u) { return (u.email === email || u.username === email) && u.password === password; });
+      if (user) {
+        alert('Login successful! Redirecting to main dashboard.');
+        openDashboardSession({ email: user.email, username: user.username, fullName: user.fullName, role: user.role });
+        return;
+      }
+
+      msg.textContent = 'Checking Login sheet...';
+      jsonpRequest(APP_SCRIPT_URL, { action: 'login', section: 'login', sheetName: 'Login', email: email, username: email, password: password }, function(result) {
+        if (result && (result.ok || result.status === 'success')) {
+          var liveUser = result.user || { email: email, username: email, fullName: email, role: 'User' };
+          alert('Login successful! Redirecting to main dashboard.');
+          openDashboardSession(liveUser);
+        } else {
+          msg.textContent = (result && (result.message || result.error)) || 'Invalid login details.';
+          alert(msg.textContent);
+        }
+      }, function() {
+        msg.textContent = 'Login failed. Register first on this device, or check your Login sheet connection.';
+        alert(msg.textContent);
+      });
     }
 
     function registerUser() {
@@ -1149,11 +1180,21 @@
 
       jsonpRequest(APP_SCRIPT_URL, params, function(result) {
         msg.textContent = result && result.ok ? 'Registration saved to Login tab. Logging in...' : 'Registered locally. Google Sheets save may need Apps Script support for Login tab.';
-        setTimeout(function() { openDashboardSession({ email: email, username: username, fullName: fullName, role: role }); }, 700);
+        setTimeout(function() { alert('Registration successful! Login successful! Redirecting to main dashboard.'); openDashboardSession({ email: email, username: username, fullName: fullName, role: role }); }, 700);
       }, function() {
         msg.textContent = 'Registered locally. Could not reach Google Sheets Login tab.';
-        setTimeout(function() { openDashboardSession({ email: email, username: username, fullName: fullName, role: role }); }, 900);
+        setTimeout(function() { alert('Registration successful! Login successful! Redirecting to main dashboard.'); openDashboardSession({ email: email, username: username, fullName: fullName, role: role }); }, 900);
       });
+    }
+
+    function logoutUser() {
+      sessionStorage.removeItem('tenderingDashboardSession');
+      document.getElementById('loginEmail').value = '';
+      document.getElementById('loginPassword').value = '';
+      document.getElementById('loginMessage').textContent = 'You have been logged out.';
+      showLoginPanel('login');
+      document.getElementById('loginGate').style.display = 'flex';
+      window.location.hash = 'login';
     }
 
     function setupLoginGate() {
@@ -1161,6 +1202,7 @@
       document.getElementById('showRegisterBtn').addEventListener('click', function() { showLoginPanel('register'); });
       document.getElementById('loginBtn').addEventListener('click', loginUser);
       document.getElementById('registerBtn').addEventListener('click', registerUser);
+      document.getElementById('logoutBtn').addEventListener('click', logoutUser);
 
       var session = sessionStorage.getItem('tenderingDashboardSession');
       if (session) document.getElementById('loginGate').style.display = 'none';
