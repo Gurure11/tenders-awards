@@ -160,6 +160,7 @@
               <select id="entryType">
                 <option value="tenderSummary">Tender Summary</option>
                 <option value="awardsTargets">Awards Targets</option>
+                <option value="directContracts">Direct Contracts</option>
                 <option value="directContractsByEntity">Direct Contracts by Entity</option>
                 <option value="directContractsByScope">Direct Contracts by Scope</option>
                 <option value="privateSector">Private Sector Awards</option>
@@ -187,11 +188,14 @@
                 <option value="Awarded">Awarded</option>
               </select>
             </div>
-            <div class="field"><label for="awardedCompany">Awarded By / Client Company</label><input id="awardedCompany" placeholder="Example: Coega" /></div>
+            <div class="field"><label for="awardedCompany">Awarded Company</label><input id="awardedCompany" placeholder="Example: Coega" /></div>
             <div class="field"><label for="tenderRef">Tender Reference</label><input id="tenderRef" placeholder="Tender / contract reference" /></div>
-            <div class="field full"><label for="opportunity">Opportunity / Description</label><textarea id="opportunity" placeholder="Enter awarded tender, pipeline opportunity, or entry note"></textarea></div>
+            <div class="field full"><label for="opportunity">Notes</label><textarea id="opportunity" placeholder="Enter notes or award description"></textarea></div>
             <div class="field"><label for="expectedMonth">Expected Month</label><select id="expectedMonth"></select></div>
-            <div class="field"><label for="value">Value / Count</label><input id="value" type="number" placeholder="Enter amount or count" /></div>
+            <div class="field"><label for="value">Value</label><input id="value" type="number" placeholder="Enter contract value" /></div>
+            <div class="field"><label for="target">Target</label><input id="target" type="number" placeholder="Enter target amount" /></div>
+            <div class="field"><label for="costCenter">Cost Center</label><input id="costCenter" placeholder="Example: Onpoint" /></div>
+            <div class="field"><label for="inputBy">Input By</label><input id="inputBy" placeholder="Example: Bothwell" /></div>
           </div>
           <div class="actions">
             <button class="btn btn-primary" id="saveDemoBtn" type="button">Save Demo Data</button>
@@ -279,8 +283,13 @@
         { entity: "Nkanyezi", actual: 0, target: 10000000 },
         { entity: "Distinct", actual: 0, target: 0 }
       ],
+      directContracts: [
+        { Timestamp: "4/24/2026 9:00:12", Entity: "On Point", Scope: "Road", Value: 107810713.2, Target: 450000000, Month: "APR", CostCenter: "Onpoint", Notes: "", InputBy: "Bothwell", AwardedCompany: "City Of Cape Town", TenderRef: "Road Repairs" },
+        { Timestamp: "4/24/2026 10:33:35", Entity: "On Point", Scope: "Civil", Value: 27830914.7, Target: 450000000, Month: "MAR", CostCenter: "Onpint", Notes: "", InputBy: "Bothwell", AwardedCompany: "Coega", TenderRef: "Amakhemfundo School Repairs" }
+      ],
       awardsDetail: [
-        { entity: "On Point", awardedCompany: "Coega", description: "Building / contract award", scope: "Building", month: "APR", value: 27830914.7, tenderRef: "" }
+        { entity: "On Point", awardedCompany: "City Of Cape Town", description: "Road Repairs", scope: "Road", month: "APR", value: 107810713.2, tenderRef: "Road Repairs" },
+        { entity: "On Point", awardedCompany: "Coega", description: "Amakhemfundo School Repairs", scope: "Civil", month: "MAR", value: 27830914.7, tenderRef: "Amakhemfundo School Repairs" }
       ],
       pipeline: [
         { id: 1, opportunity: "Sample opportunity 1", entity: "On Point", scope: "Roads", stage: "Prospecting", value: 25000000, expectedMonth: "JUN" },
@@ -398,18 +407,66 @@
       return normalizeMonthName(getCellValue(award, ['month', 'Month', 'MONTH']));
     }
 
+    function getDirectContractsRows() {
+      var rows = [];
+      if (data.directContracts && Array.isArray(data.directContracts)) {
+        rows = rows.concat(data.directContracts);
+      }
+      if (data.awardsDetail && Array.isArray(data.awardsDetail)) {
+        for (var i = 0; i < data.awardsDetail.length; i++) {
+          rows.push(data.awardsDetail[i]);
+        }
+      }
+      return rows;
+    }
+
+    function getContractEntity(row) {
+      return normalizeEntityName(getCellValue(row, ['Entity', 'entity', 'CostCenter', 'Cost Center', 'costCenter', 'Cost_Center']));
+    }
+
+    function getContractScope(row) {
+      return String(getCellValue(row, ['Scope', 'scope']) || '').trim();
+    }
+
+    function getContractValue(row) {
+      var value = getCellValue(row, ['Value', 'value', 'Actual', 'actual', 'Amount', 'amount']);
+      return Number(String(value).replace(/[^0-9.-]/g, '') || 0);
+    }
+
+    function getContractTarget(row) {
+      var value = getCellValue(row, ['Target', 'target']);
+      return Number(String(value).replace(/[^0-9.-]/g, '') || 0);
+    }
+
+    function getContractMonth(row) {
+      return normalizeMonthName(getCellValue(row, ['Month', 'month', 'MONTH']));
+    }
+
+    function getContractAwardedCompany(row) {
+      return getCellValue(row, ['AwardedCompany', 'Awarded Company', 'awardedCompany', 'Client', 'client']) || '';
+    }
+
+    function getContractTenderRef(row) {
+      return getCellValue(row, ['TenderRef', 'Tender Ref', 'tenderRef', 'Reference', 'reference']) || '';
+    }
+
+    function getContractNotes(row) {
+      return getCellValue(row, ['Notes', 'notes', 'Description', 'description', 'Opportunity', 'opportunity']) || '';
+    }
+
+
     function ensureMonthlyAwardsFromAwardTargets() {
       var awardMonthMap = {};
+      var contractRows = getDirectContractsRows();
 
-      for (var a = 0; a < data.awardsTargets.length; a++) {
-        var award = data.awardsTargets[a];
-        var entity = getAwardEntity(award);
-        var month = getAwardMonth(award);
-        var actual = getAwardActual(award);
+      for (var c = 0; c < contractRows.length; c++) {
+        var contract = contractRows[c];
+        var entity = getContractEntity(contract);
+        var month = getContractMonth(contract);
 
         if (!awardMonthMap[entity]) awardMonthMap[entity] = {};
         if (MONTHS.indexOf(month) > -1) {
-          awardMonthMap[entity][month] = Number(awardMonthMap[entity][month] || 0) + actual;
+          awardMonthMap[entity][month] = Number(awardMonthMap[entity][month] || 0) + 1;
         }
       }
 
@@ -429,11 +486,11 @@
     function getAwardsTotalForEntity(entity) {
       var total = 0;
       var wanted = normalizeEntityName(entity);
+      var contractRows = getDirectContractsRows();
 
-      for (var i = 0; i < data.awardsTargets.length; i++) {
-        var award = data.awardsTargets[i];
-        if (getAwardEntity(award) === wanted) {
-          total += getAwardActual(award);
+      for (var i = 0; i < contractRows.length; i++) {
+        if (getContractEntity(contractRows[i]) === wanted && MONTHS.indexOf(getContractMonth(contractRows[i])) > -1) {
+          total += 1;
         }
       }
 
@@ -483,6 +540,54 @@
         html += '</tbody></table></div></div></div>';
       }
       container.innerHTML = html;
+    }
+
+    function rebuildDirectContractSummaries() {
+      var contractRows = getDirectContractsRows();
+      var entityMap = {};
+      var scopeMap = {};
+
+      for (var e = 0; e < data.directContractsByEntity.length; e++) {
+        entityMap[normalizeEntityName(data.directContractsByEntity[e].entity)] = {
+          entity: normalizeEntityName(data.directContractsByEntity[e].entity),
+          actual: 0,
+          target: Number(data.directContractsByEntity[e].target || 0)
+        };
+      }
+
+      for (var s = 0; s < data.directContractsByScope.length; s++) {
+        scopeMap[String(data.directContractsByScope[s].scope || '').trim().toLowerCase()] = {
+          scope: data.directContractsByScope[s].scope,
+          actual: 0,
+          target: Number(data.directContractsByScope[s].target || 0)
+        };
+      }
+
+      for (var i = 0; i < contractRows.length; i++) {
+        var row = contractRows[i];
+        var entity = getContractEntity(row);
+        var scope = getContractScope(row);
+        var value = getContractValue(row);
+        var target = getContractTarget(row);
+
+        if (!entityMap[entity]) {
+          entityMap[entity] = { entity: entity, actual: 0, target: target || 0 };
+        }
+        entityMap[entity].actual += value;
+        if (target) entityMap[entity].target = target;
+
+        var scopeKey = String(scope || '').trim().toLowerCase();
+        if (scopeKey) {
+          if (!scopeMap[scopeKey]) {
+            scopeMap[scopeKey] = { scope: scope, actual: 0, target: target || 0 };
+          }
+          scopeMap[scopeKey].actual += value;
+          if (target && !scopeMap[scopeKey].target) scopeMap[scopeKey].target = target;
+        }
+      }
+
+      data.directContractsByEntity = Object.keys(entityMap).map(function(key) { return entityMap[key]; });
+      data.directContractsByScope = Object.keys(scopeMap).map(function(key) { return scopeMap[key]; });
     }
 
     function renderKPIs() {
@@ -560,21 +665,25 @@
       renderTable('pipelineTable', ['Opportunity', 'Entity', 'Scope', 'Stage', 'Expected Month', 'Estimated Value'], pipeRows);
 
       var execRows = [];
-      var details = data.awardsDetail || [];
+      var details = getDirectContractsRows();
       for (var ed = 0; ed < details.length; ed++) {
         var item = details[ed];
         execRows.push([
-          normalizeEntityName(item.entity || item.Entity),
-          item.awardedCompany || item.AwardedCompany || '',
-          item.description || '',
-          item.scope || '',
-          normalizeMonthName(item.month || item.Month),
-          currency(item.value || item.Actual || 0),
-          item.tenderRef || ''
+          getCellValue(item, ['Timestamp', 'timestamp']) || '',
+          getContractEntity(item),
+          getContractScope(item),
+          currency(getContractValue(item)),
+          currency(getContractTarget(item)),
+          getContractMonth(item),
+          getCellValue(item, ['CostCenter', 'Cost Center', 'costCenter']) || '',
+          getContractNotes(item),
+          getCellValue(item, ['InputBy', 'Input By', 'inputBy']) || '',
+          getContractAwardedCompany(item),
+          getContractTenderRef(item)
         ]);
       }
       if (document.getElementById('executiveAwardsTable')) {
-        renderTable('executiveAwardsTable', ['Entity', 'Awarded By / Client', 'Award / Description', 'Scope', 'Month', 'Value', 'Tender Ref'], execRows);
+        renderTable('executiveAwardsTable', ['Timestamp', 'Entity', 'Scope', 'Value', 'Target', 'Month', 'CostCenter', 'Notes', 'InputBy', 'AwardedCompany', 'TenderRef'], execRows);
       }
 
       var sheetRows = [];
@@ -677,7 +786,11 @@
         opportunity: formEls.opportunity.value,
         expectedMonth: formEls.expectedMonth.value,
         awardedCompany: formEls.awardedCompany.value,
-        tenderRef: formEls.tenderRef.value
+        tenderRef: formEls.tenderRef.value,
+        target: formEls.target.value,
+        costCenter: formEls.costCenter.value,
+        notes: formEls.opportunity.value,
+        inputBy: formEls.inputBy.value
       };
     }
 
@@ -756,6 +869,22 @@
           tenderRef: form.tenderRef || ''
         });
       }
+      if (entryType === 'directContracts') {
+        if (!data.directContracts) data.directContracts = [];
+        data.directContracts.push({
+          Timestamp: new Date().toLocaleString('en-ZA'),
+          Entity: form.entity,
+          Scope: form.scope,
+          Value: value,
+          Target: Number(form.target || 0),
+          Month: form.month,
+          CostCenter: form.costCenter || form.entity,
+          Notes: form.notes || '',
+          InputBy: form.inputBy || '',
+          AwardedCompany: form.awardedCompany || '',
+          TenderRef: form.tenderRef || ''
+        });
+      }
       if (entryType === 'directContractsByEntity') for (i = 0; i < data.directContractsByEntity.length; i++) if (data.directContractsByEntity[i].entity === form.entity) data.directContractsByEntity[i].actual = value;
       if (entryType === 'directContractsByScope') for (i = 0; i < data.directContractsByScope.length; i++) if (data.directContractsByScope[i].scope === form.scope) data.directContractsByScope[i].actual = value;
       if (entryType === 'privateSector') for (i = 0; i < data.privateSector.length; i++) if (data.privateSector[i].entity === form.entity) data.privateSector[i].actual = value;
@@ -781,6 +910,18 @@
       var params = getFormData();
       params.action = 'write';
       params.section = formEls.entryType.value;
+      params.sheetName = formEls.entryType.value === 'directContracts' ? 'Direct_Contracts' : '';
+      params.Timestamp = new Date().toISOString();
+      params.Entity = params.entity;
+      params.Scope = params.scope;
+      params.Value = params.value;
+      params.Target = params.target || '';
+      params.Month = params.month;
+      params.CostCenter = params.costCenter || params.entity;
+      params.Notes = params.notes || '';
+      params.InputBy = params.inputBy || '';
+      params.AwardedCompany = params.awardedCompany || '';
+      params.TenderRef = params.tenderRef || '';
 
       jsonpRequest(APP_SCRIPT_URL, params, function(result) {
         if (!result || !result.ok) {
@@ -812,6 +953,8 @@
       if (result.data.directContractsByScope) data.directContractsByScope = result.data.directContractsByScope;
       if (result.data.privateSector) data.privateSector = result.data.privateSector;
       if (result.data.pipeline) data.pipeline = result.data.pipeline;
+      if (result.data.directContracts) data.directContracts = result.data.directContracts;
+      if (result.data.Direct_Contracts) data.directContracts = result.data.Direct_Contracts;
       if (result.data.awardsDetail) data.awardsDetail = result.data.awardsDetail;
     }
 
@@ -846,6 +989,7 @@
 
     function renderAll() {
       ensureMonthlyAwardsFromAwardTargets();
+      rebuildDirectContractSummaries();
       renderConnection();
       renderKPIs();
       renderEntityMatrices();
@@ -879,6 +1023,9 @@
         expectedMonth: document.getElementById('expectedMonth'),
         awardedCompany: document.getElementById('awardedCompany'),
         tenderRef: document.getElementById('tenderRef'),
+        target: document.getElementById('target'),
+        costCenter: document.getElementById('costCenter'),
+        inputBy: document.getElementById('inputBy'),
         value: document.getElementById('value')
       };
 
