@@ -668,6 +668,16 @@
       var details = getDirectContractsRows();
       for (var ed = 0; ed < details.length; ed++) {
         var item = details[ed];
+
+        // FILTER OUT specific unwanted rows (small demo awarded tender rows)
+        var val = getContractValue(item);
+        var notes = (getContractNotes(item) || '').toLowerCase();
+        var target = getContractTarget(item);
+
+        if ((notes.includes('awarded tender')) && target === 0 && (val === 1 || val === 2)) {
+          continue;
+        }
+
         execRows.push([
           getCellValue(item, ['Timestamp', 'timestamp']) || '',
           getContractEntity(item),
