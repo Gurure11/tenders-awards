@@ -173,7 +173,7 @@
 
       <div class="grid-3">
         <div class="card"><h2 class="section-title">Awards to Date Against Target</h2><div class="chart-wrap"><canvas id="awardsChart"></canvas></div></div>
-        <div class="card"><h2 class="section-title">Direct Contract Mix by Scope</h2><div class="chart-wrap"><canvas id="scopePieChart"></canvas></div></div>
+        <div class="card"><h2 class="section-title">Direct Contracts by Scope: Actual vs Target</h2><div class="chart-wrap"><canvas id="scopePieChart"></canvas></div></div>
       </div>
       <div class="grid-2" style="margin-top: 16px;">
         <div class="card"><h2 class="section-title">Value of Direct Contracts by Entity</h2><div class="chart-wrap"><canvas id="entityValueChart"></canvas></div></div>
@@ -274,6 +274,8 @@
     var selectedPeriod = "ALL";
     var ENTITIES = ["On Point", "Nkanyezi", "Aqua Telecoms", "Distinct", "Aquatech", "Advantedge"];
     var SCOPES = ["Civils", "Roads", "Building", "Electrical", "Telecoms", "Mechanical", "Plant Hire"];
+    var DIRECT_SCOPE_TARGETS = { "Civils": 105000000, "Roads": 106000000, "Building": 105000000, "Electrical": 202000000, "Telecoms": 75000000, "Mechanical": 100000000, "Plant Hire": 10000000 };
+    var DIRECT_CONTRACT_TARGET_TOTAL = 703000000;
     var SHEET_TABS = [
       { tab: "Tendering", headline: "Tendering Dashboard Overview & KPIs" },
       { tab: "Tender_Summary", headline: "Summary of Tenders, RFQs and Awards by Entity" },
@@ -583,15 +585,7 @@
     }
 
     function getUniqueDirectContractsAnnualTarget() {
-      var seen = {};
-      var total = 0;
-      for (var i = 0; i < data.directContractsByScope.length; i++) {
-        var rawScope = String(data.directContractsByScope[i].scope || '').trim().toLowerCase();
-        if (!rawScope || seen[rawScope]) continue;
-        seen[rawScope] = true;
-        total += Number(data.directContractsByScope[i].target || 0);
-      }
-      return total;
+      return DIRECT_CONTRACT_TARGET_TOTAL;
     }
 
     function getUniqueDirectContractsPeriodTarget() {
@@ -607,7 +601,7 @@
 
     function normalizeScopeName(scope) {
       var s = String(scope || '').trim().toLowerCase();
-      if (s === 'civil' || s === 'civils') return 'Building';
+      if (s === 'civil' || s === 'civils') return 'Civils';
       if (s === 'road' || s === 'roads') return 'Roads';
       if (s === 'building') return 'Building';
       if (s === 'electrical') return 'Electrical';
@@ -672,24 +666,19 @@
     }
 
     function getPeriodScopeRows() {
-      var baseTargets = {};
-      for (var i = 0; i < data.directContractsByScope.length; i++) {
-        var scope = normalizeScopeName(data.directContractsByScope[i].scope);
-        baseTargets[scope] = Number(data.directContractsByScope[i].target || 0);
-      }
       var map = {};
-      var scopes = ["Building", "Roads", "Electrical", "Telecoms", "Mechanical", "Plant Hire"];
-      for (var s = 0; s < scopes.length; s++) map[scopes[s]] = { scope: scopes[s], actual: 0, target: getPeriodTargetFromAnnual(baseTargets[scopes[s]] || 0), awards: 0 };
+      var scopes = ["Civils", "Roads", "Building", "Electrical", "Telecoms", "Mechanical", "Plant Hire"];
+      for (var s = 0; s < scopes.length; s++) map[scopes[s]] = { scope: scopes[s], actual: 0, target: getPeriodTargetFromAnnual(DIRECT_SCOPE_TARGETS[scopes[s]] || 0), awards: 0 };
 
       var rows = selectedPeriodContractRows();
       for (var r = 0; r < rows.length; r++) {
         var scope = normalizeScopeName(getContractScope(rows[r]));
         var value = getContractValue(rows[r]);
         var rowTarget = getContractTarget(rows[r]);
-        if (!map[scope]) map[scope] = { scope: scope, actual: 0, target: getPeriodTargetFromAnnual(rowTarget || 0), awards: 0 };
+        if (!map[scope]) map[scope] = { scope: scope, actual: 0, target: getPeriodTargetFromAnnual(DIRECT_SCOPE_TARGETS[scope] || rowTarget || 0), awards: 0 };
         map[scope].actual += value;
         map[scope].awards += 1;
-        if (rowTarget) map[scope].target = getPeriodTargetFromAnnual(rowTarget);
+        map[scope].target = getPeriodTargetFromAnnual(DIRECT_SCOPE_TARGETS[scope] || rowTarget || 0);
       }
       return Object.keys(map).map(function(k) { return map[k]; });
     }
@@ -769,7 +758,7 @@
       var contractRows = getDirectContractsRows();
       var entityMap = {};
       var scopeMap = {};
-      var defaultScopes = ["Building", "Roads", "Electrical", "Telecoms", "Mechanical", "Plant Hire"];
+      var defaultScopes = ["Civils", "Roads", "Building", "Electrical", "Telecoms", "Mechanical", "Plant Hire"];
 
       for (var e = 0; e < data.directContractsByEntity.length; e++) {
         entityMap[normalizeEntityName(data.directContractsByEntity[e].entity)] = {
@@ -780,12 +769,12 @@
       }
 
       for (var s = 0; s < defaultScopes.length; s++) {
-        scopeMap[defaultScopes[s].toLowerCase()] = { scope: defaultScopes[s], actual: 0, target: 0 };
+        scopeMap[defaultScopes[s].toLowerCase()] = { scope: defaultScopes[s], actual: 0, target: Number(DIRECT_SCOPE_TARGETS[defaultScopes[s]] || 0) };
       }
       for (var s2 = 0; s2 < data.directContractsByScope.length; s2++) {
         var existingScope = normalizeScopeName(data.directContractsByScope[s2].scope);
         if (!scopeMap[existingScope.toLowerCase()]) scopeMap[existingScope.toLowerCase()] = { scope: existingScope, actual: 0, target: 0 };
-        scopeMap[existingScope.toLowerCase()].target = Number(data.directContractsByScope[s2].target || scopeMap[existingScope.toLowerCase()].target || 0);
+        scopeMap[existingScope.toLowerCase()].target = Number(DIRECT_SCOPE_TARGETS[existingScope] || data.directContractsByScope[s2].target || scopeMap[existingScope.toLowerCase()].target || 0);
       }
 
       for (var i = 0; i < contractRows.length; i++) {
@@ -809,7 +798,7 @@
             scopeMap[scopeKey] = { scope: scope, actual: 0, target: target || 0 };
           }
           scopeMap[scopeKey].actual += value;
-          if (target) scopeMap[scopeKey].target = target;
+          scopeMap[scopeKey].target = Number(DIRECT_SCOPE_TARGETS[scope] || scopeMap[scopeKey].target || target || 0);
         }
       }
 
@@ -955,15 +944,18 @@
         options: { responsive: true, plugins: { legend: { position: 'top' } } }
       });
 
-      var scopeActuals = getPeriodScopeRows().filter(function(x) { return Number(x.actual) > 0; });
+      var scopeRowsForChart = getPeriodScopeRows();
 
       charts.scopePie = new Chart(document.getElementById('scopePieChart'), {
-        type: 'pie',
+        type: 'bar',
         data: {
-          labels: scopeActuals.map(function (x) { return x.scope; }),
-          datasets: [{ data: scopeActuals.map(function (x) { return x.actual; }), backgroundColor: ['#0f766e', '#14b8a6', '#2dd4bf', '#5eead4', '#99f6e4'] }]
+          labels: scopeRowsForChart.map(function (x) { return x.scope; }),
+          datasets: [
+            { label: 'Target', data: scopeRowsForChart.map(function (x) { return x.target; }), backgroundColor: '#94a3b8' },
+            { label: 'Actual', data: scopeRowsForChart.map(function (x) { return x.actual; }), backgroundColor: '#0f766e' }
+          ]
         },
-        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        options: { responsive: true, plugins: { legend: { position: 'top' } } }
       });
 
       var entityValues = getPeriodAwardsByEntity();
