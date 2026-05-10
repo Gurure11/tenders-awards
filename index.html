@@ -94,7 +94,6 @@
     .variance-positive { color: #166534; font-weight: 800; }
     .variance-negative { color: #b91c1c; font-weight: 800; }
     .variance-neutral { color: #334155; font-weight: 800; }
-
     @media (max-width: 1100px) {
       .kpi-grid, .grid-2, .grid-3, .form-grid { grid-template-columns: 1fr 1fr; }
       .tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -145,6 +144,15 @@
           <option value="Q4">Q4 (Dec - Feb)</option>
         </select>
       </div>
+      <div class="field">
+        <label for="targetQuarterFilter">Target Quarter Filter</label>
+        <select id="targetQuarterFilter">
+          <option value="ALL">Show Q1, Q2 and Q3</option>
+          <option value="Q1">Q1 Target</option>
+          <option value="Q2">Q2 Cumulative Target</option>
+          <option value="Q3">Q3 Cumulative Target</option>
+        </select>
+      </div>
       <div class="small-note" id="periodFilterNote">Financial year begins in March. Select a quarter to show only that period.</div>
     </section>
 
@@ -161,7 +169,7 @@
 
     <section id="dashboard" class="tab-panel active">
       <div class="card">
-        <h2 class="section-title" id="periodSummaryTitle">Quarterly Summary</h2>
+        <h2 class="section-title" id="periodSummaryTitle">Summary</h2>
         <div class="period-summary-grid" id="periodSummaryGrid"></div>
       </div>
       <div class="grid-3" style="margin-top: 16px;">
@@ -272,6 +280,8 @@
     var MONTHS = ["MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC", "JAN", "FEB"];
     var QUARTERS = { Q1: ["MAR", "APR", "MAY"], Q2: ["JUN", "JUL", "AUG"], Q3: ["SEP", "OCT", "NOV"], Q4: ["DEC", "JAN", "FEB"] };
     var selectedPeriod = "ALL";
+    var selectedTargetQuarter = "ALL";
+    var FIXED_ANNUAL_AWARD_TARGETS = { "On Point": 50, "Aqua Telecoms": 30, "Nkanyezi": 24, "Distinct": 10 };
     var ENTITIES = ["On Point", "Nkanyezi", "Aqua Telecoms", "Distinct", "Aquatech", "Advantedge"];
     var SCOPES = ["Civils", "Roads", "Building", "Electrical", "Telecoms", "Mechanical", "Plant Hire"];
     var DIRECT_SCOPE_TARGETS = { "Civils": 105000000, "Roads": 106000000, "Building": 105000000, "Electrical": 202000000, "Telecoms": 75000000, "Mechanical": 100000000, "Plant Hire": 10000000 };
@@ -627,12 +637,8 @@
     }
 
     function annualAwardsTargetForEntity(entity) {
-      var total = 0;
       var wanted = normalizeEntityName(entity);
-      for (var i = 0; i < data.awardsTargets.length; i++) {
-        if (getAwardEntity(data.awardsTargets[i]) === wanted) total += getAwardTarget(data.awardsTargets[i]);
-      }
-      return total;
+      return Number(FIXED_ANNUAL_AWARD_TARGETS[wanted] || 0);
     }
 
     function getPeriodAwardsByEntity() {
@@ -689,20 +695,119 @@
       note.innerHTML = '<strong>' + getPeriodLabel() + '</strong> selected. All dashboard figures below show this selected period only. Financial year begins in March.';
     }
 
-    function renderPeriodSummary() {
-      var byEntity = getPeriodAwardsByEntity();
-      var awards = 0, target = 0, value = 0;
-      for (var i = 0; i < byEntity.length; i++) {
-        awards += byEntity[i].awards;
-        target += byEntity[i].target;
-        value += byEntity[i].value;
+    function quarterTargetMultiplier(q) {
+      if (q === 'Q1') return 1;
+      if (q === 'Q2') return 2;
+      if (q === 'Q3') return 3;
+      if (q === 'Q4') return 4;
+      return 4;
+    }
+
+    function getCumulativeQuarterMonths(q) {
+      if (q === 'Q1') return QUARTERS.Q1.slice();
+      if (q === 'Q2') return QUARTERS.Q1.concat(QUARTERS.Q2);
+      if (q === 'Q3') return QUARTERS.Q1.concat(QUARTERS.Q2).concat(QUARTERS.Q3);
+      if (q === 'Q4') return MONTHS.slice();
+      return MONTHS.slice();
+    }
+
+    function getQuarterWindowMonths(q) {
+      return QUARTERS[q] ? QUARTERS[q].slice() : MONTHS.slice();
+    }
+
+    function getQuarterAwardsByEntity(q) {
+      var months = getQuarterWindowMonths(q);
+      var map = {};
+      for (var i = 0; i < ENTITIES.length; i++) {
+        var entityName = ENTITIES[i];
+        var annualTarget = annualAwardsTargetForEntity(entityName);
+        map[entityName] = { entity: entityName, awards: 0, value: 0, annualTarget: annualTarget, target: annualTarget / 4 };
       }
-      document.getElementById('periodSummaryTitle').textContent = 'Quarterly Summary - ' + getPeriodLabel();
-      document.getElementById('periodSummaryGrid').innerHTML =
-        '<div class="summary-card"><div class="label">Awards for Period</div><div class="value">' + integer(awards) + '</div><div class="sub">Filtered to ' + getPeriodLabel() + '</div></div>' +
-        '<div class="summary-card"><div class="label">Target for Period</div><div class="value">' + integer(target) + '</div><div class="sub">Pro-rated from annual target</div></div>' +
-        '<div class="summary-card"><div class="label">Variance</div><div class="value">' + integer(awards - target) + '</div><div class="sub">' + percent(awards - target, target) + '</div></div>' +
-        '<div class="summary-card"><div class="label">Actual Award Value</div><div class="value">' + currency(value) + '</div><div class="sub">Contracts in selected period</div></div>';
+
+      for (var a = 0; a < data.awardsTargets.length; a++) {
+        var awardEntity = getAwardEntity(data.awardsTargets[a]);
+        if (!map[awardEntity]) {
+          var extraTarget = annualAwardsTargetForEntity(awardEntity);
+          map[awardEntity] = { entity: awardEntity, awards: 0, value: 0, annualTarget: extraTarget, target: extraTarget / 4 };
+        }
+        var awardMonth = getAwardMonth(data.awardsTargets[a]);
+        if (!awardMonth || months.indexOf(awardMonth) > -1) map[awardEntity].awards += getAwardActual(data.awardsTargets[a]);
+      }
+
+      var rows = getDirectContractsRows();
+      for (var r = 0; r < rows.length; r++) {
+        var contractMonth = getContractMonth(rows[r]);
+        if (months.indexOf(contractMonth) === -1) continue;
+        var contractEntity = getContractEntity(rows[r]);
+        if (!map[contractEntity]) {
+          var contractTarget = annualAwardsTargetForEntity(contractEntity);
+          map[contractEntity] = { entity: contractEntity, awards: 0, value: 0, annualTarget: contractTarget, target: contractTarget / 4 };
+        }
+        map[contractEntity].value += getContractValue(rows[r]);
+      }
+      return Object.keys(map).map(function(k) { return map[k]; });
+    }
+
+    function renderQuarterWindowCard(q) {
+      var rows = getQuarterAwardsByEntity(q);
+      var awards = 0, target = 0, value = 0;
+      for (var i = 0; i < rows.length; i++) {
+        awards += Number(rows[i].awards || 0);
+        target += Number(rows[i].target || 0);
+        value += Number(rows[i].value || 0);
+      }
+      return '<div class="summary-card"><div class="label">' + q + ' (' + getQuarterWindowMonths(q).join(', ') + ')</div>' +
+        '<div class="value">' + integer(awards) + ' vs target ' + integer(target) + '</div>' +
+        '<div class="sub">Quarterly performance: ' + percent(awards, target) + ' | Award value: ' + currency(value) + '</div></div>';
+    }
+
+    function getFinancialMonthsToDate() {
+      var currentMonth = getCurrentFinancialMonth();
+      var idx = MONTHS.indexOf(currentMonth);
+      if (idx < 0) return MONTHS.slice();
+      return MONTHS.slice(0, idx + 1);
+    }
+
+    function renderGroupAwardsToDateCard() {
+      var months = getFinancialMonthsToDate();
+      var annualTarget = 0;
+      var awards = 0;
+      var value = 0;
+
+      for (var k in FIXED_ANNUAL_AWARD_TARGETS) {
+        if (Object.prototype.hasOwnProperty.call(FIXED_ANNUAL_AWARD_TARGETS, k)) {
+          annualTarget += Number(FIXED_ANNUAL_AWARD_TARGETS[k] || 0);
+        }
+      }
+      var targetToDate = annualTarget * (months.length / 12);
+
+      for (var a = 0; a < data.awardsTargets.length; a++) {
+        var awardEntity = getAwardEntity(data.awardsTargets[a]);
+        if (!Object.prototype.hasOwnProperty.call(FIXED_ANNUAL_AWARD_TARGETS, awardEntity)) continue;
+        var awardMonth = getAwardMonth(data.awardsTargets[a]);
+        if (!awardMonth || months.indexOf(awardMonth) > -1) awards += getAwardActual(data.awardsTargets[a]);
+      }
+
+      var rows = getDirectContractsRows();
+      for (var r = 0; r < rows.length; r++) {
+        var contractEntity = getContractEntity(rows[r]);
+        if (!Object.prototype.hasOwnProperty.call(FIXED_ANNUAL_AWARD_TARGETS, contractEntity)) continue;
+        var contractMonth = getContractMonth(rows[r]);
+        if (months.indexOf(contractMonth) === -1) continue;
+        value += getContractValue(rows[r]);
+      }
+
+      return '<div class="summary-card"><div class="label">Group Awards to Date vs Target to Date</div>' +
+        '<div class="value">' + integer(awards) + ' vs target ' + integer(targetToDate) + '</div>' +
+        '<div class="sub">Cumulative ' + months.join(', ') + ' | Performance: ' + percent(awards, targetToDate) + ' | Award value: ' + currency(value) + '</div></div>';
+    }
+
+    function renderPeriodSummary() {
+      document.getElementById('periodSummaryTitle').textContent = 'Summary';
+      var quartersToShow = selectedTargetQuarter === 'ALL' ? ['Q1', 'Q2', 'Q3'] : [selectedTargetQuarter];
+      var html = renderGroupAwardsToDateCard();
+      for (var q = 0; q < quartersToShow.length; q++) html += renderQuarterWindowCard(quartersToShow[q]);
+      document.getElementById('periodSummaryGrid').innerHTML = html;
     }
 
     function renderQuarterlySummaryTables() {
@@ -711,10 +816,38 @@
       });
       renderTable('quarterlyScopeSummaryTable', ['Scope', 'Awards', 'Actual', 'Target', 'Variance', '% Performance'], scopeRows);
 
-      var entityRows = getPeriodAwardsByEntity().map(function(row) {
-        return [row.entity, integer(row.awards), currency(row.value), integer(row.target), '<span class="' + (row.awards >= row.target ? 'variance-positive' : 'variance-negative') + '">' + integer(row.awards - row.target) + ' / ' + percent(row.awards - row.target, row.target) + '</span>', percent(row.awards, row.target)];
-      });
-      renderTable('quarterlyEntityAwardSummaryTable', ['Entity', 'Awards', 'Award Value', 'Target', 'Variance', '% Performance'], entityRows);
+      var quarterList = selectedTargetQuarter === 'ALL' ? ['Q1', 'Q2', 'Q3'] : [selectedTargetQuarter];
+      var rows = [];
+      var entityMap = {};
+      for (var q = 0; q < quarterList.length; q++) {
+        var quarterRows = getQuarterAwardsByEntity(quarterList[q]);
+        for (var i = 0; i < quarterRows.length; i++) {
+          var row = quarterRows[i];
+          if (!entityMap[row.entity]) entityMap[row.entity] = { entity: row.entity, annualTarget: row.annualTarget, quarters: {} };
+          entityMap[row.entity].annualTarget = row.annualTarget;
+          entityMap[row.entity].quarters[quarterList[q]] = row;
+        }
+      }
+
+      var entityKeys = Object.keys(entityMap).sort();
+      for (var e = 0; e < entityKeys.length; e++) {
+        var item = entityMap[entityKeys[e]];
+        var cells = [item.entity];
+        for (var qq = 0; qq < quarterList.length; qq++) {
+          var qKey = quarterList[qq];
+          var qRow = item.quarters[qKey] || { awards: 0, target: Number(item.annualTarget || 0) / 4, value: 0 };
+          cells.push(integer(qRow.awards) + ' vs target ' + integer(qRow.target));
+          cells.push(percent(qRow.awards, qRow.target));
+        }
+        rows.push(cells);
+      }
+
+      var headers = ['Cost Center'];
+      for (var h = 0; h < quarterList.length; h++) {
+        headers.push(quarterList[h] + ' Awards Target');
+        headers.push(quarterList[h] + ' Quarterly Performance');
+      }
+      renderTable('quarterlyEntityAwardSummaryTable', headers, rows);
     }
 
     function renderEntityMatrices() {
@@ -1277,6 +1410,15 @@
         periodFilter.value = selectedPeriod;
         periodFilter.addEventListener('change', function() {
           selectedPeriod = this.value;
+          renderAll();
+        });
+      }
+
+      var targetQuarterFilter = document.getElementById('targetQuarterFilter');
+      if (targetQuarterFilter) {
+        targetQuarterFilter.value = selectedTargetQuarter;
+        targetQuarterFilter.addEventListener('change', function() {
+          selectedTargetQuarter = this.value;
           renderAll();
         });
       }
